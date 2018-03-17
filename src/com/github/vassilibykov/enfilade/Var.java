@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class Var extends AtomicExpression {
     @Nullable private final String name;
+    private int index = -1;
 
     Var(@Nullable String name) {
         this.name = name;
@@ -11,6 +12,14 @@ public class Var extends AtomicExpression {
 
     public String name() {
         return name;
+    }
+
+    public int index() {
+        return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     @Override
