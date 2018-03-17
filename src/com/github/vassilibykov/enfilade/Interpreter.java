@@ -10,12 +10,6 @@ public class Interpreter {
             this.parentFrame = parentFrame;
             this.locals = new Object[localsCount];
         }
-        /*
-         Interestingly, replacing Frame with just an Object[] and saving the caller frame in a local
-         in the call method reduces runtime by about 15%. However, dispensing with object allocation
-         altogether by creating a single 'stack' Object[] with a current frame base index makes no
-         difference compared to using Object[] instead of Frame.
-         */
     }
 
     private static class ReturnException extends RuntimeException {
@@ -29,31 +23,25 @@ public class Interpreter {
     private class Evaluator implements Expression.Visitor<Object> {
         @Override
         public Object visitCall0(Call0 call) {
-            currentFrame = newFrame(currentFrame, call.method());
-            Object result = runMethod(call.method());
-            currentFrame = currentFrame.parentFrame;
-            return result;
+            Method callee = call.method();
+            return runMethod(callee, newFrame(currentFrame, callee));
         }
 
         @Override
         public Object visitCall1(Call1 call) {
-            Frame calleeFrame = newFrame(currentFrame, call.method());
+            Method callee = call.method();
+            Frame calleeFrame = newFrame(currentFrame, callee);
             calleeFrame.locals[0] = call.arg().accept(this);
-            currentFrame = calleeFrame;
-            Object result = runMethod(call.method());
-            currentFrame = currentFrame.parentFrame;
-            return result;
+            return runMethod(callee, calleeFrame);
         }
 
         @Override
         public Object visitCall2(Call2 call) {
-            Frame calleeFrame = newFrame(currentFrame, call.method());
+            Method callee = call.method();
+            Frame calleeFrame = newFrame(currentFrame, callee);
             calleeFrame.locals[0] = call.arg1().accept(this);
             calleeFrame.locals[1] = call.arg2().accept(this);
-            currentFrame = calleeFrame;
-            Object result = runMethod(call.method());
-            currentFrame = currentFrame.parentFrame;
-            return result;
+            return runMethod(callee, calleeFrame);
         }
 
         @Override
@@ -125,20 +113,25 @@ public class Interpreter {
     private Frame currentFrame;
 
     public Object interpret(Method method, Object[] actualArguments) {
-        currentFrame = newFrame(null, method);
-        System.arraycopy(actualArguments, 0, currentFrame.locals, 0, actualArguments.length);
-        return runMethod(method);
+        currentFrame = null;
+        Frame frame = newFrame(null, method);
+        System.arraycopy(actualArguments, 0, frame.locals, 0, actualArguments.length);
+        return runMethod(method, frame);
     }
 
     private Frame newFrame(Frame parentFrame, Method method) {
         return new Frame(parentFrame, method.localsCount());
     }
 
-    private Object runMethod(Method method) {
+    private Object runMethod(Method method, Frame frame) {
+        Frame oldFrame = currentFrame;
+        currentFrame = frame;
         try {
             return method.body().accept(evaluator);
         } catch (ReturnException e) {
             return e.value;
+        } finally {
+            currentFrame = oldFrame;
         }
     }
 }

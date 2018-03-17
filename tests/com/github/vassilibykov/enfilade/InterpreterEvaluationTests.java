@@ -109,11 +109,15 @@ public class InterpreterEvaluationTests {
         assertEquals(13, eval(fibonacci, 6));
     }
 
-    @Test
+//    @Test
     public void timeFib() {
-        int n = 31;
+        int n = 35;
+        Method fibonacci = fibonacci();
+        Interpreter interpreter = new Interpreter();
+        Object[] args = {n};
+        for (int i = 0; i < 20; i++) interpreter.interpret(fibonacci, args);
         long start = System.nanoTime();
-        int result = (Integer) eval(fibonacci(), n);
+        int result = (Integer) interpreter.interpret(fibonacci, args);
         long elapsed = System.nanoTime() - start;
         System.out.format("fibonacci(%s) = %s in %s ms", n, result, elapsed / 1_000_000L);
     }
