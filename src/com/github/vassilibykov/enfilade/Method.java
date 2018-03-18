@@ -57,17 +57,20 @@ public class Method {
     @NotNull private final Var[] arguments;
     @NotNull private final Expression body;
     private final int localsCount;
+    /*internal*/ final MethodProfile profile;
 
     private Method(@NotNull Var[] arguments, @NotNull Expression body) {
         this.arguments = arguments;
         this.body = body;
         this.localsCount = computeLocalsCount();
+        this.profile = new MethodProfile(this);
     }
 
     private Method(@NotNull Var[] arguments, Function<Method, Expression> recursiveBodyMaker) {
         this.arguments = arguments;
         this.body = recursiveBodyMaker.apply(this);
         this.localsCount = computeLocalsCount();
+        this.profile = new MethodProfile(this);
     }
 
     public Var[] arguments() {
@@ -76,6 +79,10 @@ public class Method {
 
     public Expression body() {
         return body;
+    }
+
+    public int arity() {
+        return arguments.length;
     }
 
     public int localsCount() {

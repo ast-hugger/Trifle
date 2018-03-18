@@ -19,6 +19,10 @@ public class CodeFactory {
         return Method.with(new Var[]{arg1, arg2}, bodyMaker.apply(arg1, arg2));
     }
 
+    public static Call0 call(Method method) {
+        return new Call0(method);
+    }
+
     public static Call1 call(Method method, AtomicExpression arg) {
         return new Call1(method, arg);
     }

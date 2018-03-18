@@ -2,7 +2,7 @@ package com.github.vassilibykov.enfilade;
 
 import org.jetbrains.annotations.NotNull;
 
-public class Let extends Expression {
+public class Let extends ComplexExpression {
     @NotNull private final Var variable;
     @NotNull private final Expression initializer;
     @NotNull private final Expression body;

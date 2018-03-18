@@ -15,6 +15,11 @@ public class Call1 extends Call {
     }
 
     @Override
+    protected int arity() {
+        return 1;
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitCall1(this);
     }

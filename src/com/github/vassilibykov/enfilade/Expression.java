@@ -1,18 +1,20 @@
 package com.github.vassilibykov.enfilade;
 
+import com.github.vassilibykov.enfilade.compiler.CompilerAnnotation;
+
 import java.util.stream.Stream;
 
 public abstract class Expression {
 
     public interface Visitor<T> {
         T visitCall0(Call0 call);
-        T visitCall1(Call1 call1);
-        T visitCall2(Call2 call2);
+        T visitCall1(Call1 call);
+        T visitCall2(Call2 call);
         T visitConst(Const aConst);
         T visitIf(If anIf);
         T visitLet(Let let);
-        T visitPrimitive1(Primitive1 primitive1);
-        T visitPrimitive2(Primitive2 primitive2);
+        T visitPrimitive1(Primitive1 primitive);
+        T visitPrimitive2(Primitive2 primitive);
         T visitProg(Prog prog);
         T visitRet(Ret ret);
         T visitSetVar(SetVar set);
@@ -95,6 +97,20 @@ public abstract class Expression {
         private T visit(Expression expr) {
             return expr.accept(this);
         }
+    }
+
+    /*
+        Instance
+     */
+
+    private CompilerAnnotation compilerAnnotation;
+
+    public CompilerAnnotation compilerAnnotation() {
+        return compilerAnnotation;
+    }
+
+    public void setCompilerAnnotation(CompilerAnnotation compilerAnnotation) {
+        this.compilerAnnotation = compilerAnnotation;
     }
 
     public abstract <T> T accept(Visitor<T> visitor);

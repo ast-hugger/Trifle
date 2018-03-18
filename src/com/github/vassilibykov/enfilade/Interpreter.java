@@ -2,9 +2,9 @@ package com.github.vassilibykov.enfilade;
 
 public class Interpreter {
 
-    private static class Frame {
-        private final Frame parentFrame;
-        private final Object[] locals;
+    static class Frame {
+        final Frame parentFrame;
+        final Object[] locals;
 
         Frame(Frame parentFrame, int localsCount) {
             this.parentFrame = parentFrame;
@@ -24,7 +24,9 @@ public class Interpreter {
         @Override
         public Object visitCall0(Call0 call) {
             Method callee = call.method();
-            return runMethod(callee, newFrame(currentFrame, callee));
+            Frame calleeFrame = newFrame(currentFrame, callee);
+            callee.profile.recordInvocation(calleeFrame);
+            return runMethod(callee, calleeFrame);
         }
 
         @Override
@@ -32,6 +34,7 @@ public class Interpreter {
             Method callee = call.method();
             Frame calleeFrame = newFrame(currentFrame, callee);
             calleeFrame.locals[0] = call.arg().accept(this);
+            callee.profile.recordInvocation(calleeFrame);
             return runMethod(callee, calleeFrame);
         }
 
@@ -41,6 +44,7 @@ public class Interpreter {
             Frame calleeFrame = newFrame(currentFrame, callee);
             calleeFrame.locals[0] = call.arg1().accept(this);
             calleeFrame.locals[1] = call.arg2().accept(this);
+            callee.profile.recordInvocation(calleeFrame);
             return runMethod(callee, calleeFrame);
         }
 
@@ -63,6 +67,7 @@ public class Interpreter {
         public Object visitLet(Let let) {
             Object value = let.initializer().accept(this);
             currentFrame.locals[let.variable().index()] = value;
+            currentMethod.profile.recordVarStore(let.variable(), value);
             return let.body().accept(this);
         }
 
@@ -96,6 +101,7 @@ public class Interpreter {
         public Object visitSetVar(SetVar set) {
             Object value = set.value().accept(this);
             currentFrame.locals[set.variable().index()] = value;
+            currentMethod.profile.recordVarStore(set.variable(), value);
             return value;
         }
 
@@ -110,12 +116,14 @@ public class Interpreter {
      */
 
     private final Evaluator evaluator = new Evaluator();
+    private Method currentMethod;
     private Frame currentFrame;
 
     public Object interpret(Method method, Object[] actualArguments) {
         currentFrame = null;
         Frame frame = newFrame(null, method);
         System.arraycopy(actualArguments, 0, frame.locals, 0, actualArguments.length);
+        method.profile.recordInvocation(frame);
         return runMethod(method, frame);
     }
 
@@ -124,13 +132,16 @@ public class Interpreter {
     }
 
     private Object runMethod(Method method, Frame frame) {
+        Method oldMethod = currentMethod;
         Frame oldFrame = currentFrame;
+        currentMethod = method;
         currentFrame = frame;
         try {
             return method.body().accept(evaluator);
         } catch (ReturnException e) {
             return e.value;
         } finally {
+            currentMethod = oldMethod;
             currentFrame = oldFrame;
         }
     }
