@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 public class Var extends AtomicExpression {
     @Nullable private final String name;
     private int index = -1;
+    final ValueProfile profile = new ValueProfile();
 
     Var(@Nullable String name) {
         this.name = name;

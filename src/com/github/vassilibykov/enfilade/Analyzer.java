@@ -1,6 +1,4 @@
-package com.github.vassilibykov.enfilade.compiler;
-
-import com.github.vassilibykov.enfilade.*;
+package com.github.vassilibykov.enfilade;
 
 public class Analyzer implements Expression.Visitor<Void> {
     private final MethodProfile methodProfile;
@@ -67,13 +65,7 @@ public class Analyzer implements Expression.Visitor<Void> {
 
     @Override
     public Void visitVar(Var var) {
-        ValueCategory category;
-        if (methodProfile.isVarProfiled(var) && methodProfile.isPureInt(var)) {
-            category = ValueCategory.INT;
-        } else {
-            category = ValueCategory.REFERENCE;
-        }
-        var.setCompilerAnnotation(new CompilerAnnotation(category));
+        var.setCompilerAnnotation(new CompilerAnnotation(var.profile.valueCategory()));
         return null;
     }
 }

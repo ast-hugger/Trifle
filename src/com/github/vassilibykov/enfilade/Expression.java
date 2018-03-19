@@ -1,7 +1,5 @@
 package com.github.vassilibykov.enfilade;
 
-import com.github.vassilibykov.enfilade.compiler.CompilerAnnotation;
-
 import java.util.stream.Stream;
 
 public abstract class Expression {
@@ -103,7 +101,7 @@ public abstract class Expression {
         Instance
      */
 
-    private CompilerAnnotation compilerAnnotation;
+    /*internal*/ CompilerAnnotation compilerAnnotation;
 
     public CompilerAnnotation compilerAnnotation() {
         return compilerAnnotation;

@@ -23,7 +23,7 @@ public class InterpreterProfilingTests {
                 call(callee),
                 call(callee)));
         for (int i = 0; i < 7; i++) {
-            interpreter.interpret(caller, new Object[0]);
+            caller.invoke();
         }
         assertEquals(7, caller.profile.invocationCount());
         assertEquals(14, callee.profile.invocationCount());
@@ -39,15 +39,15 @@ public class InterpreterProfilingTests {
                 call(method, arg2),
                 call(method, arg2)));
         for (int i = 0; i < 3; i++) {
-            interpreter.interpret(method2, new Object[]{"hello"});
+            method2.invoke("hello");
         }
         for (int i = 0; i < 4; i++) {
-            interpreter.interpret(method2, new Object[]{42});
+            method2.invoke(42);
         }
-        assertEquals(3, method2.profile.refCaseCount(arg2));
-        assertEquals(4, method2.profile.intCaseCount(arg2));
-        assertEquals(6, method.profile.refCaseCount(arg));
-        assertEquals(8, method.profile.intCaseCount(arg));
+        assertEquals(3, arg2.profile.referenceCases());
+        assertEquals(4, arg2.profile.intCases());
+        assertEquals(6, arg.profile.referenceCases());
+        assertEquals(8, arg.profile.intCases());
     }
 
     @Test
@@ -57,12 +57,12 @@ public class InterpreterProfilingTests {
         Method method = Method.with(new Var[]{arg},
             let(t, arg, t));
         for (int i = 0; i < 3; i++) {
-            interpreter.interpret(method, new Object[]{"hello"});
+            method.invoke("hello");
         }
         for (int i = 0; i < 4; i++) {
-            interpreter.interpret(method, new Object[]{42});
+            method.invoke(42);
         }
-        assertEquals(3, method.profile.refCaseCount(t));
-        assertEquals(4, method.profile.intCaseCount(t));
+        assertEquals(3, t.profile.referenceCases());
+        assertEquals(4, t.profile.intCases());
     }
 }

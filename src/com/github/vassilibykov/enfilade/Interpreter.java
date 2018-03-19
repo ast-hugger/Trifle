@@ -2,15 +2,7 @@ package com.github.vassilibykov.enfilade;
 
 public class Interpreter {
 
-    static class Frame {
-        final Frame parentFrame;
-        final Object[] locals;
-
-        Frame(Frame parentFrame, int localsCount) {
-            this.parentFrame = parentFrame;
-            this.locals = new Object[localsCount];
-        }
-    }
+    public static final Interpreter INSTANCE = new Interpreter();
 
     private static class ReturnException extends RuntimeException {
         private Object value;
@@ -20,32 +12,29 @@ public class Interpreter {
         }
     }
 
-    private class Evaluator implements Expression.Visitor<Object> {
+    private static class ProfilingEvaluator implements Expression.Visitor<Object> {
+        final Object[] frame;
+
+        private ProfilingEvaluator(Object[] frame) {
+            this.frame = frame;
+        }
+
         @Override
         public Object visitCall0(Call0 call) {
-            Method callee = call.method();
-            Frame calleeFrame = newFrame(currentFrame, callee);
-            callee.profile.recordInvocation(calleeFrame);
-            return runMethod(callee, calleeFrame);
+            return call.method().nexus.invoke();
         }
 
         @Override
         public Object visitCall1(Call1 call) {
-            Method callee = call.method();
-            Frame calleeFrame = newFrame(currentFrame, callee);
-            calleeFrame.locals[0] = call.arg().accept(this);
-            callee.profile.recordInvocation(calleeFrame);
-            return runMethod(callee, calleeFrame);
+            Object arg = call.arg().accept(this);
+            return call.method().nexus.invoke(arg);
         }
 
         @Override
         public Object visitCall2(Call2 call) {
-            Method callee = call.method();
-            Frame calleeFrame = newFrame(currentFrame, callee);
-            calleeFrame.locals[0] = call.arg1().accept(this);
-            calleeFrame.locals[1] = call.arg2().accept(this);
-            callee.profile.recordInvocation(calleeFrame);
-            return runMethod(callee, calleeFrame);
+            Object arg1 = call.arg1().accept(this);
+            Object arg2 = call.arg2().accept(this);
+            return call.method().nexus.invoke(arg1, arg2);
         }
 
         @Override
@@ -66,8 +55,9 @@ public class Interpreter {
         @Override
         public Object visitLet(Let let) {
             Object value = let.initializer().accept(this);
-            currentFrame.locals[let.variable().index()] = value;
-            currentMethod.profile.recordVarStore(let.variable(), value);
+            Var variable = let.variable();
+            frame[variable.index()] = value;
+            variable.profile.recordValue(value);
             return let.body().accept(this);
         }
 
@@ -100,14 +90,15 @@ public class Interpreter {
         @Override
         public Object visitSetVar(SetVar set) {
             Object value = set.value().accept(this);
-            currentFrame.locals[set.variable().index()] = value;
-            currentMethod.profile.recordVarStore(set.variable(), value);
+            Var variable = set.variable();
+            frame[variable.index()] = value;
+            variable.profile.recordValue(value);
             return value;
         }
 
         @Override
         public Object visitVar(Var var) {
-            return currentFrame.locals[var.index()];
+            return frame[var.index()];
         }
     }
 
@@ -115,34 +106,48 @@ public class Interpreter {
         Instance
      */
 
-    private final Evaluator evaluator = new Evaluator();
-    private Method currentMethod;
-    private Frame currentFrame;
-
-    public Object interpret(Method method, Object[] actualArguments) {
-        currentFrame = null;
-        Frame frame = newFrame(null, method);
-        System.arraycopy(actualArguments, 0, frame.locals, 0, actualArguments.length);
+    public Object interpret(Method method) {
+        Object[] frame = new Object[method.localsCount()];
         method.profile.recordInvocation(frame);
-        return runMethod(method, frame);
-    }
-
-    private Frame newFrame(Frame parentFrame, Method method) {
-        return new Frame(parentFrame, method.localsCount());
-    }
-
-    private Object runMethod(Method method, Frame frame) {
-        Method oldMethod = currentMethod;
-        Frame oldFrame = currentFrame;
-        currentMethod = method;
-        currentFrame = frame;
         try {
-            return method.body().accept(evaluator);
+            return method.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
-        } finally {
-            currentMethod = oldMethod;
-            currentFrame = oldFrame;
         }
     }
+
+    public Object interpret(Method method, Object arg) {
+        Object[] frame = new Object[method.localsCount()];
+        frame[0] = arg;
+        method.profile.recordInvocation(frame);
+        try {
+            return method.body().accept(new ProfilingEvaluator(frame));
+        } catch (ReturnException e) {
+            return e.value;
+        }
+    }
+
+    public Object interpret(Method method, Object arg1, Object arg2) {
+        Object[] frame = new Object[method.localsCount()];
+        frame[0] = arg1;
+        frame[1] = arg2;
+        method.profile.recordInvocation(frame);
+        try {
+            return method.body().accept(new ProfilingEvaluator(frame));
+        } catch (ReturnException e) {
+            return e.value;
+        }
+    }
+
+    public Object interpretWithArgs(Method method, Object[] actualArguments) {
+        Object[] frame = new Object[method.localsCount()];
+        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
+        method.profile.recordInvocation(frame);
+        try {
+            return method.body().accept(new ProfilingEvaluator(frame));
+        } catch (ReturnException e) {
+            return e.value;
+        }
+    }
+
 }

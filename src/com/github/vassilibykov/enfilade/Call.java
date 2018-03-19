@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 public abstract class Call extends ComplexExpression {
     @NotNull private Method method;
+    /*internal*/ final ValueProfile profile = new ValueProfile();
 
     Call(@NotNull Method method) {
         if (method.arity() != arity()) {

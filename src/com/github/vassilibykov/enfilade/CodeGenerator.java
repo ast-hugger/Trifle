@@ -1,9 +1,9 @@
-package com.github.vassilibykov.enfilade.compiler;
+package com.github.vassilibykov.enfilade;
 
-import com.github.vassilibykov.enfilade.*;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
-import static com.github.vassilibykov.enfilade.compiler.ValueCategory.INT;
+import static com.github.vassilibykov.enfilade.ValueCategory.INT;
 import static org.objectweb.asm.Opcodes.*;
 
 public class CodeGenerator implements Expression.Visitor<ValueCategory> {
@@ -30,28 +30,48 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
 
     @Override
     public ValueCategory visitConst(Const aConst) {
-        ValueCategory category = aConst.compilerAnnotation().valueCategory();
         Object value = aConst.value();
-        if (category == INT) {
+        if (value instanceof Integer) {
             generateLoadInt((Integer) value);
+            writer.visitMethodInsn(
+                INVOKESTATIC,
+                "java/lang/Integer",
+                "valueOf",
+                "(I)Ljava/lang/Integer;",
+                false);
+        } else if (value instanceof String) {
+            writer.visitLdcInsn(value);
         } else {
-            if (value instanceof String) {
-                writer.visitLdcInsn(value);
-            } else {
-                throw new UnsupportedOperationException("unsupported constant type");
-            }
+            throw new UnsupportedOperationException("unsupported constant type");
         }
-        return category;
+        return null;
     }
 
     @Override
     public ValueCategory visitIf(If anIf) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        anIf.condition().accept(this);
+        writer.visitMethodInsn(INVOKESTATIC,
+            "java/lang/Boolean",
+            "value",
+            "(Ljava/lang/Boolean;)I",
+            false);
+        Label elseStart = new Label();
+        Label end = new Label();
+        writer.visitJumpInsn(IFEQ, elseStart);
+        anIf.trueBranch().accept(this);
+        writer.visitJumpInsn(GOTO, end);
+        writer.visitLabel(elseStart);
+        anIf.falseBranch().accept(this);
+        writer.visitLabel(end);
+        return null;
     }
 
     @Override
     public ValueCategory visitLet(Let let) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        let.initializer().accept(this);
+        writer.visitVarInsn(ASTORE, let.variable().index());
+        let.body().accept(this);
+        return null;
     }
 
     @Override
@@ -66,17 +86,24 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
 
     @Override
     public ValueCategory visitProg(Prog prog) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        if (prog.expressions().length == 0) {
+            writer.visitInsn(NULL);
+            return null;
+        }
+        int i;
+        for (i = 0; i < prog.expressions().length - 1; i++) {
+            Expression expr = prog.expressions()[i];
+            expr.accept(this);
+            writer.visitInsn(POP);
+        }
+        prog.expressions()[i].accept(this);
+        return null;
     }
 
     @Override
     public ValueCategory visitRet(Ret ret) {
-        ValueCategory valueCategory = ret.value().accept(this);
-        if (valueCategory == INT) {
-            writer.visitInsn(IRETURN);
-        } else {
-            writer.visitInsn(ARETURN);
-        }
+        ret.value().accept(this);
+        writer.visitInsn(ARETURN);
         return null;
     }
 
@@ -91,12 +118,8 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
     @Override
     public ValueCategory visitVar(Var var) {
         ValueCategory category = var.compilerAnnotation().valueCategory();
-        if (category == INT) {
-            writer.visitVarInsn(ILOAD, var.index());
-        } else {
-            writer.visitVarInsn(ALOAD, var.index());
-        }
-        return category;
+        writer.visitVarInsn(ALOAD, var.index());
+        return null;
     }
 
     /**

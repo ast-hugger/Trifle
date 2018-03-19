@@ -57,12 +57,14 @@ public class Method {
     @NotNull private final Var[] arguments;
     @NotNull private final Expression body;
     private final int localsCount;
+    /*internal*/ final Nexus nexus;
     /*internal*/ final MethodProfile profile;
 
     private Method(@NotNull Var[] arguments, @NotNull Expression body) {
         this.arguments = arguments;
         this.body = body;
         this.localsCount = computeLocalsCount();
+        this.nexus = new Nexus(this);
         this.profile = new MethodProfile(this);
     }
 
@@ -70,6 +72,7 @@ public class Method {
         this.arguments = arguments;
         this.body = recursiveBodyMaker.apply(this);
         this.localsCount = computeLocalsCount();
+        this.nexus = new Nexus(this);
         this.profile = new MethodProfile(this);
     }
 
@@ -98,5 +101,17 @@ public class Method {
         body.accept(indexer);
         body.accept(new VariableIndexValidator());
         return indexer.index();
+    }
+
+    public Object invoke() {
+        return nexus.invoke();
+    }
+
+    public Object invoke(Object arg) {
+        return nexus.invoke(arg);
+    }
+
+    public Object invoke(Object arg1, Object arg2) {
+        return nexus.invoke(arg1, arg2);
     }
 }

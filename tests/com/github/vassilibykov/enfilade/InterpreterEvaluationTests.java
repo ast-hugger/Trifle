@@ -30,8 +30,8 @@ public class InterpreterEvaluationTests {
                 if_(arg,
                     const_("true"),
                 const_("false")));
-        assertEquals("true", eval(method, true));
-        assertEquals("false", eval(method, false));
+        assertEquals("true", method.invoke(true));
+        assertEquals("false", method.invoke(false));
     }
 
     @Test
@@ -43,7 +43,7 @@ public class InterpreterEvaluationTests {
                 let(t, const_(3),
                     let(u, const_(4),
                     primitive(PLUS, t, u))));
-        assertEquals(7, eval(method));
+        assertEquals(7, method.invoke());
     }
 
     @Test
@@ -51,8 +51,8 @@ public class InterpreterEvaluationTests {
         Method method = unaryMethod(
             arg ->
                 primitive(NEGATE, arg));
-        assertEquals(-42, eval(method, 42));
-        assertEquals(123, eval(method, -123));
+        assertEquals(-42, method.invoke(42));
+        assertEquals(123, method.invoke(-123));
     }
 
     @Test
@@ -60,8 +60,8 @@ public class InterpreterEvaluationTests {
         Method method = binaryMethod(
             (arg1, arg2) ->
                 primitive(PLUS, arg1, arg2));
-        assertEquals(7, eval(method, 3, 4));
-        assertEquals(0, eval(method, -42, 42));
+        assertEquals(7, method.invoke(3, 4));
+        assertEquals(0, method.invoke(-42, 42));
     }
 
     @Test
@@ -69,7 +69,7 @@ public class InterpreterEvaluationTests {
         Method method = unaryMethod(
             arg ->
                 set(arg, const_(42)));
-        assertEquals(42, eval(method, 3));
+        assertEquals(42, method.invoke(3));
     }
 
     @Test
@@ -79,45 +79,44 @@ public class InterpreterEvaluationTests {
                 prog(
                     set(arg, const_(42)),
                     arg));
-        assertEquals(42, eval(method, 3));
+        assertEquals(42, method.invoke(3));
     }
 
     @Test
     public void testVar() {
         Method method = unaryMethod(arg -> arg);
-        assertEquals(42, eval(method, 42));
-        assertEquals("hello", eval(method, "hello"));
+        assertEquals(42, method.invoke(42));
+        assertEquals("hello", method.invoke("hello"));
     }
 
     @Test
     public void testFactorial() {
         Method factorial = factorial();
-        assertEquals(6, eval(factorial, 3));
-        assertEquals(24, eval(factorial, 4));
-        assertEquals(120, eval(factorial, 5));
+        assertEquals(6, factorial.invoke(3));
+        assertEquals(24, factorial.invoke(4));
+        assertEquals(120, factorial.invoke(5));
     }
 
     @Test
     public void testFibonacci() { // and everybody's favorite
         Method fibonacci = fibonacci();
-        assertEquals(1, eval(fibonacci, 0));
-        assertEquals(1, eval(fibonacci, 1));
-        assertEquals(2, eval(fibonacci, 2));
-        assertEquals(3, eval(fibonacci, 3));
-        assertEquals(5, eval(fibonacci, 4));
-        assertEquals(8, eval(fibonacci, 5));
-        assertEquals(13, eval(fibonacci, 6));
+        assertEquals(1, fibonacci.invoke(0));
+        assertEquals(1, fibonacci.invoke(1));
+        assertEquals(2, fibonacci.invoke(2));
+        assertEquals(3, fibonacci.invoke(3));
+        assertEquals(5, fibonacci.invoke(4));
+        assertEquals(8, fibonacci.invoke(5));
+        assertEquals(13, fibonacci.invoke(6));
     }
 
 //    @Test
     public void timeFib() {
         int n = 35;
         Method fibonacci = fibonacci();
-        Interpreter interpreter = new Interpreter();
         Object[] args = {n};
-        for (int i = 0; i < 20; i++) interpreter.interpret(fibonacci, args);
+        for (int i = 0; i < 20; i++) fibonacci.invoke(n);
         long start = System.nanoTime();
-        int result = (Integer) interpreter.interpret(fibonacci, args);
+        int result = (Integer) fibonacci.invoke(n);
         long elapsed = System.nanoTime() - start;
         System.out.format("fibonacci(%s) = %s in %s ms", n, result, elapsed / 1_000_000L);
     }
@@ -128,12 +127,7 @@ public class InterpreterEvaluationTests {
 
     private Object eval(Expression methodBody) {
         Method method = Method.with(new Var[0], methodBody);
-        return eval(method);
-    }
-
-    private Object eval(Method method, Object... args) {
-        Interpreter interpreter = new Interpreter();
-        return interpreter.interpret(method, args);
+        return method.invoke();
     }
 
     private Method factorial() {

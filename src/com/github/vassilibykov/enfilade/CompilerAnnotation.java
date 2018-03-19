@@ -1,4 +1,4 @@
-package com.github.vassilibykov.enfilade.compiler;
+package com.github.vassilibykov.enfilade;
 
 import org.jetbrains.annotations.NotNull;
 
