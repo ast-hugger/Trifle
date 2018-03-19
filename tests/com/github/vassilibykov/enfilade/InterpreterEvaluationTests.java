@@ -2,19 +2,11 @@ package com.github.vassilibykov.enfilade;
 
 import org.junit.Test;
 
-import java.util.function.BinaryOperator;
-import java.util.function.UnaryOperator;
-
-import static com.github.vassilibykov.enfilade.CodeFactory.*;
+import static com.github.vassilibykov.enfilade.ExpressionLanguage.*;
 import static org.junit.Assert.assertEquals;
 
+@SuppressWarnings("Convert2MethodRef")
 public class InterpreterEvaluationTests {
-
-    private static final UnaryOperator<Object> NEGATE = a -> -((Integer) a);
-    private static final BinaryOperator<Object> LESS_THAN = (a, b) -> ((Integer) a) < ((Integer) b);
-    private static final BinaryOperator<Object> PLUS  = (a, b) -> ((Integer) a) + ((Integer) b);
-    private static final BinaryOperator<Object> MINUS = (a, b) -> ((Integer) a) - ((Integer) b);
-    private static final BinaryOperator<Object> TIMES = (a, b) -> ((Integer) a) * ((Integer) b);
 
     @Test
     public void testConstant() {
@@ -29,7 +21,7 @@ public class InterpreterEvaluationTests {
             arg ->
                 if_(arg,
                     const_("true"),
-                const_("false")));
+                    const_("false")));
         assertEquals("true", method.invoke(true));
         assertEquals("false", method.invoke(false));
     }
@@ -42,7 +34,7 @@ public class InterpreterEvaluationTests {
             () ->
                 let(t, const_(3),
                     let(u, const_(4),
-                    primitive(PLUS, t, u))));
+                    add(t, u))));
         assertEquals(7, method.invoke());
     }
 
@@ -50,7 +42,7 @@ public class InterpreterEvaluationTests {
     public void testPrimitive1() {
         Method method = unaryMethod(
             arg ->
-                primitive(NEGATE, arg));
+                negate(arg));
         assertEquals(-42, method.invoke(42));
         assertEquals(123, method.invoke(-123));
     }
@@ -59,7 +51,7 @@ public class InterpreterEvaluationTests {
     public void testPrimitive2() {
         Method method = binaryMethod(
             (arg1, arg2) ->
-                primitive(PLUS, arg1, arg2));
+                add(arg1, arg2));
         assertEquals(7, method.invoke(3, 4));
         assertEquals(0, method.invoke(-42, 42));
     }
@@ -134,10 +126,10 @@ public class InterpreterEvaluationTests {
         Var n = var("n");
         Var t = var("t");
         return Method.withRecursion(new Var[]{n}, rec ->
-            if_(primitive(LESS_THAN, n, const_(1)),
+            if_(lessThan(n, const_(1)),
                 const_(1),
-                let(t, call(rec, primitive(MINUS, n, const_(1))),
-                    primitive(TIMES, t, n))));
+                let(t, call(rec, sub(n, const_(1))),
+                    mul(t, n))));
     }
 
     private Method fibonacci() {
@@ -145,10 +137,10 @@ public class InterpreterEvaluationTests {
         Var t1 = var("t1");
         Var t2 = var("t2");
         return Method.withRecursion(new Var[]{n}, rec ->
-            if_(primitive(LESS_THAN, n, const_(2)),
+            if_(lessThan(n, const_(2)),
                 const_(1),
-                let(t1, call(rec, primitive(MINUS, n, const_(1))),
-                    let(t2, call(rec, primitive(MINUS, n, const_(2))),
-                        primitive(PLUS, t1, t2)))));
+                let(t1, call(rec, sub(n, const_(1))),
+                    let(t2, call(rec, sub(n, const_(2))),
+                        add(t1, t2)))));
     }
 }

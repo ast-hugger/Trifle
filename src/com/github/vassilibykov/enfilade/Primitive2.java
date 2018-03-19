@@ -23,7 +23,7 @@ public abstract class Primitive2 extends AtomicExpression {
     @NotNull private final AtomicExpression argument1;
     @NotNull private final AtomicExpression argument2;
 
-    Primitive2(@NotNull AtomicExpression argument1, @NotNull AtomicExpression argument2) {
+    protected Primitive2(@NotNull AtomicExpression argument1, @NotNull AtomicExpression argument2) {
         this.argument1 = argument1;
         this.argument2 = argument2;
     }
@@ -42,4 +42,5 @@ public abstract class Primitive2 extends AtomicExpression {
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitPrimitive2(this);
     }
+
 }

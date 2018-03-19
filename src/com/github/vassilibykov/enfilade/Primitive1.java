@@ -22,7 +22,7 @@ public abstract class Primitive1 extends AtomicExpression {
 
     @NotNull private final AtomicExpression argument;
 
-    Primitive1(@NotNull AtomicExpression argument) {
+    protected Primitive1(@NotNull AtomicExpression argument) {
         this.argument = argument;
     }
 

@@ -3,15 +3,23 @@ package com.github.vassilibykov.enfilade;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
-import static com.github.vassilibykov.enfilade.ValueCategory.INT;
 import static org.objectweb.asm.Opcodes.*;
 
-public class CodeGenerator implements Expression.Visitor<ValueCategory> {
+public class MethodGenerator implements Expression.Visitor<ValueCategory> {
 
-    private static final int[] SPECIAL_LOAD_INT_OPCODES = new int[] {
-        ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
+    public static final String BOOLEAN = "java/lang/Boolean";
+    public static final String INTEGER = "java/lang/Integer";
 
-    private MethodVisitor writer;
+    public static final String TO_BOOL = "()Z";
+    public static final String INT_TO_INTEGER = "(I)Ljava/lang/Integer;";
+    public static final String OBJECT_TO_OBJECT = "(Ljava/lang/Object;)Ljava/lang/Object;";
+    public static final String OBJECT2_TO_OBJECT = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
+
+    private final MethodVisitor writer;
+
+    public MethodGenerator(MethodVisitor writer) {
+        this.writer = writer;
+    }
 
     @Override
     public ValueCategory visitCall0(Call0 call) {
@@ -33,12 +41,7 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
         Object value = aConst.value();
         if (value instanceof Integer) {
             generateLoadInt((Integer) value);
-            writer.visitMethodInsn(
-                INVOKESTATIC,
-                "java/lang/Integer",
-                "valueOf",
-                "(I)Ljava/lang/Integer;",
-                false);
+            writer.visitMethodInsn(INVOKESTATIC, INTEGER, "valueOf", INT_TO_INTEGER, false);
         } else if (value instanceof String) {
             writer.visitLdcInsn(value);
         } else {
@@ -50,11 +53,8 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
     @Override
     public ValueCategory visitIf(If anIf) {
         anIf.condition().accept(this);
-        writer.visitMethodInsn(INVOKESTATIC,
-            "java/lang/Boolean",
-            "value",
-            "(Ljava/lang/Boolean;)I",
-            false);
+        writer.visitTypeInsn(CHECKCAST, BOOLEAN);
+        writer.visitMethodInsn(INVOKEVIRTUAL, BOOLEAN, "booleanValue", TO_BOOL, false);
         Label elseStart = new Label();
         Label end = new Label();
         writer.visitJumpInsn(IFEQ, elseStart);
@@ -76,12 +76,19 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
 
     @Override
     public ValueCategory visitPrimitive1(Primitive1 primitive1) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        primitive1.argument().accept(this);
+        String implClassName = Compiler.internalClassName(primitive1.getClass());
+        writer.visitMethodInsn(INVOKESTATIC, implClassName, "staticApply", OBJECT_TO_OBJECT, false);
+        return null;
     }
 
     @Override
     public ValueCategory visitPrimitive2(Primitive2 primitive2) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        primitive2.argument1().accept(this);
+        primitive2.argument2().accept(this);
+        String implClassName = Compiler.internalClassName(primitive2.getClass());
+        writer.visitMethodInsn(INVOKESTATIC, implClassName, "staticApply", OBJECT2_TO_OBJECT, false);
+        return null;
     }
 
     @Override
@@ -109,15 +116,14 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
 
     @Override
     public ValueCategory visitSetVar(SetVar set) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        set.value().accept(this);
-//        writer.visitVarInsn(ASTORE, set.variable().index());
-//        return null;
+        set.value().accept(this);
+        writer.visitVarInsn(ASTORE, set.variable().index());
+        return null;
     }
 
     @Override
     public ValueCategory visitVar(Var var) {
-        ValueCategory category = var.compilerAnnotation().valueCategory();
+//        ValueCategory category = var.compilerAnnotation().valueCategory();
         writer.visitVarInsn(ALOAD, var.index());
         return null;
     }
@@ -135,4 +141,7 @@ public class CodeGenerator implements Expression.Visitor<ValueCategory> {
             writer.visitIntInsn(SIPUSH, value);
         }
     }
+
+    private static final int[] SPECIAL_LOAD_INT_OPCODES = new int[] {
+        ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
 }

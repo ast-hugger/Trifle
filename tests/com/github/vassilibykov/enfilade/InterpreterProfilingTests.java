@@ -3,7 +3,7 @@ package com.github.vassilibykov.enfilade;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static com.github.vassilibykov.enfilade.CodeFactory.*;
+import static com.github.vassilibykov.enfilade.ExpressionLanguage.*;
 import static org.junit.Assert.assertEquals;
 
 public class InterpreterProfilingTests {

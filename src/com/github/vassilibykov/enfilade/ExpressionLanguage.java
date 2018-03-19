@@ -1,8 +1,10 @@
 package com.github.vassilibykov.enfilade;
 
+import com.github.vassilibykov.enfilade.primitives.*;
+
 import java.util.function.*;
 
-public class CodeFactory {
+public class ExpressionLanguage {
 
     public static Method nullaryMethod(Supplier<Expression> bodyMaker) {
         return Method.with(new Var[0], bodyMaker.get());
@@ -49,6 +51,26 @@ public class CodeFactory {
 
     public static Primitive2 primitive(BinaryOperator<Object> function, AtomicExpression arg1, AtomicExpression arg2) {
         return new Primitive2.Wrapper(function, arg1, arg2);
+    }
+
+    public static Add add(AtomicExpression arg1, AtomicExpression arg2) {
+        return new Add(arg1, arg2);
+    }
+
+    public static LessThan lessThan(AtomicExpression arg1, AtomicExpression arg2) {
+        return new LessThan(arg1, arg2);
+    }
+
+    public static Mul mul(AtomicExpression arg1, AtomicExpression arg2) {
+        return new Mul(arg1, arg2);
+    }
+
+    public static Sub sub(AtomicExpression arg1, AtomicExpression arg2) {
+        return new Sub(arg1, arg2);
+    }
+
+    public static Primitive1 negate(AtomicExpression arg) {
+        return new Negate(arg);
     }
 
     public static Prog prog(Expression... expressions) {

@@ -1,6 +1,10 @@
 package com.github.vassilibykov.enfilade;
 
+import org.jetbrains.annotations.TestOnly;
+
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.invoke.SwitchPoint;
 
 /**
@@ -25,6 +29,7 @@ class Nexus {
         this.invalidator = new SwitchPoint();
     }
 
+    // TODO this and others shouldn't be wholesale synchronized; not around the interpret part anyway
     public synchronized Object invoke() {
         if (compiledForm != null) {
             try {
@@ -35,7 +40,7 @@ class Nexus {
         } else {
             Object result = Interpreter.INSTANCE.interpret(method);
             if (method.profile.invocationCount() > PROFILING_THRESHOLD) {
-                scheduleCompilation(method);
+                scheduleCompilation();
             }
             return result;
         }
@@ -51,7 +56,7 @@ class Nexus {
         } else {
             Object result = Interpreter.INSTANCE.interpret(method, arg);
             if (method.profile.invocationCount() > PROFILING_THRESHOLD) {
-                scheduleCompilation(method);
+                scheduleCompilation();
             }
             return result;
         }
@@ -67,7 +72,7 @@ class Nexus {
         } else {
             Object result = Interpreter.INSTANCE.interpret(method, arg1, arg2);
             if (method.profile.invocationCount() > PROFILING_THRESHOLD) {
-                scheduleCompilation(method);
+                scheduleCompilation();
             }
             return result;
         }
@@ -82,7 +87,30 @@ class Nexus {
         }
     }
 
-    private void scheduleCompilation(Method method) {
-        // TODO
+    /*
+        For now let's just keep all the machinery here.
+     */
+
+    private static GeneratedClassLoader classLoader = new GeneratedClassLoader(Nexus.class.getClassLoader());
+
+    private void scheduleCompilation() {
+        // For now no scheduling, just compile and set synchronously.
+        forceCompile();
+    }
+
+    @TestOnly
+    void forceCompile() {
+        if (compiledForm == null) {
+            Compiler.Result result = Compiler.compile(method);
+            classLoader.add(result);
+            try {
+                Class<?> implClass = classLoader.loadClass(result.className());
+                MethodHandle compiledMethod = MethodHandles.lookup()
+                    .findStatic(implClass, Compiler.IMPL_METHOD_NAME, MethodType.genericMethodType(method.arity()));
+                setCompiledForm(compiledMethod);
+            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+                throw new AssertionError(e);
+            }
+        }
     }
 }
