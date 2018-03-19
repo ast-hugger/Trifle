@@ -1,9 +1,9 @@
 package com.github.vassilibykov.enfilade;
 
 public class Analyzer implements Expression.Visitor<Void> {
-    private final MethodProfile methodProfile;
+    private final FunctionProfile methodProfile;
 
-    Analyzer(MethodProfile methodProfile) {
+    Analyzer(FunctionProfile methodProfile) {
         this.methodProfile = methodProfile;
     }
 

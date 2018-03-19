@@ -17,8 +17,8 @@ public class InterpreterProfilingTests {
 
     @Test
     public void testInvocationsCount() {
-        Method callee = Method.with(new Var[0], const_(42));
-        Method caller = Method.with(new Var[0],
+        Function callee = Function.with(new Var[0], const_(42));
+        Function caller = Function.with(new Var[0],
             prog(
                 call(callee),
                 call(callee)));
@@ -32,17 +32,17 @@ public class InterpreterProfilingTests {
     @Test
     public void testMethodArgTypeProfile() {
         Var arg = var("arg");
-        Method method = Method.with(new Var[]{arg}, arg);
+        Function function = Function.with(new Var[]{arg}, arg);
         Var arg2 = var("arg2");
-        Method method2 = Method.with(new Var[]{arg2},
+        Function function2 = Function.with(new Var[]{arg2},
             prog(
-                call(method, arg2),
-                call(method, arg2)));
+                call(function, arg2),
+                call(function, arg2)));
         for (int i = 0; i < 3; i++) {
-            method2.invoke("hello");
+            function2.invoke("hello");
         }
         for (int i = 0; i < 4; i++) {
-            method2.invoke(42);
+            function2.invoke(42);
         }
         assertEquals(3, arg2.profile.referenceCases());
         assertEquals(4, arg2.profile.intCases());
@@ -54,13 +54,13 @@ public class InterpreterProfilingTests {
     public void testLetVarProfile() {
         Var arg = var("arg");
         Var t = var("t");
-        Method method = Method.with(new Var[]{arg},
+        Function function = Function.with(new Var[]{arg},
             let(t, arg, t));
         for (int i = 0; i < 3; i++) {
-            method.invoke("hello");
+            function.invoke("hello");
         }
         for (int i = 0; i < 4; i++) {
-            method.invoke(42);
+            function.invoke(42);
         }
         assertEquals(3, t.profile.referenceCases());
         assertEquals(4, t.profile.intCases());

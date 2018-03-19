@@ -6,8 +6,8 @@ public class Call2 extends Call {
     @NotNull private final AtomicExpression arg1;
     @NotNull private final AtomicExpression arg2;
 
-    Call2(Method method, @NotNull AtomicExpression arg1, @NotNull AtomicExpression arg2) {
-        super(method);
+    Call2(Function function, @NotNull AtomicExpression arg1, @NotNull AtomicExpression arg2) {
+        super(function);
         this.arg1 = arg1;
         this.arg2 = arg2;
     }

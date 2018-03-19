@@ -2,13 +2,10 @@ package com.github.vassilibykov.enfilade;
 
 import org.objectweb.asm.*;
 
-import java.io.BufferedWriter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.invoke.MethodType;
 
 /**
- * Compiles a {@link Method} to a class with a single static method.
+ * Compiles a {@link Function} to a class with a single static method.
  */
 public class Compiler {
 
@@ -35,10 +32,10 @@ public class Compiler {
     }
 
     /**
-     * The access point: compile a method.
+     * The access point: compile a function.
      */
-    public static Result compile(Method method) {
-        Compiler compiler = new Compiler(method);
+    public static Result compile(Function function) {
+        Compiler compiler = new Compiler(function);
         return compiler.compile();
     }
 
@@ -62,12 +59,12 @@ public class Compiler {
         Instance
      */
 
-    private final Method method;
+    private final Function function;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 
-    private Compiler(Method method) {
-        this.method = method;
+    private Compiler(Function function) {
+        this.function = function;
         this.className = generateClassName();
     }
 
@@ -92,11 +89,11 @@ public class Compiler {
         MethodVisitor methodWriter = classWriter.visitMethod(
             Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
             IMPL_METHOD_NAME,
-            methodDescriptor(method.arity()),
+            methodDescriptor(function.arity()),
             null, null);
         methodWriter.visitCode();
-        MethodGenerator methodGenerator = new MethodGenerator(methodWriter);
-        method.body().accept(methodGenerator);
+        FunctionCodeGenerator functionCodeGenerator = new FunctionCodeGenerator(methodWriter);
+        function.body().accept(functionCodeGenerator);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();

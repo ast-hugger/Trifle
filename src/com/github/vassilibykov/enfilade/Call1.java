@@ -5,8 +5,8 @@ import org.jetbrains.annotations.NotNull;
 public class Call1 extends Call {
     @NotNull private final AtomicExpression arg;
 
-    Call1(Method method, @NotNull AtomicExpression arg) {
-        super(method);
+    Call1(Function function, @NotNull AtomicExpression arg) {
+        super(function);
         this.arg = arg;
     }
 

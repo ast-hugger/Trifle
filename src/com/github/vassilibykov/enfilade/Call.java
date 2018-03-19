@@ -3,18 +3,18 @@ package com.github.vassilibykov.enfilade;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class Call extends ComplexExpression {
-    @NotNull private Method method;
+    @NotNull private Function function;
     /*internal*/ final ValueProfile profile = new ValueProfile();
 
-    Call(@NotNull Method method) {
-        if (method.arity() != arity()) {
-            throw new AssertionError("a method of arity " + arity() + " required");
+    Call(@NotNull Function function) {
+        if (function.arity() != arity()) {
+            throw new AssertionError("a function of arity " + arity() + " required");
         }
-        this.method = method;
+        this.function = function;
     }
 
-    public Method method() {
-        return method;
+    public Function function() {
+        return function;
     }
 
     protected abstract int arity();

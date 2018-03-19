@@ -1,20 +1,20 @@
 package com.github.vassilibykov.enfilade;
 
 /**
- * Counts method invocations and records observed types of method
+ * Counts function invocations and records observed types of function
  * arguments and other locals.
  */
-public class MethodProfile {
+public class FunctionProfile {
 
-    private final Method method;
+    private final Function function;
     private final Var[] methodArguments;
     private final int methodArity;
     private long invocationCount = 0;
 
-    MethodProfile(Method method) {
-        this.method = method;
-        this.methodArguments = method.arguments();
-        this.methodArity = method.arity();
+    FunctionProfile(Function function) {
+        this.function = function;
+        this.methodArguments = function.arguments();
+        this.methodArity = function.arity();
     }
 
     public long invocationCount() {

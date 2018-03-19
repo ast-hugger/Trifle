@@ -5,7 +5,7 @@ import org.objectweb.asm.MethodVisitor;
 
 import static org.objectweb.asm.Opcodes.*;
 
-public class MethodGenerator implements Expression.Visitor<ValueCategory> {
+public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> {
 
     public static final String BOOLEAN = "java/lang/Boolean";
     public static final String INTEGER = "java/lang/Integer";
@@ -17,23 +17,44 @@ public class MethodGenerator implements Expression.Visitor<ValueCategory> {
 
     private final MethodVisitor writer;
 
-    public MethodGenerator(MethodVisitor writer) {
+    public FunctionCodeGenerator(MethodVisitor writer) {
         this.writer = writer;
     }
 
     @Override
     public ValueCategory visitCall0(Call0 call) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        Integer id = DirectCallRegistry.INSTANCE.lookup(call.function());
+        writer.visitInvokeDynamicInsn(
+            "call0",
+            "()Ljava/lang/Object;",
+            DirectCall.BOOTSTRAP,
+            id);
+        return null;
     }
 
     @Override
-    public ValueCategory visitCall1(Call1 call1) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    public ValueCategory visitCall1(Call1 call) {
+        call.arg().accept(this);
+        Integer id = DirectCallRegistry.INSTANCE.lookup(call.function());
+        writer.visitInvokeDynamicInsn(
+            "call1",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            DirectCall.BOOTSTRAP,
+            id);
+        return null;
     }
 
     @Override
-    public ValueCategory visitCall2(Call2 call2) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    public ValueCategory visitCall2(Call2 call) {
+        call.arg1().accept(this);
+        call.arg2().accept(this);
+        Integer id = DirectCallRegistry.INSTANCE.lookup(call.function());
+        writer.visitInvokeDynamicInsn(
+            "call2",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            DirectCall.BOOTSTRAP,
+            id);
+        return null;
     }
 
     @Override
@@ -117,6 +138,7 @@ public class MethodGenerator implements Expression.Visitor<ValueCategory> {
     @Override
     public ValueCategory visitSetVar(SetVar set) {
         set.value().accept(this);
+        writer.visitInsn(DUP);
         writer.visitVarInsn(ASTORE, set.variable().index());
         return null;
     }

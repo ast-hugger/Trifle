@@ -5,7 +5,7 @@ public class Interpreter {
     public static final Interpreter INSTANCE = new Interpreter();
 
     private static class ReturnException extends RuntimeException {
-        private Object value;
+        private final Object value;
 
         ReturnException(Object value) {
             this.value = value;
@@ -21,20 +21,20 @@ public class Interpreter {
 
         @Override
         public Object visitCall0(Call0 call) {
-            return call.method().nexus.invoke();
+            return call.function().nexus.invoke();
         }
 
         @Override
         public Object visitCall1(Call1 call) {
             Object arg = call.arg().accept(this);
-            return call.method().nexus.invoke(arg);
+            return call.function().nexus.invoke(arg);
         }
 
         @Override
         public Object visitCall2(Call2 call) {
             Object arg1 = call.arg1().accept(this);
             Object arg2 = call.arg2().accept(this);
-            return call.method().nexus.invoke(arg1, arg2);
+            return call.function().nexus.invoke(arg1, arg2);
         }
 
         @Override
@@ -106,45 +106,45 @@ public class Interpreter {
         Instance
      */
 
-    public Object interpret(Method method) {
-        Object[] frame = new Object[method.localsCount()];
-        method.profile.recordInvocation(frame);
+    public Object interpret(Function function) {
+        Object[] frame = new Object[function.localsCount()];
+        function.profile.recordInvocation(frame);
         try {
-            return method.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    public Object interpret(Method method, Object arg) {
-        Object[] frame = new Object[method.localsCount()];
+    public Object interpret(Function function, Object arg) {
+        Object[] frame = new Object[function.localsCount()];
         frame[0] = arg;
-        method.profile.recordInvocation(frame);
+        function.profile.recordInvocation(frame);
         try {
-            return method.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    public Object interpret(Method method, Object arg1, Object arg2) {
-        Object[] frame = new Object[method.localsCount()];
+    public Object interpret(Function function, Object arg1, Object arg2) {
+        Object[] frame = new Object[function.localsCount()];
         frame[0] = arg1;
         frame[1] = arg2;
-        method.profile.recordInvocation(frame);
+        function.profile.recordInvocation(frame);
         try {
-            return method.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    public Object interpretWithArgs(Method method, Object[] actualArguments) {
-        Object[] frame = new Object[method.localsCount()];
+    public Object interpretWithArgs(Function function, Object[] actualArguments) {
+        Object[] frame = new Object[function.localsCount()];
         System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
-        method.profile.recordInvocation(frame);
+        function.profile.recordInvocation(frame);
         try {
-            return method.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }

@@ -2,35 +2,38 @@ package com.github.vassilibykov.enfilade;
 
 import com.github.vassilibykov.enfilade.primitives.*;
 
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 public class ExpressionLanguage {
 
-    public static Method nullaryMethod(Supplier<Expression> bodyMaker) {
-        return Method.with(new Var[0], bodyMaker.get());
+    public static Function nullaryFunction(Supplier<Expression> bodyMaker) {
+        return Function.with(new Var[0], bodyMaker.get());
     }
 
-    public static Method unaryMethod(Function<Var, Expression> bodyMaker) {
+    public static Function unaryFunction(java.util.function.Function<Var, Expression> bodyMaker) {
         Var arg = var("a1");
-        return Method.with(new Var[]{arg}, bodyMaker.apply(arg));
+        return Function.with(new Var[]{arg}, bodyMaker.apply(arg));
     }
 
-    public static Method binaryMethod(BiFunction<Var, Var, Expression> bodyMaker) {
+    public static Function binaryFunction(BiFunction<Var, Var, Expression> bodyMaker) {
         Var arg1 = var("a1");
         Var arg2 = var("a2");
-        return Method.with(new Var[]{arg1, arg2}, bodyMaker.apply(arg1, arg2));
+        return Function.with(new Var[]{arg1, arg2}, bodyMaker.apply(arg1, arg2));
     }
 
-    public static Call0 call(Method method) {
-        return new Call0(method);
+    public static Call0 call(Function function) {
+        return new Call0(function);
     }
 
-    public static Call1 call(Method method, AtomicExpression arg) {
-        return new Call1(method, arg);
+    public static Call1 call(Function function, AtomicExpression arg) {
+        return new Call1(function, arg);
     }
 
-    public static Call2 call(Method method, AtomicExpression arg1, AtomicExpression arg2) {
-        return new Call2(method, arg1, arg2);
+    public static Call2 call(Function function, AtomicExpression arg1, AtomicExpression arg2) {
+        return new Call2(function, arg1, arg2);
     }
 
     public static Const const_(Object value) {

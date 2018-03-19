@@ -2,16 +2,14 @@ package com.github.vassilibykov.enfilade;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Function;
+public class Function {
 
-public class Method {
-
-    public static Method with(Var[] arguments, Expression body) {
-        return new Method(arguments, body);
+    public static Function with(Var[] arguments, Expression body) {
+        return new Function(arguments, body);
     }
 
-    public static Method withRecursion(Var[] arguments, Function<Method, Expression> bodyMaker) {
-        return new Method(arguments, bodyMaker);
+    public static Function withRecursion(Var[] arguments, java.util.function.Function<Function, Expression> bodyMaker) {
+        return new Function(arguments, bodyMaker);
     }
 
     private static class VariableIndexer extends Expression.VisitorSkeleton<Void> {
@@ -30,7 +28,7 @@ public class Method {
             Var var = let.variable();
             if (var.index() >= 0) {
                 // This happening is the sign of malformed expression, with the let variable
-                // reused as a let variable or a method argument.
+                // reused as a let variable or a function argument.
                 throw new AssertionError("variable reuse detected: " + var);
             }
             var.setIndex(index++);
@@ -43,7 +41,7 @@ public class Method {
         public Void visitVar(Var var) {
             if (var.index() < 0) {
                 // This is an undeclared variable: used in an expression but not listed
-                // as a method argument or a let binding.
+                // as a function argument or a let binding.
                 throw new AssertionError("undeclared variable: " + var);
             }
             return null;
@@ -58,22 +56,22 @@ public class Method {
     @NotNull private final Expression body;
     private final int localsCount;
     /*internal*/ final Nexus nexus;
-    /*internal*/ final MethodProfile profile;
+    /*internal*/ final FunctionProfile profile;
 
-    private Method(@NotNull Var[] arguments, @NotNull Expression body) {
+    private Function(@NotNull Var[] arguments, @NotNull Expression body) {
         this.arguments = arguments;
         this.body = body;
         this.localsCount = computeLocalsCount();
         this.nexus = new Nexus(this);
-        this.profile = new MethodProfile(this);
+        this.profile = new FunctionProfile(this);
     }
 
-    private Method(@NotNull Var[] arguments, Function<Method, Expression> recursiveBodyMaker) {
+    private Function(@NotNull Var[] arguments, java.util.function.Function<Function, Expression> recursiveBodyMaker) {
         this.arguments = arguments;
         this.body = recursiveBodyMaker.apply(this);
         this.localsCount = computeLocalsCount();
         this.nexus = new Nexus(this);
-        this.profile = new MethodProfile(this);
+        this.profile = new FunctionProfile(this);
     }
 
     public Var[] arguments() {
