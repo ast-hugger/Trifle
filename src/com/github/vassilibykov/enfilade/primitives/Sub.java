@@ -1,9 +1,9 @@
 package com.github.vassilibykov.enfilade.primitives;
 
-import com.github.vassilibykov.enfilade.AtomicExpression;
-import com.github.vassilibykov.enfilade.GhostWriter;
-import com.github.vassilibykov.enfilade.Primitive2;
-import com.github.vassilibykov.enfilade.TypeCategory;
+import com.github.vassilibykov.enfilade.core.AtomicExpression;
+import com.github.vassilibykov.enfilade.core.GhostWriter;
+import com.github.vassilibykov.enfilade.core.Primitive2;
+import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.Opcodes;
 
