@@ -1,13 +1,25 @@
 package com.github.vassilibykov.enfilade;
 
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
 
 /**
- * Compiles a {@link Function} to a class with a single static method.
+ * Compiles a {@link Function} into a class with a single static method.
  */
 public class Compiler {
+
+    public static final String IMPL_METHOD_NAME = "run";
+
+    /**
+     * The access point: compile a function.
+     */
+    public static Result compile(Function function) {
+        Compiler compiler = new Compiler(function);
+        return compiler.compile();
+    }
 
     public static class Result {
         private final String className;
@@ -22,24 +34,10 @@ public class Compiler {
             return className;
         }
 
-        public String internalClassName() {
-            return Compiler.internalClassName(className);
-        }
-
         public byte[] bytecode() {
             return bytecode;
         }
     }
-
-    /**
-     * The access point: compile a function.
-     */
-    public static Result compile(Function function) {
-        Compiler compiler = new Compiler(function);
-        return compiler.compile();
-    }
-
-    public static final String IMPL_METHOD_NAME = "run";
 
     static String internalClassName(Class<?> klass) {
         return internalClassName(klass.getName());
@@ -49,8 +47,8 @@ public class Compiler {
         return fqnName.replace('.', '/');
     }
 
-    static String generateClassName() {
-        return "$gen$" + serial++;
+    static String allocateClassName() {
+        return "$g$" + serial++;
     }
 
     private static long serial = 0;
@@ -65,7 +63,7 @@ public class Compiler {
 
     private Compiler(Function function) {
         this.function = function;
-        this.className = generateClassName();
+        this.className = allocateClassName();
     }
 
     public Result compile() {

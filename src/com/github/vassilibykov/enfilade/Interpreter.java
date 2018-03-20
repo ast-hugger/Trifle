@@ -1,21 +1,20 @@
 package com.github.vassilibykov.enfilade;
 
 public class Interpreter {
-
     public static final Interpreter INSTANCE = new Interpreter();
 
-    private static class ReturnException extends RuntimeException {
-        private final Object value;
+    static class ReturnException extends RuntimeException {
+        final Object value;
 
         ReturnException(Object value) {
             this.value = value;
         }
     }
 
-    private static class ProfilingEvaluator implements Expression.Visitor<Object> {
-        final Object[] frame;
+    static class Evaluator implements Expression.Visitor<Object> {
+        protected final Object[] frame;
 
-        private ProfilingEvaluator(Object[] frame) {
+        Evaluator(Object[] frame) {
             this.frame = frame;
         }
 
@@ -57,7 +56,6 @@ public class Interpreter {
             Object value = let.initializer().accept(this);
             Var variable = let.variable();
             frame[variable.index()] = value;
-            variable.profile.recordValue(value);
             return let.body().accept(this);
         }
 
@@ -92,7 +90,6 @@ public class Interpreter {
             Object value = set.value().accept(this);
             Var variable = set.variable();
             frame[variable.index()] = value;
-            variable.profile.recordValue(value);
             return value;
         }
 
@@ -108,9 +105,8 @@ public class Interpreter {
 
     public Object interpret(Function function) {
         Object[] frame = new Object[function.localsCount()];
-        function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
@@ -119,9 +115,8 @@ public class Interpreter {
     public Object interpret(Function function, Object arg) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg;
-        function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
@@ -131,9 +126,8 @@ public class Interpreter {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg1;
         frame[1] = arg2;
-        function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
@@ -142,12 +136,10 @@ public class Interpreter {
     public Object interpretWithArgs(Function function, Object[] actualArguments) {
         Object[] frame = new Object[function.localsCount()];
         System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
-        function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
-
 }

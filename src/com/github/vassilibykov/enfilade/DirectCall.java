@@ -4,14 +4,13 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.CallSite;
-import java.lang.invoke.ConstantCallSite;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 
 /**
- * Am implementation of an invokedynamic instruction for a call
- * expression whose function is a direct pointer at another function.
+ * An invokedynamic instruction for a call expression whose function is a direct
+ * pointer at another function. The target is encoded as an integer ID in the
+ * {@link FunctionRegistry}, passed as an extra bootstrapper argument.
  */
 public class DirectCall {
 
@@ -19,15 +18,15 @@ public class DirectCall {
         Opcodes.H_INVOKESTATIC,
         Compiler.internalClassName(DirectCall.class),
         "bootstrap",
-        MethodType.methodType(CallSite.class, MethodHandles.Lookup.class, String.class, MethodType.class, Integer.class).toMethodDescriptorString(),
+        MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class, Integer.class).toMethodDescriptorString(),
         false);
 
-    public static CallSite bootstrap(MethodHandles.Lookup lookupAtCallSite, String name, MethodType callSiteType, Integer targetId) {
-        Function target = DirectCallRegistry.INSTANCE.lookup(targetId);
+    @SuppressWarnings("unused") // called by generated code
+    public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
+        Function target = FunctionRegistry.INSTANCE.lookup(targetId);
         if (target == null) {
             throw new AssertionError("target function ID not found: " + targetId);
         }
-        // FIXME for now just binding to the compiled form in the nexus assumed to exist
-        return new ConstantCallSite(target.nexus.compiledForm);
+        return target.nexus.callSite(callSiteType);
     }
 }

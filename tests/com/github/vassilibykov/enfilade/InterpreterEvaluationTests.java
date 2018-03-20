@@ -103,6 +103,8 @@ public class InterpreterEvaluationTests {
 
 //    @Test
     public void timeFib() {
+        // Now that the compiler is enabled, this in fact doesn't time the interpreter
+        // as most of the computation is done in compiled mode.
         int n = 35;
         Function fibonacci = fibonacci();
         Object[] args = {n};

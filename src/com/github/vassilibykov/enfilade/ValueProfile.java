@@ -7,7 +7,7 @@ class ValueProfile {
     private long referenceCases = 0;
     private long intCases = 0;
 
-    public void recordValue(Object value) {
+    public synchronized void recordValue(Object value) {
         if (value instanceof Integer) {
             intCases++;
         } else {
@@ -15,23 +15,23 @@ class ValueProfile {
         }
     }
 
-    public long referenceCases() {
+    public synchronized long referenceCases() {
         return referenceCases;
     }
 
-    public long intCases() {
+    public synchronized long intCases() {
         return intCases;
     }
 
-    public ValueCategory valueCategory() {
+    public synchronized ValueCategory valueCategory() {
         return hasProfileData() && isPureInt() ? INT : REFERENCE;
     }
 
-    public boolean hasProfileData() {
+    public synchronized boolean hasProfileData() {
         return referenceCases > 0 || intCases > 0;
     }
 
-    public boolean isPureInt() {
+    public synchronized boolean isPureInt() {
         if (!hasProfileData()) {
             throw new AssertionError("no profile data");
         }

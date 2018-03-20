@@ -7,13 +7,13 @@ import static org.objectweb.asm.Opcodes.*;
 
 public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> {
 
-    public static final String BOOLEAN = "java/lang/Boolean";
-    public static final String INTEGER = "java/lang/Integer";
+    private static final String BOOLEAN = "java/lang/Boolean";
+    private static final String INTEGER = "java/lang/Integer";
 
-    public static final String TO_BOOL = "()Z";
-    public static final String INT_TO_INTEGER = "(I)Ljava/lang/Integer;";
-    public static final String OBJECT_TO_OBJECT = "(Ljava/lang/Object;)Ljava/lang/Object;";
-    public static final String OBJECT2_TO_OBJECT = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
+    private static final String TO_BOOL = "()Z";
+    private static final String INT_TO_INTEGER = "(I)Ljava/lang/Integer;";
+    private static final String OBJECT_TO_OBJECT = "(Ljava/lang/Object;)Ljava/lang/Object;";
+    private static final String OBJECT2_TO_OBJECT = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
 
     private final MethodVisitor writer;
 
@@ -23,7 +23,7 @@ public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> 
 
     @Override
     public ValueCategory visitCall0(Call0 call) {
-        Integer id = DirectCallRegistry.INSTANCE.lookup(call.function());
+        int id = FunctionRegistry.INSTANCE.lookup(call.function());
         writer.visitInvokeDynamicInsn(
             "call0",
             "()Ljava/lang/Object;",
@@ -35,7 +35,7 @@ public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> 
     @Override
     public ValueCategory visitCall1(Call1 call) {
         call.arg().accept(this);
-        Integer id = DirectCallRegistry.INSTANCE.lookup(call.function());
+        int id = FunctionRegistry.INSTANCE.lookup(call.function());
         writer.visitInvokeDynamicInsn(
             "call1",
             "(Ljava/lang/Object;)Ljava/lang/Object;",
@@ -48,7 +48,7 @@ public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> 
     public ValueCategory visitCall2(Call2 call) {
         call.arg1().accept(this);
         call.arg2().accept(this);
-        Integer id = DirectCallRegistry.INSTANCE.lookup(call.function());
+        int id = FunctionRegistry.INSTANCE.lookup(call.function());
         writer.visitInvokeDynamicInsn(
             "call2",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
