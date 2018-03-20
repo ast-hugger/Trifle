@@ -9,6 +9,30 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
+        public Object visitCall0(Call0 call) {
+            Object result = call.function().nexus.invoke();
+            call.profile.recordValue(result);
+            return result;
+        }
+
+        @Override
+        public Object visitCall1(Call1 call) {
+            Object arg = call.arg().accept(this);
+            Object result = call.function().nexus.invoke(arg);
+            call.profile.recordValue(result);
+            return result;
+        }
+
+        @Override
+        public Object visitCall2(Call2 call) {
+            Object arg1 = call.arg1().accept(this);
+            Object arg2 = call.arg2().accept(this);
+            Object result = call.function().nexus.invoke(arg1, arg2);
+            call.profile.recordValue(result);
+            return result;
+        }
+
+        @Override
         public Object visitLet(Let let) {
             Object value = let.initializer().accept(this);
             Var variable = let.variable();

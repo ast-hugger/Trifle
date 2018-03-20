@@ -7,13 +7,16 @@ import java.util.stream.Stream;
  * by the {@link ProfilingInterpreter}. Summarizes the findings of values
  * observed during the evaluation in expression node annotations.
  */
-class ValueAnalyzer implements Expression.Visitor<TypeCategory> {
+class ExpressionTypeAnalyzer implements Expression.Visitor<TypeCategory> {
 
-    static void analyze(Function function) {
-        function.body().accept(new ValueAnalyzer());
+    static TypeCategory analyze(Function function) {
+        Stream.of(function.arguments()).forEach(each -> each.accept(INSTANCE));
+        return function.body().accept(INSTANCE);
     }
 
-    private ValueAnalyzer() {}
+    private static final ExpressionTypeAnalyzer INSTANCE = new ExpressionTypeAnalyzer();
+
+    private ExpressionTypeAnalyzer() {}
 
     @Override
     public TypeCategory visitCall0(Call0 call) {
@@ -45,6 +48,7 @@ class ValueAnalyzer implements Expression.Visitor<TypeCategory> {
     @Override
     public TypeCategory visitLet(Let let) {
         let.initializer().accept(this);
+        let.variable().accept(this);
         return annotate(let.body(), let.body().accept(this));
     }
 

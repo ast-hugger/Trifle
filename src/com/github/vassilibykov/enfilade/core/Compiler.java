@@ -1,17 +1,27 @@
 package com.github.vassilibykov.enfilade.core;
 
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
+import java.util.stream.Stream;
+
+import static org.objectweb.asm.Opcodes.ACC_FINAL;
+import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
+import static org.objectweb.asm.Opcodes.ACC_STATIC;
+import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
  * Compiles a {@link Function} into a class with a single static method.
  */
 public class Compiler {
 
-    public static final String IMPL_METHOD_NAME = "run";
+    public static final String GENERIC_METHOD_NAME = "generic";
+    public static final String SPECIALIZED_METHOD_NAME = "specialized";
+    private static final String JAVA_LANG_OBJECT = "java/lang/Object";
+    private static final String GENERATED_CLASS_NAME_PREFIX = "$g$";
 
     /**
      * The access point: compile a function.
@@ -24,10 +34,12 @@ public class Compiler {
     public static class Result {
         private final String className;
         private final byte[] bytecode;
+        @Nullable private final MethodType specializationType; // set by generateSpecializedMethod()
 
-        private Result(String className, byte[] bytecode) {
+        private Result(String className, byte[] bytecode, @Nullable MethodType specializationType) {
             this.className = className;
             this.bytecode = bytecode;
+            this.specializationType = specializationType;
         }
 
         public String className() {
@@ -36,6 +48,11 @@ public class Compiler {
 
         public byte[] bytecode() {
             return bytecode;
+        }
+
+        @Nullable
+        public MethodType specializationType() {
+            return specializationType;
         }
     }
 
@@ -48,7 +65,7 @@ public class Compiler {
     }
 
     static String allocateClassName() {
-        return "$g$" + serial++;
+        return GENERATED_CLASS_NAME_PREFIX + serial++;
     }
 
     private static long serial = 0;
@@ -60,6 +77,8 @@ public class Compiler {
     private final Function function;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    private TypeCategory bodyType;
+    @Nullable private MethodType specializationType = null;
 
     private Compiler(Function function) {
         this.function = function;
@@ -67,45 +86,65 @@ public class Compiler {
     }
 
     public Result compile() {
-        ValueAnalyzer.analyze(function);
+        bodyType = ExpressionTypeAnalyzer.analyze(function);
         setupClassWriter();
         generateGenericMethod();
         if (function.profile.canBeSpecialized()) {
             generateSpecializedMethod();
         }
         classWriter.visitEnd();
-        return new Result(className, classWriter.toByteArray());
+        return new Result(className, classWriter.toByteArray(), specializationType);
     }
 
     private void setupClassWriter() {
         classWriter.visit(
             Opcodes.V9,
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER | Opcodes.ACC_FINAL,
+            ACC_PUBLIC | ACC_SUPER | ACC_FINAL,
             internalClassName(className),
             null,
-            "java/lang/Object",
+            JAVA_LANG_OBJECT,
             null);
     }
 
     private void generateGenericMethod() {
         MethodVisitor methodWriter = classWriter.visitMethod(
-            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
-            IMPL_METHOD_NAME,
-            methodDescriptor(function.arity()),
+            ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
+            GENERIC_METHOD_NAME,
+            MethodType.genericMethodType(function.arity()).toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        FunctionCodeGenerator functionCodeGenerator = new FunctionCodeGenerator(methodWriter);
-        function.body().accept(functionCodeGenerator);
+        FunctionCodeGeneratorGeneric generator = new FunctionCodeGeneratorGeneric(methodWriter);
+        TypeCategory resultType = function.body().accept(generator);
+        generator.writer.adaptType(resultType, TypeCategory.REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
     }
 
     private void generateSpecializedMethod() {
-        // TODO
+        specializationType = computeSpecializationType();
+        System.out.println("generating a specialized method of type " + specializationType);
+        MethodVisitor methodWriter = classWriter.visitMethod(
+            ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
+            SPECIALIZED_METHOD_NAME,
+            specializationType.toMethodDescriptorString(),
+            null, null);
+        methodWriter.visitCode();
+        FunctionCodeGeneratorSpecialized generator = new FunctionCodeGeneratorSpecialized(methodWriter);
+        function.body().accept(generator);
+        bodyType.match(new TypeCategory.VoidMatcher() {
+            public void ifReference() { methodWriter.visitInsn(Opcodes.ARETURN); }
+            public void ifInt() { methodWriter.visitInsn(Opcodes.IRETURN); }
+            public void ifBoolean() { methodWriter.visitInsn(Opcodes.IRETURN); }
+        });
+        methodWriter.visitMaxs(-1, -1);
+        methodWriter.visitEnd();
     }
 
-    private String methodDescriptor(int arity) {
-        return MethodType.genericMethodType(arity).toMethodDescriptorString();
+    private MethodType computeSpecializationType() {
+        Class<?>[] argClasses = Stream.of(function.arguments())
+            .map(var -> var.compilerAnnotation.valueCategory().representativeType())
+            .toArray(Class[]::new);
+        return MethodType.methodType(bodyType.representativeType(), argClasses);
     }
 }

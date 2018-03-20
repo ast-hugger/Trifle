@@ -7,21 +7,25 @@ import java.util.function.BinaryOperator;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
+/**
+ * A set of static factory methods for creating expressions in a readable form,
+ * especially in unit tests.
+ */
 public class ExpressionLanguage {
 
-    public static Function nullaryFunction(Supplier<Expression> bodyMaker) {
-        return Function.with(new Var[0], bodyMaker.get());
+    public static Function nullaryFunction(Supplier<Expression> bodyBuilder) {
+        return Function.with(new Var[0], bodyBuilder.get());
     }
 
-    public static Function unaryFunction(java.util.function.Function<Var, Expression> bodyMaker) {
+    public static Function unaryFunction(java.util.function.Function<Var, Expression> bodyBuilder) {
         Var arg = var("a1");
-        return Function.with(new Var[]{arg}, bodyMaker.apply(arg));
+        return Function.with(new Var[]{arg}, bodyBuilder.apply(arg));
     }
 
-    public static Function binaryFunction(BiFunction<Var, Var, Expression> bodyMaker) {
+    public static Function binaryFunction(BiFunction<Var, Var, Expression> bodyBuilder) {
         Var arg1 = var("a1");
         Var arg2 = var("a2");
-        return Function.with(new Var[]{arg1, arg2}, bodyMaker.apply(arg1, arg2));
+        return Function.with(new Var[]{arg1, arg2}, bodyBuilder.apply(arg1, arg2));
     }
 
     public static Call0 call(Function function) {
@@ -46,14 +50,6 @@ public class ExpressionLanguage {
 
     public static Let let(Var variable, Expression initializer, Expression body) {
         return new Let(variable, initializer, body);
-    }
-
-    public static Primitive1 primitive(UnaryOperator<Object> function, AtomicExpression argument) {
-        return new Primitive1.Wrapper(function, argument);
-    }
-
-    public static Primitive2 primitive(BinaryOperator<Object> function, AtomicExpression arg1, AtomicExpression arg2) {
-        return new Primitive2.Wrapper(function, arg1, arg2);
     }
 
     public static Add add(AtomicExpression arg1, AtomicExpression arg2) {

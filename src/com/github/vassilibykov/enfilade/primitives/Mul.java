@@ -1,11 +1,15 @@
 package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.AtomicExpression;
+import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.Primitive2;
 import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
-import org.objectweb.asm.Opcodes;
+
+import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
+import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
+import static org.objectweb.asm.Opcodes.IMUL;
 
 public class Mul extends Primitive2 {
     public Mul(@NotNull AtomicExpression argument1, @NotNull AtomicExpression argument2) {
@@ -23,15 +27,56 @@ public class Mul extends Primitive2 {
     }
 
     @Override
-    public void generate(GhostWriter writer) {
-        writer
-            .checkCast(Integer.class)
-            .invokeVirtual(Integer.class, "intValue", int.class)
-            .swap()
-            .checkCast(Integer.class)
-            .invokeVirtual(Integer.class, "intValue", int.class)
-            .swap();
-        writer.methodWriter().visitInsn(Opcodes.IMUL);
-        writer.invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
+    public TypeCategory generate(GhostWriter writer, TypeCategory arg1Category, TypeCategory arg2Category) {
+        return arg1Category.match(new TypeCategory.Matcher<TypeCategory>() {
+            public TypeCategory ifReference() {
+                return arg2Category.match(new TypeCategory.Matcher<TypeCategory>() {
+                    public TypeCategory ifReference() { // (Object, Object)
+                        writer.invokeStatic(Mul.class, "mul", int.class, Object.class, Object.class);
+                        return INT;
+                    }
+                    public TypeCategory ifInt() { // (Object, int)
+                        writer.invokeStatic(Mul.class, "mul", int.class, Object.class, int.class);
+                        return INT;
+                    }
+                    public TypeCategory ifBoolean() { // (Object, boolean)
+                        throw new CompilerError("MUL is not applicable to a boolean");
+                    }
+                });
+            }
+
+            public TypeCategory ifInt() {
+                return arg2Category.match(new TypeCategory.Matcher<TypeCategory>() {
+                    public TypeCategory ifReference() { // (int, Object)
+                        writer
+                            .adaptType(REFERENCE, INT)
+                            .withAsmVisitor(it -> it.visitInsn(IMUL));
+                        return INT;
+                    }
+                    public TypeCategory ifInt() { // (int, int)
+                        writer.withAsmVisitor(it -> it.visitInsn(IMUL));
+                        return INT;
+                    }
+                    public TypeCategory ifBoolean() {
+                        throw new CompilerError("MUL is not applicable to a boolean");
+                    }
+                });
+            }
+
+            public TypeCategory ifBoolean() {
+                throw new CompilerError("MUL is not applicable to a boolean");
+            }
+        });
+    }
+
+    public static int mul(Object a, Object b) {
+        return (Integer) a * (Integer) b;
+    }
+
+    public static int mul(Object a, int b) {
+        return (Integer) a * b;
+    }
+    public static int mul(int a, Object b) {
+        return a * (Integer) b;
     }
 }

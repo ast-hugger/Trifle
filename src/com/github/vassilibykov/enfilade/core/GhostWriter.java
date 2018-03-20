@@ -39,6 +39,55 @@ public class GhostWriter {
         return methodWriter;
     }
 
+    public GhostWriter adaptType(TypeCategory from, TypeCategory to) {
+        from.match(new TypeCategory.VoidMatcher() {
+            public void ifReference() {
+                to.match(new TypeCategory.VoidMatcher() {
+                    public void ifReference() {
+                        // nothing to do
+                    }
+                    public void ifInt() {
+                        checkCast(Integer.class);
+                        invokeVirtual(Integer.class, "intValue", int.class);
+                    }
+                    public void ifBoolean() {
+                        checkCast(Boolean.class);
+                        invokeVirtual(Boolean.class, "booleanValue", boolean.class);
+                    }
+                });
+            }
+            public void ifInt() {
+                to.match(new TypeCategory.VoidMatcher() {
+                    public void ifReference() {
+                        invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
+//                        checkCast(Object.class);
+                    }
+                    public void ifInt() {
+                        // nothing to do
+                    }
+                    public void ifBoolean() {
+                        throw new CompilerError("cannot adapt int to boolean");
+                    }
+                });
+            }
+            public void ifBoolean() {
+                to.match(new TypeCategory.VoidMatcher() {
+                    public void ifReference() {
+                        invokeStatic(Boolean.class, "valueOf", Boolean.class, boolean.class);
+//                        checkCast(Object.class);
+                    }
+                    public void ifInt() {
+                        throw new CompilerError("cannot adapt boolean to int");
+                    }
+                    public void ifBoolean() {
+                        // nothing to do
+                    }
+                });
+            }
+        });
+        return this;
+    }
+
     public GhostWriter checkCast(Class<?> castClass) {
         methodWriter.visitTypeInsn(CHECKCAST, internalClassName(castClass));
         return this;
@@ -165,7 +214,12 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter withLabelAtTheEnd(Consumer<Label> emitter) {
+    public GhostWriter withAsmVisitor(Consumer<MethodVisitor> action) {
+        action.accept(methodWriter);
+        return this;
+    }
+
+    public GhostWriter withLabelAtEnd(Consumer<Label> emitter) {
         Label label = new Label();
         emitter.accept(label);
         methodWriter.visitLabel(label);

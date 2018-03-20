@@ -1,5 +1,8 @@
 package com.github.vassilibykov.enfilade.core;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,6 +16,7 @@ public class GeneratedClassLoader extends ClassLoader {
 
     public void add(Compiler.Result result) {
         compilerResultsByName.put(result.className(), result);
+        dumpClassFile("dumped", result.bytecode());
     }
 
     @Override
@@ -28,5 +32,16 @@ public class GeneratedClassLoader extends ClassLoader {
             loadedClassesByName.put(name, loadedClass);
         }
         return loadedClass;
+    }
+
+    private void dumpClassFile(String name, byte[] bytecode) {
+        File classFile = new File(name + ".class");
+        try {
+            FileOutputStream classStream = new FileOutputStream(classFile);
+            classStream.write(bytecode);
+            classStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

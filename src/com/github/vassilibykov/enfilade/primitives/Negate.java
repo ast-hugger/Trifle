@@ -1,11 +1,15 @@
 package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.AtomicExpression;
+import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.Primitive1;
 import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
-import org.objectweb.asm.Opcodes;
+
+import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
+import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
+import static org.objectweb.asm.Opcodes.ISUB;
 
 public class Negate extends Primitive1 {
     public Negate(@NotNull AtomicExpression argument) {
@@ -14,7 +18,7 @@ public class Negate extends Primitive1 {
 
     @Override
     public TypeCategory valueCategory() {
-        return TypeCategory.INT;
+        return INT;
     }
 
     @Override
@@ -23,13 +27,26 @@ public class Negate extends Primitive1 {
     }
 
     @Override
-    public void generate(GhostWriter writer) {
-        writer
-            .checkCast(Integer.class)
-            .invokeVirtual(Integer.class, "intValue", int.class)
-            .loadInt(0)
-            .swap();
-        writer.methodWriter().visitInsn(Opcodes.ISUB);
-        writer.invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
+    public TypeCategory generate(GhostWriter writer, TypeCategory argCategory) {
+        return argCategory.match(new TypeCategory.Matcher<TypeCategory>() {
+            public TypeCategory ifReference() {
+                writer
+                    .adaptType(REFERENCE, INT)
+                    .loadInt(0)
+                    .swap()
+                    .withAsmVisitor(it -> it.visitInsn(ISUB));
+                return INT;
+            }
+            public TypeCategory ifInt() {
+                writer
+                    .loadInt(0)
+                    .swap()
+                    .withAsmVisitor(it -> it.visitInsn(ISUB));
+                return INT;
+            }
+            public TypeCategory ifBoolean() {
+                throw new CompilerError("NEGATE is not applicable to a boolean");
+            }
+        });
     }
 }

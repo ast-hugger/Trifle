@@ -1,5 +1,7 @@
 package com.github.vassilibykov.enfilade.core;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -44,6 +46,8 @@ class Nexus {
     private final Function function;
     private final VolatileCallSite callSite;
     private final MethodHandle callSiteInvoker;
+    @Nullable private MethodType specializationType;
+    @Nullable private VolatileCallSite specializationCallSite;
     private State state;
 
     Nexus(Function function) {
@@ -60,9 +64,15 @@ class Nexus {
      * function, so invokedynamics with an incompatible signature will fail at
      * the bootstrap time unless special measures are taken by the bootstrapper.
      */
-    public CallSite callSite(MethodType requiredType) {
+    public CallSite callSite(MethodType requestedType) {
         // At the moment everything is generically typed so no adaptation is necessary.
-        return callSite;
+        if (requestedType.equals(specializationType)) {
+            return specializationCallSite;
+        } else if (requestedType.equals(callSite.type())){
+            return callSite;
+        } else {
+            throw new UnsupportedOperationException("partial specialization is not yet supported");
+        }
     }
 
     private MethodHandle profilingInterpreterInvoker() {
@@ -134,9 +144,24 @@ class Nexus {
         }
     }
 
-    /*internal*/ synchronized void setCompiledForm(MethodHandle newCompiledForm) {
-        this.state = State.COMPILED;
-        this.callSite.setTarget(newCompiledForm);
+    /*internal*/ synchronized void updateCompiledForm(
+        MethodHandle genericMethod,
+        @Nullable MethodType specializationType,
+        @Nullable MethodHandle specializedMethod)
+    {
+        state = State.COMPILED;
+        this.specializationType = specializationType;
+        if (specializedMethod == null) {
+            callSite.setTarget(genericMethod);
+            // FIXME properly handle specializationCallSite if present
+        } else {
+            callSite.setTarget(makeSpecializationGuard(genericMethod, specializedMethod, specializationType));
+            if (specializationCallSite == null) {
+                specializationCallSite = new VolatileCallSite(specializedMethod);
+            } else {
+                specializationCallSite.setTarget(specializedMethod);
+            }
+        }
     }
 
     /*
@@ -159,10 +184,54 @@ class Nexus {
         classLoader.add(result);
         try {
             Class<?> implClass = classLoader.loadClass(result.className());
-            MethodHandle compiledMethod = MethodHandles.lookup()
-                .findStatic(implClass, Compiler.IMPL_METHOD_NAME, MethodType.genericMethodType(function.arity()));
-            setCompiledForm(compiledMethod);
+            MethodHandle genericMethod = MethodHandles.lookup()
+                .findStatic(implClass, Compiler.GENERIC_METHOD_NAME, MethodType.genericMethodType(function.arity()));
+            MethodType specializedType = result.specializationType();
+            MethodHandle specializedMethod = null;
+            if (specializedType != null) {
+                specializedMethod = MethodHandles.lookup()
+                    .findStatic(implClass, Compiler.SPECIALIZED_METHOD_NAME, specializedType);
+            }
+            updateCompiledForm(genericMethod, specializedType, specializedMethod);
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private MethodHandle makeSpecializationGuard(MethodHandle generic, MethodHandle specialized, MethodType type) {
+        MethodHandle checker = CHECK.bindTo(type);
+        return MethodHandles.guardWithTest(
+            checker.asCollector(Object[].class, type.parameterCount()),
+            generify(specialized),
+            generic);
+    }
+
+    /**
+     * Take a method handle of a type involving some non-Object types and wrap
+     * it so that it accepts and returns all Objects.
+     */
+    private MethodHandle generify(MethodHandle specialization) {
+        return specialization.asType(MethodType.genericMethodType(specialization.type().parameterCount()));
+    }
+
+    public static boolean checkSpecializationApplicability(MethodType specialization, Object[] args) {
+        for (int i = 0; i < args.length; i++) {
+            Class<?> type = specialization.parameterType(i);
+            Object arg = args[i];
+            if (type.equals(int.class) && !(arg instanceof Integer)) return false;
+            if (type.equals(boolean.class) && !(arg instanceof Boolean)) return false;
+        }
+        return true;
+    }
+    private static final MethodHandle CHECK;
+
+    static {
+        try {
+            CHECK = MethodHandles.lookup().findStatic(
+                Nexus.class,
+                "checkSpecializationApplicability",
+                MethodType.methodType(boolean.class, MethodType.class, Object[].class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
     }

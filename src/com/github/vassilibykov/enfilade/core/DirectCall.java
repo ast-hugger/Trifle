@@ -9,7 +9,7 @@ import java.lang.invoke.MethodType;
 
 /**
  * An invokedynamic instruction for a call expression whose function is a direct
- * pointer at another function. The target is encoded as an integer ID in the
+ * pointer to another function. The target is encoded as an integer ID in the
  * {@link FunctionRegistry}, passed as an extra bootstrapper argument.
  */
 public class DirectCall {
