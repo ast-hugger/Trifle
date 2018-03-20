@@ -1,70 +1,63 @@
 package com.github.vassilibykov.enfilade;
 
-import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
-import static org.objectweb.asm.Opcodes.*;
+import java.lang.invoke.MethodType;
 
-public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> {
+import static com.github.vassilibykov.enfilade.TypeCategory.REFERENCE;
 
-    private static final String BOOLEAN = "java/lang/Boolean";
-    private static final String INTEGER = "java/lang/Integer";
+class FunctionCodeGenerator implements Expression.Visitor<Void> {
+    protected final GhostWriter writer;
 
-    private static final String TO_BOOL = "()Z";
-    private static final String INT_TO_INTEGER = "(I)Ljava/lang/Integer;";
-    private static final String OBJECT_TO_OBJECT = "(Ljava/lang/Object;)Ljava/lang/Object;";
-    private static final String OBJECT2_TO_OBJECT = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
-
-    private final MethodVisitor writer;
-
-    public FunctionCodeGenerator(MethodVisitor writer) {
-        this.writer = writer;
+    FunctionCodeGenerator(MethodVisitor visitor) {
+        this.writer = new GhostWriter(visitor);
     }
 
     @Override
-    public ValueCategory visitCall0(Call0 call) {
+    public Void visitCall0(Call0 call) {
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        writer.visitInvokeDynamicInsn(
-            "call0",
-            "()Ljava/lang/Object;",
+        writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
+            "call0",
+            MethodType.methodType(Object.class),
             id);
         return null;
     }
 
     @Override
-    public ValueCategory visitCall1(Call1 call) {
+    public Void visitCall1(Call1 call) {
         call.arg().accept(this);
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        writer.visitInvokeDynamicInsn(
-            "call1",
-            "(Ljava/lang/Object;)Ljava/lang/Object;",
+        writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
+            "call1",
+            MethodType.methodType(Object.class, Object.class),
             id);
         return null;
     }
 
     @Override
-    public ValueCategory visitCall2(Call2 call) {
+    public Void visitCall2(Call2 call) {
         call.arg1().accept(this);
         call.arg2().accept(this);
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        writer.visitInvokeDynamicInsn(
-            "call2",
-            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+        writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
+            "call2",
+            MethodType.methodType(Object.class, Object.class, Object.class),
             id);
         return null;
     }
 
     @Override
-    public ValueCategory visitConst(Const aConst) {
+    public Void visitConst(Const aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
-            generateLoadInt((Integer) value);
-            writer.visitMethodInsn(INVOKESTATIC, INTEGER, "valueOf", INT_TO_INTEGER, false);
+            writer
+                .loadInt((Integer) value)
+                .invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
         } else if (value instanceof String) {
-            writer.visitLdcInsn(value);
+            writer.loadString((String) value);
         } else {
             throw new UnsupportedOperationException("unsupported constant type");
         }
@@ -72,98 +65,83 @@ public class FunctionCodeGenerator implements Expression.Visitor<ValueCategory> 
     }
 
     @Override
-    public ValueCategory visitIf(If anIf) {
+    public Void visitIf(If anIf) {
         anIf.condition().accept(this);
-        writer.visitTypeInsn(CHECKCAST, BOOLEAN);
-        writer.visitMethodInsn(INVOKEVIRTUAL, BOOLEAN, "booleanValue", TO_BOOL, false);
-        Label elseStart = new Label();
-        Label end = new Label();
-        writer.visitJumpInsn(IFEQ, elseStart);
-        anIf.trueBranch().accept(this);
-        writer.visitJumpInsn(GOTO, end);
-        writer.visitLabel(elseStart);
-        anIf.falseBranch().accept(this);
-        writer.visitLabel(end);
+        writer
+            .checkCast(Boolean.class)
+            .invokeVirtual(Boolean.class, "booleanValue", boolean.class);
+        writer.withLabelAtTheEnd(end -> {
+            writer.withLabelAtTheEnd(elseStart -> {
+                writer.jumpIf0(elseStart);
+                anIf.trueBranch().accept(this);
+                writer.jump(end);
+            });
+            anIf.falseBranch().accept(this);
+        });
         return null;
     }
 
     @Override
-    public ValueCategory visitLet(Let let) {
+    public Void visitLet(Let let) {
         let.initializer().accept(this);
-        writer.visitVarInsn(ASTORE, let.variable().index());
+        writer.storeLocal(REFERENCE, let.variable().index());
         let.body().accept(this);
         return null;
     }
 
     @Override
-    public ValueCategory visitPrimitive1(Primitive1 primitive1) {
+    public Void visitPrimitive1(Primitive1 primitive1) {
         primitive1.argument().accept(this);
-        String implClassName = Compiler.internalClassName(primitive1.getClass());
-        writer.visitMethodInsn(INVOKESTATIC, implClassName, "staticApply", OBJECT_TO_OBJECT, false);
+        primitive1.generate(writer);
+//        writer.invokeStatic(primitive1.getClass(), "staticApply", Object.class, Object.class);
         return null;
     }
 
     @Override
-    public ValueCategory visitPrimitive2(Primitive2 primitive2) {
+    public Void visitPrimitive2(Primitive2 primitive2) {
         primitive2.argument1().accept(this);
         primitive2.argument2().accept(this);
-        String implClassName = Compiler.internalClassName(primitive2.getClass());
-        writer.visitMethodInsn(INVOKESTATIC, implClassName, "staticApply", OBJECT2_TO_OBJECT, false);
+        primitive2.generate(writer);
+//        writer.invokeStatic(primitive2.getClass(), "staticApply", Object.class, Object.class, Object.class);
         return null;
     }
 
     @Override
-    public ValueCategory visitProg(Prog prog) {
-        if (prog.expressions().length == 0) {
-            writer.visitInsn(NULL);
+    public Void visitProg(Prog prog) {
+        Expression[] expressions = prog.expressions();
+        if (expressions.length == 0) {
+            writer.loadNull();
             return null;
         }
         int i;
-        for (i = 0; i < prog.expressions().length - 1; i++) {
-            Expression expr = prog.expressions()[i];
+        for (i = 0; i < expressions.length - 1; i++) {
+            Expression expr = expressions[i];
             expr.accept(this);
-            writer.visitInsn(POP);
+            writer.pop();
         }
-        prog.expressions()[i].accept(this);
+        expressions[i].accept(this);
         return null;
     }
 
     @Override
-    public ValueCategory visitRet(Ret ret) {
+    public Void visitRet(Ret ret) {
         ret.value().accept(this);
-        writer.visitInsn(ARETURN);
+        writer.ret(REFERENCE);
         return null;
     }
 
     @Override
-    public ValueCategory visitSetVar(SetVar set) {
+    public Void visitSetVar(SetVar set) {
         set.value().accept(this);
-        writer.visitInsn(DUP);
-        writer.visitVarInsn(ASTORE, set.variable().index());
+        writer
+            .dup()
+            .storeLocal(REFERENCE, set.variable().index());
         return null;
     }
 
     @Override
-    public ValueCategory visitVar(Var var) {
-//        ValueCategory category = var.compilerAnnotation().valueCategory();
-        writer.visitVarInsn(ALOAD, var.index());
+    public Void visitVar(Var var) {
+        writer.loadLocal(REFERENCE, var.index());
         return null;
     }
-
-    /**
-     * Using the supplied MethodVisitor, pick and generate an optimal
-     * instruction to load the specified int value.
-     */
-    private void generateLoadInt(int value) {
-        if (0 <= value && value <= 5) {
-            writer.visitInsn(SPECIAL_LOAD_INT_OPCODES[value]);
-        } else if (-128 <= value && value <= 127) {
-            writer.visitIntInsn(BIPUSH, value);
-        } else {
-            writer.visitIntInsn(SIPUSH, value);
-        }
-    }
-
-    private static final int[] SPECIAL_LOAD_INT_OPCODES = new int[] {
-        ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
 }

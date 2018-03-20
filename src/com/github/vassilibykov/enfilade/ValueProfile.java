@@ -1,7 +1,7 @@
 package com.github.vassilibykov.enfilade;
 
-import static com.github.vassilibykov.enfilade.ValueCategory.INT;
-import static com.github.vassilibykov.enfilade.ValueCategory.REFERENCE;
+import static com.github.vassilibykov.enfilade.TypeCategory.INT;
+import static com.github.vassilibykov.enfilade.TypeCategory.REFERENCE;
 
 class ValueProfile {
     private long referenceCases = 0;
@@ -23,7 +23,7 @@ class ValueProfile {
         return intCases;
     }
 
-    public synchronized ValueCategory valueCategory() {
+    public synchronized TypeCategory valueCategory() {
         return hasProfileData() && isPureInt() ? INT : REFERENCE;
     }
 

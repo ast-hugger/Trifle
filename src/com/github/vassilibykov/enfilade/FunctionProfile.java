@@ -1,5 +1,7 @@
 package com.github.vassilibykov.enfilade;
 
+import java.util.stream.Stream;
+
 /**
  * Counts function invocations and records observed types of function
  * arguments and other locals.
@@ -24,5 +26,9 @@ public class FunctionProfile {
         for (int i = 0; i < methodArity; i++) {
             methodArguments[i].profile.recordValue(frame[i]);
         }
+    }
+
+    public boolean canBeSpecialized() {
+        return Stream.of(methodArguments).anyMatch(some -> some.profile.valueCategory() != TypeCategory.REFERENCE);
     }
 }

@@ -15,6 +15,16 @@ public abstract class Primitive1 extends AtomicExpression {
         }
 
         @Override
+        public TypeCategory valueCategory() {
+            return TypeCategory.REFERENCE;
+        }
+
+        @Override
+        public void generate(GhostWriter writer) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Object apply(Object arg) {
             return function.apply(arg);
         }
@@ -30,7 +40,11 @@ public abstract class Primitive1 extends AtomicExpression {
         return argument;
     }
 
+    public abstract TypeCategory valueCategory();
+
     public abstract Object apply(Object arg);
+
+    public abstract void generate(GhostWriter writer);
 
     @Override
     public <T> T accept(Visitor<T> visitor) {

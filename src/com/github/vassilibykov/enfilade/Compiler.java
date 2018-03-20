@@ -67,8 +67,12 @@ public class Compiler {
     }
 
     public Result compile() {
+        ValueAnalyzer.analyze(function);
         setupClassWriter();
-        generateMethod();
+        generateGenericMethod();
+        if (function.profile.canBeSpecialized()) {
+            generateSpecializedMethod();
+        }
         classWriter.visitEnd();
         return new Result(className, classWriter.toByteArray());
     }
@@ -83,7 +87,7 @@ public class Compiler {
             null);
     }
 
-    private void generateMethod() {
+    private void generateGenericMethod() {
         MethodVisitor methodWriter = classWriter.visitMethod(
             Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
             IMPL_METHOD_NAME,
@@ -95,6 +99,10 @@ public class Compiler {
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
+    }
+
+    private void generateSpecializedMethod() {
+        // TODO
     }
 
     private String methodDescriptor(int arity) {
