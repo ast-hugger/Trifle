@@ -2,6 +2,6 @@
   <copyright>
     <option name="keyword" value="Copyright .* Vassili Bykov .*" />
     <option name="myName" value="Apache" />
-    <option name="notice" value="Copyright (c) &amp;#36;today.year Vassili Bykov. Licensed under Apache License Version 2.0." />
+    <option name="notice" value="Copyright (c) &amp;#36;today.year Vassili Bykov. Licensed under the Apache License, Version 2.0." />
   </copyright>
 </component>
