@@ -4,6 +4,9 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * The classic {@code let} form, introducing a variable and binding its value.
+ */
 public class Let extends ComplexExpression {
     @NotNull private final Var variable;
     @NotNull private final Expression initializer;

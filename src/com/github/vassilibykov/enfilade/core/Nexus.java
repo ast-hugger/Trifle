@@ -12,8 +12,8 @@ import java.lang.invoke.VolatileCallSite;
 
 /**
  * A nexus of function representation and execution. Manages function
- * compilation, keeps track of any existing compiled form(s) of the function and
- * able to execute the function in either interpreted or compiled mode.
+ * compilation, keeps track of any existing compiled form(s) of the function,
+ * and is able to execute the function in either interpreted or compiled mode.
  */
 class Nexus {
     /** The number of times a function is profiled before it's queued for compilation. */

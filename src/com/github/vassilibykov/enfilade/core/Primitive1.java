@@ -4,6 +4,9 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * A call of a unary primitive.
+ */
 public abstract class Primitive1 extends AtomicExpression {
     @NotNull
     private final AtomicExpression argument;

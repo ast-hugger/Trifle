@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * An annotation associated with an expression by the compiler analyzer.
  * Summarizes the values the expression can evaluate to, as observed by the
- * profiling interpreter.
+ * profiling interpreter. In future may hold onto more information.
  */
 public class CompilerAnnotation {
     @NotNull private final TypeCategory typeCategory;

@@ -1,7 +1,8 @@
-## Timings
+## Times
 
-The times below are milliseconds to compute fibonacci(35). Times for Pharo and
-Enfilade are after enough warmup runs (20 for Enfilade) to get stable timings.
+The times below are milliseconds to compute fibonacci(35). Times for Enfilade
+are after enough warmup runs (20, though 10 might be enough) to get stable timings.
+Pharo/Cog doesn't seem to benefit from warmup.
 
 * 850: Enfilade, profiling evaluator
 * 120: Pharo, 64-bit Cog, March05 2018 build
@@ -12,7 +13,7 @@ Enfilade are after enough warmup runs (20 for Enfilade) to get stable timings.
 * 35: gcc -O2
 * 21: gcc -O3
 
-## Enfilade function definition
+## Benchmark function definition in Enfilade
 
     static Function fibonacci() {
         Var n = var("n");

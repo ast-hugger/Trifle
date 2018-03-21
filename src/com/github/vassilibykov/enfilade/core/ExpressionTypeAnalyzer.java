@@ -71,7 +71,7 @@ class ExpressionTypeAnalyzer implements Expression.Visitor<TypeCategory> {
             return TypeCategory.REFERENCE;
         } else {
             Stream.of(expressions).forEach(each -> each.accept(this));
-            return expressions[expressions.length - 1].compilerAnnotation().valueCategory();
+            return expressions[expressions.length - 1].compilerAnnotation.valueCategory();
         }
     }
 

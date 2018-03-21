@@ -4,6 +4,9 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * The conditional.
+ */
 public class If extends ComplexExpression {
     @NotNull private final AtomicExpression condition;
     @NotNull private final Expression trueBranch;

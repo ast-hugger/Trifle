@@ -4,6 +4,14 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * A function call. This is an abstract superclass of concrete subclasses
+ * for specific function arities.
+ *
+ * <p>The target of a call is currently a direct pointer to the callee. In the
+ * future this can easily be relaxed to a more pluggable policy to support
+ * late-bound calls.
+ */
 public abstract class Call extends ComplexExpression {
     @NotNull private Function function;
     /*internal*/ final ValueProfile profile = new ValueProfile();

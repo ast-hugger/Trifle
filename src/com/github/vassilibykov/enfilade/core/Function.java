@@ -4,6 +4,14 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * A function is the executable unit of code in Enfilade. Execution is launched
+ * using the {@link #invoke} family of methods.
+ */
 public class Function {
 
     public static Function with(Var[] arguments, Expression body) {
@@ -14,11 +22,22 @@ public class Function {
         return new Function(arguments, bodyMaker);
     }
 
-    private static class VariableIndexer extends Expression.VisitorSkeleton<Void> {
+    /**
+     * Assigns indices to all let-bound variables in a function body. Also
+     * validates the use of variables, checking that any variable reference is
+     * either to a function argument or to a let-bound variable currently in
+     * scope.
+     */
+    private class VariableIndexer extends Expression.VisitorSkeleton<Void> {
         private int index;
+        private final Set<Var> scope = new HashSet<>();
 
-        private VariableIndexer(int index) {
-            this.index = index;
+        private VariableIndexer() {
+            for (int i = 0; i < arguments.length; i++) {
+                arguments[i].index = i;
+            }
+            this.index = arguments.length;
+            scope.addAll(Arrays.asList(arguments));
         }
 
         public int index() {
@@ -29,22 +48,20 @@ public class Function {
         public Void visitLet(Let let) {
             Var var = let.variable();
             if (var.index() >= 0) {
-                // This happening is the sign of malformed expression, with the let variable
-                // reused as a let variable or a function argument.
                 throw new AssertionError("variable reuse detected: " + var);
             }
-            var.setIndex(index++);
-            return super.visitLet(let);
+            var.index = index++;
+            let.initializer().accept(this);
+            scope.add(var);
+            let.body().accept(this);
+            scope.remove(var);
+            return null;
         }
-    }
 
-    private static class VariableIndexValidator extends Expression.VisitorSkeleton<Void> {
         @Override
         public Void visitVar(Var var) {
-            if (var.index() < 0) {
-                // This is an undeclared variable: used in an expression but not listed
-                // as a function argument or a let binding.
-                throw new AssertionError("undeclared variable: " + var);
+            if (!scope.contains(var)) {
+                throw new AssertionError("variable used outside of its scope: " + var);
             }
             return null;
         }
@@ -93,13 +110,8 @@ public class Function {
     }
 
     private int computeLocalsCount() {
-        int i;
-        for (i = 0; i < arguments.length; i++) {
-            arguments[i].setIndex(i);
-        }
-        VariableIndexer indexer = new VariableIndexer(i);
+        VariableIndexer indexer = new VariableIndexer();
         body.accept(indexer);
-        body.accept(new VariableIndexValidator());
         return indexer.index();
     }
 

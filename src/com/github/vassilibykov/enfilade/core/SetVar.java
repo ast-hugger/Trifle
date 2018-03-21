@@ -4,6 +4,10 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * An expression mutating a variable to have a new value. The new value, which
+ * is also the value of this expression, must be an atomic expression.
+ */
 public class SetVar extends ComplexExpression {
     @NotNull private final Var variable;
     @NotNull private final AtomicExpression value;

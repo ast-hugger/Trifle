@@ -4,6 +4,30 @@ package com.github.vassilibykov.enfilade.core;
 
 import java.util.stream.Stream;
 
+/**
+ * A node of an expression tree accepted by Enfilade as input.
+ *
+ * <p>Expression structure is modeled after A-normal forms, with any specific
+ * expression classified as either atomic or complex. Complex expressions are
+ * not allowed as subexpression of certain expressions. For example, an argument
+ * of a function or a primitive call must be atomic. Because function calls are
+ * complex, a function call may not appear as an argument of another function
+ * call. In contrast, a primitive call is atomic so an argument of a primitive
+ * call may be another primitive call. (So atomicity should not be confused with
+ * being a terminal of the expression grammar).
+ *
+ * <p>This structure (statically verifiable by the type system!) of the input
+ * language has beneficial properties for addressing some of the key issues
+ * in adaptively translating these expressions into the JVM code.
+ *
+ * <p>For the theoretical exposition of A-normal forms see <em>The Essence of
+ * Compiling with Continuations</em> by C. Flanagan et al, 1993.
+ *
+ * <p><a href="http://matt.might.net/articles/a-normalization/">This blog post by Matt Might</a>
+ * gives a more practical explanation.</p>
+ *
+ * @author Vassili Bykov
+ */
 public abstract class Expression {
 
     public interface Visitor<T> {
@@ -105,11 +129,7 @@ public abstract class Expression {
 
     /*internal*/ CompilerAnnotation compilerAnnotation;
 
-    public CompilerAnnotation compilerAnnotation() {
-        return compilerAnnotation;
-    }
-
-    public void setCompilerAnnotation(CompilerAnnotation compilerAnnotation) {
+    void setCompilerAnnotation(CompilerAnnotation compilerAnnotation) {
         this.compilerAnnotation = compilerAnnotation;
     }
 
