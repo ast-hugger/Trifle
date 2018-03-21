@@ -54,7 +54,7 @@ public class Sub extends Primitive2 {
                         return INT;
                     }
                     public TypeCategory ifInt() { // (int, int)
-                        writer.withAsmVisitor(it -> it.visitInsn(ISUB));
+                        writer.asm().visitInsn(ISUB);
                         return INT;
                     }
                     public TypeCategory ifBoolean() {

@@ -4,9 +4,10 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
-public class Ret extends AtomicExpression {
-    // TODO is it atomic or complex? theoretically it's probably complex but in practice we might want to consider it atomic
-
+/**
+ * An explicit return (a bypass in the normal chain of continuations).
+ */
+public class Ret extends ComplexExpression {
     @NotNull private final AtomicExpression value;
 
     Ret(@NotNull AtomicExpression value) {

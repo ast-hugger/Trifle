@@ -52,11 +52,11 @@ public class Mul extends Primitive2 {
                     public TypeCategory ifReference() { // (int, Object)
                         writer
                             .adaptType(REFERENCE, INT)
-                            .withAsmVisitor(it -> it.visitInsn(IMUL));
+                            .asm().visitInsn(IMUL);
                         return INT;
                     }
                     public TypeCategory ifInt() { // (int, int)
-                        writer.withAsmVisitor(it -> it.visitInsn(IMUL));
+                        writer.asm().visitInsn(IMUL);
                         return INT;
                     }
                     public TypeCategory ifBoolean() {

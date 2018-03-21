@@ -6,14 +6,28 @@ import com.github.vassilibykov.enfilade.primitives.LessThan;
 import org.objectweb.asm.MethodVisitor;
 
 import java.lang.invoke.MethodType;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOLEAN;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 
 class FunctionCodeGeneratorSpecialized extends FunctionCodeGeneratorGeneric {
+    private final Deque<TypeCategory> continuationTypes = new ArrayDeque<>();
+
     FunctionCodeGeneratorSpecialized(MethodVisitor writer) {
         super(writer);
+    }
+
+    TypeCategory generate(Function function) {
+        TypeCategory observedReturnType = function.profile.result().valueCategory();
+        continuationTypes.push(observedReturnType);
+        function.body().accept(this);
+        continuationTypes.pop();
+        return observedReturnType;
+    }
+
+    private TypeCategory currentContinuationType() {
+        return continuationTypes.peek();
     }
 
     @Override

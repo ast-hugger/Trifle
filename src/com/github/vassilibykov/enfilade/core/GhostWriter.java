@@ -31,14 +31,14 @@ public class GhostWriter {
         Instance
      */
 
-    private final MethodVisitor methodWriter;
+    private final MethodVisitor asmWriter;
 
     GhostWriter(MethodVisitor methodWriter) {
-        this.methodWriter = methodWriter;
+        this.asmWriter = methodWriter;
     }
 
-    public MethodVisitor methodWriter() {
-        return methodWriter;
+    public MethodVisitor asm() {
+        return asmWriter;
     }
 
     public GhostWriter adaptType(TypeCategory from, TypeCategory to) {
@@ -91,17 +91,17 @@ public class GhostWriter {
     }
 
     public GhostWriter checkCast(Class<?> castClass) {
-        methodWriter.visitTypeInsn(CHECKCAST, internalClassName(castClass));
+        asmWriter.visitTypeInsn(CHECKCAST, internalClassName(castClass));
         return this;
     }
 
     public GhostWriter dup() {
-        methodWriter.visitInsn(DUP);
+        asmWriter.visitInsn(DUP);
         return this;
     }
 
     public GhostWriter invokeDynamic(Handle bootstrapper, String name, MethodType callSiteType, Object... bootstrapperArgs) {
-        methodWriter.visitInvokeDynamicInsn(
+        asmWriter.visitInvokeDynamicInsn(
             name,
             callSiteType.toMethodDescriptorString(),
             bootstrapper,
@@ -110,7 +110,7 @@ public class GhostWriter {
     }
 
     public GhostWriter invokeStatic(Class<?> owner, String methodName, Class<?> returnType, Class<?>... argTypes) {
-        methodWriter.visitMethodInsn(
+        asmWriter.visitMethodInsn(
             INVOKESTATIC,
             internalClassName(owner),
             methodName,
@@ -120,7 +120,7 @@ public class GhostWriter {
     }
 
     public GhostWriter invokeVirtual(Class<?> owner, String methodName, Class<?> returnType, Class<?>... argTypes) {
-        methodWriter.visitMethodInsn(
+        asmWriter.visitMethodInsn(
             INVOKEVIRTUAL,
             internalClassName(owner),
             methodName,
@@ -130,12 +130,12 @@ public class GhostWriter {
     }
 
     public GhostWriter jump(Label label) {
-        methodWriter.visitJumpInsn(GOTO, label);
+        asmWriter.visitJumpInsn(GOTO, label);
         return this;
     }
 
     public GhostWriter jumpIf0(Label label) {
-        methodWriter.visitJumpInsn(IFEQ, label);
+        asmWriter.visitJumpInsn(IFEQ, label);
         return this;
     }
 
@@ -145,11 +145,11 @@ public class GhostWriter {
      */
     public GhostWriter loadInt(int value) {
         if (0 <= value && value <= 5) {
-            methodWriter.visitInsn(SPECIAL_LOAD_INT_OPCODES[value]);
+            asmWriter.visitInsn(SPECIAL_LOAD_INT_OPCODES[value]);
         } else if (-128 <= value && value <= 127) {
-            methodWriter.visitIntInsn(BIPUSH, value);
+            asmWriter.visitIntInsn(BIPUSH, value);
         } else {
-            methodWriter.visitIntInsn(SIPUSH, value);
+            asmWriter.visitIntInsn(SIPUSH, value);
         }
         return this;
     }
@@ -157,10 +157,10 @@ public class GhostWriter {
     public GhostWriter loadLocal(TypeCategory category, int index) {
         switch (category) {
             case REFERENCE:
-                methodWriter.visitVarInsn(ALOAD, index);
+                asmWriter.visitVarInsn(ALOAD, index);
                 break;
             case INT:
-                methodWriter.visitVarInsn(ILOAD, index);
+                asmWriter.visitVarInsn(ILOAD, index);
                 break;
             default:
                 throw new IllegalArgumentException("unrecognized type category");
@@ -169,27 +169,27 @@ public class GhostWriter {
     }
 
     public GhostWriter loadNull() {
-        methodWriter.visitInsn(ACONST_NULL);
+        asmWriter.visitInsn(ACONST_NULL);
         return this;
     }
 
     public GhostWriter loadString(String string) {
-        methodWriter.visitLdcInsn(string);
+        asmWriter.visitLdcInsn(string);
         return this;
     }
 
     public GhostWriter pop() {
-        methodWriter.visitInsn(POP);
+        asmWriter.visitInsn(POP);
         return this;
     }
 
     public GhostWriter ret(TypeCategory category) {
         switch (category) {
             case REFERENCE:
-                methodWriter.visitInsn(ARETURN);
+                asmWriter.visitInsn(ARETURN);
                 break;
             case INT:
-                methodWriter.visitInsn(IRETURN);
+                asmWriter.visitInsn(IRETURN);
                 break;
             default:
                 throw new IllegalArgumentException("unrecognized type category");
@@ -200,10 +200,10 @@ public class GhostWriter {
     public GhostWriter storeLocal(TypeCategory category, int index) {
         switch (category) {
             case REFERENCE:
-                methodWriter.visitVarInsn(ASTORE, index);
+                asmWriter.visitVarInsn(ASTORE, index);
                 break;
             case INT:
-                methodWriter.visitVarInsn(ISTORE, index);
+                asmWriter.visitVarInsn(ISTORE, index);
                 break;
             default:
                 throw new IllegalArgumentException("unrecognized type category");
@@ -212,19 +212,14 @@ public class GhostWriter {
     }
 
     public GhostWriter swap() {
-        methodWriter.visitInsn(SWAP);
-        return this;
-    }
-
-    public GhostWriter withAsmVisitor(Consumer<MethodVisitor> action) {
-        action.accept(methodWriter);
+        asmWriter.visitInsn(SWAP);
         return this;
     }
 
     public GhostWriter withLabelAtEnd(Consumer<Label> emitter) {
         Label label = new Label();
         emitter.accept(label);
-        methodWriter.visitLabel(label);
+        asmWriter.visitLabel(label);
         return this;
     }
 }

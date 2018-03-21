@@ -62,7 +62,9 @@ public class ProfilingInterpreter extends Interpreter {
         Object[] frame = new Object[function.localsCount()];
         function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            Object result = function.body().accept(new ProfilingEvaluator(frame));
+            function.profile.recordResult(result);
+            return result;
         } catch (ReturnException e) {
             return e.value;
         }
@@ -74,7 +76,9 @@ public class ProfilingInterpreter extends Interpreter {
         frame[0] = arg;
         function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            Object result = function.body().accept(new ProfilingEvaluator(frame));
+            function.profile.recordResult(result);
+            return result;
         } catch (ReturnException e) {
             return e.value;
         }
@@ -87,7 +91,9 @@ public class ProfilingInterpreter extends Interpreter {
         frame[1] = arg2;
         function.profile.recordInvocation(frame);
         try {
-            return function.body().accept(new ProfilingEvaluator(frame));
+            Object result = function.body().accept(new ProfilingEvaluator(frame));
+            function.profile.recordResult(result);
+            return result;
         } catch (ReturnException e) {
             return e.value;
         }

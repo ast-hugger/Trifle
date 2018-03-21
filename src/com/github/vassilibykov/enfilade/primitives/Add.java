@@ -54,7 +54,7 @@ public class Add extends Primitive2 {
                         return INT;
                     }
                     public TypeCategory ifInt() { // (int, int)
-                        writer.withAsmVisitor(it -> it.visitInsn(IADD));
+                        writer.asm().visitInsn(IADD);
                         return INT;
                     }
                     public TypeCategory ifBoolean() {

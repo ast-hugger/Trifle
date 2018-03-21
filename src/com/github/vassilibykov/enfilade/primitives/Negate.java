@@ -36,14 +36,14 @@ public class Negate extends Primitive1 {
                     .adaptType(REFERENCE, INT)
                     .loadInt(0)
                     .swap()
-                    .withAsmVisitor(it -> it.visitInsn(ISUB));
+                    .asm().visitInsn(ISUB);
                 return INT;
             }
             public TypeCategory ifInt() {
                 writer
                     .loadInt(0)
                     .swap()
-                    .withAsmVisitor(it -> it.visitInsn(ISUB));
+                    .asm().visitInsn(ISUB);
                 return INT;
             }
             public TypeCategory ifBoolean() {

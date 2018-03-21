@@ -105,7 +105,7 @@ public class LessThan extends Primitive2 {
         TypeCategory[] branchTypes = new TypeCategory[2];
         writer.withLabelAtEnd(end -> {
             writer.withLabelAtEnd(elseStart -> {
-                writer.withAsmVisitor(it -> it.visitJumpInsn(IF_ICMPGE, elseStart));
+                writer.asm().visitJumpInsn(IF_ICMPGE, elseStart);
                 branchTypes[0] = theIf.trueBranch().accept(generator);
                 writer.jump(end);
             });

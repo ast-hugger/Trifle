@@ -10,6 +10,11 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOLEAN;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 
+/**
+ * A code generator producing code for the generic version of a function.
+ * The result returned by each visitor method is the type category of the
+ * value of the the subexpression compiled by the method.
+ */
 class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     protected final GhostWriter writer;
 

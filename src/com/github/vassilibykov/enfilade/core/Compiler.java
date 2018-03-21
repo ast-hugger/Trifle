@@ -133,8 +133,8 @@ public class Compiler {
             null, null);
         methodWriter.visitCode();
         FunctionCodeGeneratorSpecialized generator = new FunctionCodeGeneratorSpecialized(methodWriter);
-        function.body().accept(generator);
-        bodyType.match(new TypeCategory.VoidMatcher() {
+        TypeCategory returnType = generator.generate(function);
+        returnType.match(new TypeCategory.VoidMatcher() {
             public void ifReference() { methodWriter.visitInsn(Opcodes.ARETURN); }
             public void ifInt() { methodWriter.visitInsn(Opcodes.IRETURN); }
             public void ifBoolean() { methodWriter.visitInsn(Opcodes.IRETURN); }

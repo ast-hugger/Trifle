@@ -13,6 +13,7 @@ public class FunctionProfile {
     private final Var[] methodArguments;
     private final int methodArity;
     private long invocationCount = 0;
+    private final ValueProfile resultProfile = new ValueProfile();
 
     FunctionProfile(Function function) {
         this.methodArguments = function.arguments();
@@ -23,11 +24,19 @@ public class FunctionProfile {
         return invocationCount;
     }
 
+    public ValueProfile result() {
+        return resultProfile;
+    }
+
     public synchronized void recordInvocation(Object[] frame) {
         invocationCount++;
         for (int i = 0; i < methodArity; i++) {
             methodArguments[i].profile.recordValue(frame[i]);
         }
+    }
+
+    public void recordResult(Object result) {
+        resultProfile.recordValue(result);
     }
 
     public boolean canBeSpecialized() {
