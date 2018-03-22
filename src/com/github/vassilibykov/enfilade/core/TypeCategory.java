@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import java.util.function.Supplier;
-
 /**
  * A broad category of types as seen by the JVM, i.e. reference types vs.
  * primitive {@code int}s, vs other primitive types.

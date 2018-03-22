@@ -146,7 +146,8 @@ class ExpressionTypeAnalyzer implements Expression.Visitor<TypeCategory> {
     }
 
     private TypeCategory annotate(Expression expression, TypeCategory category) {
-        expression.setCompilerAnnotation(new CompilerAnnotation(category));
+        // FIXME
+//        expression.setCompilerAnnotation(new CompilerAnnotation(category));
         return category;
     }
 }

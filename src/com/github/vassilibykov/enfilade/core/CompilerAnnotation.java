@@ -2,7 +2,8 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import org.jetbrains.annotations.NotNull;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * An annotation associated with an expression by the compiler analyzer.
@@ -13,17 +14,37 @@ import org.jetbrains.annotations.NotNull;
  * expressions as it compiles them, this is the place to do that.
  */
 public class CompilerAnnotation {
-    @NotNull private final TypeCategory typeCategory;
+    private InferredType inferredType;
+    private TypeCategory observedType;
 
-    CompilerAnnotation(@NotNull TypeCategory typeCategory) {
-        this.typeCategory = typeCategory;
-    }
+    CompilerAnnotation() {}
 
     /**
      * The category of values this expression has been observed to evaluate to,
      * or inferred by the analyzer.
      */
+    @Deprecated
     public TypeCategory valueCategory() {
-        return typeCategory;
+        return observedType;
+    }
+
+    public synchronized InferredType inferredType() {
+        return Objects.requireNonNull(inferredType, "types have not been inferred yet");
+    }
+
+    /*internal*/ synchronized void setInferredType(InferredType inferredType) {
+        this.inferredType = inferredType;
+    }
+
+    /*internal*/ synchronized void unifyInferredTypeWith(InferredType type) {
+        inferredType = inferredType.union(type);
+    }
+
+    public synchronized Optional<TypeCategory> observedType() {
+        return Optional.ofNullable(observedType);
+    }
+
+    /*internal*/ synchronized void setObservedType(TypeCategory type) {
+        observedType = type;
     }
 }

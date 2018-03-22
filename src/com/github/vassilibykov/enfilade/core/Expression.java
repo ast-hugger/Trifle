@@ -20,12 +20,6 @@ import java.util.stream.Stream;
  * language has beneficial properties for addressing some of the key issues
  * in adaptively translating these expressions into the JVM code.
  *
- * <p>For the theoretical exposition of A-normal forms see <em>The Essence of
- * Compiling with Continuations</em> by C. Flanagan et al, 1993.
- *
- * <p><a href="http://matt.might.net/articles/a-normalization/">This blog post by Matt Might</a>
- * gives a more practical explanation.</p>
- *
  * @author Vassili Bykov
  */
 public abstract class Expression {
@@ -127,11 +121,7 @@ public abstract class Expression {
         Instance
      */
 
-    /*internal*/ CompilerAnnotation compilerAnnotation;
-
-    void setCompilerAnnotation(CompilerAnnotation compilerAnnotation) {
-        this.compilerAnnotation = compilerAnnotation;
-    }
+    /*internal*/ final CompilerAnnotation compilerAnnotation = new CompilerAnnotation();
 
     public abstract <T> T accept(Visitor<T> visitor);
 }

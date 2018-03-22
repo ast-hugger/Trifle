@@ -1,15 +1,23 @@
 ## Times
 
-The times below are milliseconds to compute fibonacci(35). Times for Enfilade
-are after enough warmup runs (20, though 10 might be enough) to get stable timings.
-Pharo/Cog doesn't seem to benefit from warmup.
+The times below are milliseconds to compute a recursively defined fibonacci(35).
+Times for Enfilade and Java are after enough warmup runs (20, though 10 might be
+enough) to get stable timings. Pharo/Cog doesn't seem to benefit from warmup.
+None of the mainstream interpreted languages respond to warming up.
 
-* 850: Enfilade, profiling evaluator
-* 120: Pharo, 64-bit Cog, March05 2018 build
+* 6250: Javascript - Firefox 56.0
+* 6080: Javasacript - Firefox Quantum (58.0.2)
+* 2440: Python 2.7.12
+* 1450: Lua 5.2
+* 1030: Ruby 2.3.1
+* 850: Enfilade, profiling interpreter
+* 129: Smalltalk - Pharo, 64-bit Cog, March05 2018 build
+* 106: Javascript - node.js
 * 85: Enfilade, generic compiled form (wrapped ints)
 * 66: gcc -O0
 * 48: gcc -O1
 * 41: Enfilade, adaptively specialized
+* 39: Java
 * 35: gcc -O2
 * 21: gcc -O3
 
