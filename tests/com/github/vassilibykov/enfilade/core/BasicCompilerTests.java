@@ -17,7 +17,7 @@ public class BasicCompilerTests {
 
     @Test
     public void testArg() {
-        Function function = unaryFunction(arg -> arg);
+        Function function = unaryFunction(arg -> ref(arg));
         function.nexus.forceCompile();
         assertEquals(42, function.invoke(42));
     }
@@ -26,7 +26,7 @@ public class BasicCompilerTests {
     public void testIf() {
         Function function = unaryFunction(
             arg ->
-                if_(arg,
+                if_(ref(arg),
                     const_("true"),
                     const_("false")));
         function.nexus.forceCompile();
@@ -36,9 +36,9 @@ public class BasicCompilerTests {
 
     @Test
     public void testLet() {
-        Var t = var("t");
+        Variable t = var("t");
         Function function = unaryFunction(arg ->
-            let(t, arg, t));
+            let(t, ref(arg), ref(t)));
         function.nexus.forceCompile();
         assertEquals(42, function.invoke(42));
         assertEquals("hello", function.invoke("hello"));
@@ -46,12 +46,12 @@ public class BasicCompilerTests {
 
     @Test
     public void testLet2() {
-        Var t = var("t");
-        Var u = var("u");
+        Variable t = var("t");
+        Variable u = var("u");
         Function function = unaryFunction(arg ->
-            let(t, add(arg, const_(1)),
-                let(u, add(arg, const_(2)),
-                    mul(t, u))));
+            let(t, add(ref(arg), const_(1)),
+                let(u, add(ref(arg), const_(2)),
+                    mul(ref(t), ref(u)))));
         function.nexus.forceCompile();
         assertEquals(12, function.invoke(2));
     }
@@ -60,7 +60,7 @@ public class BasicCompilerTests {
     public void testPrimitive1() {
         Function function = unaryFunction(
             arg ->
-                negate(arg));
+                negate(ref(arg)));
         function.nexus.forceCompile();
         assertEquals(-42, function.invoke(42));
         assertEquals(123, function.invoke(-123));
@@ -70,7 +70,7 @@ public class BasicCompilerTests {
     public void testPrimitive2() {
         Function function = binaryFunction(
             (arg1, arg2) ->
-                add(arg1, arg2));
+                add(ref(arg1), ref(arg2)));
         function.nexus.forceCompile();
         assertEquals(7, function.invoke(3, 4));
         assertEquals(0, function.invoke(-42, 42));
@@ -91,14 +91,14 @@ public class BasicCompilerTests {
             arg ->
                 prog(
                     set(arg, const_(42)),
-                    arg));
+                    ref(arg)));
         function.nexus.forceCompile();
         assertEquals(42, function.invoke(3));
     }
 
     @Test
     public void testVar() {
-        Function function = unaryFunction(arg -> arg);
+        Function function = unaryFunction(arg -> ref(arg));
         assertEquals(42, function.invoke(42));
         assertEquals("hello", function.invoke("hello"));
     }
@@ -139,7 +139,7 @@ public class BasicCompilerTests {
     }
 
     private Function compile(Expression methodBody) {
-        Function function = Function.with(new Var[0], methodBody);
+        Function function = Function.with(new Variable[0], methodBody);
         function.nexus.forceCompile();
         return function;
     }

@@ -35,18 +35,42 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
+        public Object visitConst(Const aConst) {
+            aConst.evaluatedWhileProfiling = true;
+            return super.visitConst(aConst);
+        }
+
+        @Override
         public Object visitLet(Let let) {
             Object value = let.initializer().accept(this);
-            Var variable = let.variable();
+            Variable variable = let.variable();
             frame[variable.index()] = value;
             variable.profile.recordValue(value);
             return let.body().accept(this);
         }
 
         @Override
-        public Object visitSetVar(SetVar set) {
+        public Object visitPrimitive1(Primitive1 primitive) {
+            primitive.evaluatedWhileProfiling = true;
+            return super.visitPrimitive1(primitive);
+        }
+
+        @Override
+        public Object visitPrimitive2(Primitive2 primitive) {
+            primitive.evaluatedWhileProfiling = true;
+            return super.visitPrimitive2(primitive);
+        }
+
+        @Override
+        public Object visitVarRef(VarRef varRef) {
+            varRef.evaluatedWhileProfiling = true;
+            return super.visitVarRef(varRef);
+        }
+
+        @Override
+        public Object visitVarSet(VarSet set) {
             Object value = set.value().accept(this);
-            Var variable = set.variable();
+            Variable variable = set.variable();
             frame[variable.index()] = value;
             variable.profile.recordValue(value);
             return value;

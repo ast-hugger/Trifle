@@ -9,13 +9,13 @@ package com.github.vassilibykov.enfilade.core;
 public enum TypeCategory {
     REFERENCE(Object.class),
     INT(int.class),
-    BOOLEAN(boolean.class);
+    BOOL(boolean.class);
 
     public static TypeCategory ofObject(Object value) {
         if (value instanceof Integer) {
             return INT;
         } if (value instanceof Boolean) {
-            return BOOLEAN;
+            return BOOL;
         } else {
             return REFERENCE;
         }
@@ -43,7 +43,7 @@ public enum TypeCategory {
         this.representativeType = representativeType;
     }
 
-    public Class<?> representativeType() {
+    public Class<?> representativeClass() {
         return representativeType;
     }
 
@@ -59,7 +59,7 @@ public enum TypeCategory {
         switch (this) {
             case REFERENCE: return matcher.ifReference();
             case INT: return matcher.ifInt();
-            case BOOLEAN: return matcher.ifBoolean();
+            case BOOL: return matcher.ifBoolean();
             default:
                 throw new AssertionError("missing matcher case");
         }
@@ -73,7 +73,7 @@ public enum TypeCategory {
             case INT:
                 matcher.ifInt();
                 break;
-            case BOOLEAN:
+            case BOOL:
                 matcher.ifBoolean();
                 break;
             default:

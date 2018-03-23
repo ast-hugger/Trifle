@@ -10,7 +10,7 @@ import java.util.stream.Stream;
  */
 public class FunctionProfile {
 
-    private final Var[] methodArguments;
+    private final Variable[] methodArguments;
     private final int methodArity;
     private long invocationCount = 0;
     private final ValueProfile resultProfile = new ValueProfile();

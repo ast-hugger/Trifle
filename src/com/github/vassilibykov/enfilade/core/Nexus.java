@@ -213,7 +213,9 @@ class Nexus {
      * it so that it accepts and returns all Objects.
      */
     private MethodHandle generify(MethodHandle specialization) {
-        return specialization.asType(MethodType.genericMethodType(specialization.type().parameterCount()));
+        MethodType genericType = MethodType.genericMethodType(specialization.type().parameterCount());
+        MethodHandle generic = specialization.asType(genericType);
+        return MethodHandles.catchException(generic, SquarePegException.class, EXTRACT_SQUARE_PEG);
     }
 
     public static boolean checkSpecializationApplicability(MethodType specialization, Object[] args) {
@@ -225,7 +227,13 @@ class Nexus {
         }
         return true;
     }
+
+    public static Object extractSquarePeg(SquarePegException exception) {
+        return exception.value;
+    }
+
     private static final MethodHandle CHECK;
+    private static final MethodHandle EXTRACT_SQUARE_PEG;
 
     static {
         try {
@@ -233,6 +241,9 @@ class Nexus {
                 Nexus.class,
                 "checkSpecializationApplicability",
                 MethodType.methodType(boolean.class, MethodType.class, Object[].class));
+            EXTRACT_SQUARE_PEG = MethodHandles.lookup().findStatic(
+                Nexus.class,
+                "extractSquarePeg", MethodType.methodType(Object.class, SquarePegException.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }

@@ -12,4 +12,5 @@ package com.github.vassilibykov.enfilade.core;
  * @author Vassili Bykov
  */
 public abstract class AtomicExpression extends Expression {
+    /*internal*/ volatile boolean evaluatedWhileProfiling = false;
 }

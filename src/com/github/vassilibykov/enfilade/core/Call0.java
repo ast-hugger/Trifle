@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-public class Call0 extends Call {
+public class Call0 extends CallExpression {
 
     Call0(Function function) {
         super(function);

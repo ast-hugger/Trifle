@@ -8,17 +8,17 @@ import org.jetbrains.annotations.NotNull;
  * The classic {@code let} form, introducing a variable and binding its value.
  */
 public class Let extends ComplexExpression {
-    @NotNull private final Var variable;
+    @NotNull private final Variable variable;
     @NotNull private final Expression initializer;
     @NotNull private final Expression body;
 
-    Let(@NotNull Var variable, @NotNull Expression initializer, @NotNull Expression body) {
+    Let(@NotNull Variable variable, @NotNull Expression initializer, @NotNull Expression body) {
         this.variable = variable;
         this.initializer = initializer;
         this.body = body;
     }
 
-    public Var variable() {
+    public Variable variable() {
         return variable;
     }
 

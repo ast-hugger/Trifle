@@ -16,7 +16,7 @@ None of the mainstream interpreted languages respond to warming up.
 * 85: Enfilade, generic compiled form (wrapped ints)
 * 66: gcc -O0
 * 48: gcc -O1
-* 41: Enfilade, adaptively specialized
+* 42: Enfilade, adaptively specialized
 * 39: Java
 * 35: gcc -O2
 * 21: gcc -O3
@@ -24,15 +24,15 @@ None of the mainstream interpreted languages respond to warming up.
 ## Benchmark function definition in Enfilade
 
     static Function fibonacci() {
-        Var n = var("n");
-        Var t1 = var("t1");
-        Var t2 = var("t2");
-        return Function.withRecursion(new Var[]{n}, fibonacci ->
-            if_(lessThan(n, const_(2)),
+        Variable n = var("n");
+        Variable t1 = var("t1");
+        Variable t2 = var("t2");
+        return Function.withRecursion(new Variable[]{n}, fibonacci ->
+            if_(lessThan(ref(n), const_(2)),
                 const_(1),
-                let(t1, call(fibonacci, sub(n, const_(1))),
-                    let(t2, call(fibonacci, sub(n, const_(2))),
-                        add(t1, t2)))));
+                let(t1, call(fibonacci, sub(ref(n), const_(1))),
+                    let(t2, call(fibonacci, sub(ref(n), const_(2))),
+                        add(ref(t1), ref(t2))))));
     }
 
 ## Bytecode of the generic compiled method

@@ -19,8 +19,8 @@ public class InterpreterProfilingTests {
 
     @Test
     public void testInvocationsCount() {
-        Function callee = Function.with(new Var[0], const_(42));
-        Function caller = Function.with(new Var[0],
+        Function callee = Function.with(new Variable[0], const_(42));
+        Function caller = Function.with(new Variable[0],
             prog(
                 call(callee),
                 call(callee)));
@@ -33,13 +33,13 @@ public class InterpreterProfilingTests {
 
     @Test
     public void testMethodArgTypeProfile() {
-        Var arg = var("arg");
-        Function function = Function.with(new Var[]{arg}, arg);
-        Var arg2 = var("arg2");
-        Function function2 = Function.with(new Var[]{arg2},
+        Variable arg = var("arg");
+        Function function = Function.with(new Variable[]{arg}, ref(arg));
+        Variable arg2 = var("arg2");
+        Function function2 = Function.with(new Variable[]{arg2},
             prog(
-                call(function, arg2),
-                call(function, arg2)));
+                call(function, ref(arg2)),
+                call(function, ref(arg2))));
         for (int i = 0; i < 3; i++) {
             function2.invoke("hello");
         }
@@ -54,10 +54,10 @@ public class InterpreterProfilingTests {
 
     @Test
     public void testLetVarProfile() {
-        Var arg = var("arg");
-        Var t = var("t");
-        Function function = Function.with(new Var[]{arg},
-            let(t, arg, t));
+        Variable arg = var("arg");
+        Variable t = var("t");
+        Function function = Function.with(new Variable[]{arg},
+            let(t, ref(arg), ref(t)));
         for (int i = 0; i < 3; i++) {
             function.invoke("hello");
         }

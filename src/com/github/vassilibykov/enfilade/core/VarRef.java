@@ -2,14 +2,15 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 /**
- * A variable in a program. A variable object must appear exactly once as a
- * function argument, or as a {@link Let}-bound variable. It may appear any
+ * A variable reference in a program, not to be confused with {@link Variable}
+ * which is a variable definition. A variable object must appear exactly once as
+ * a function argument, or as a {@link Let}-bound variable. It may appear any
  * number of times in an expression position, evaluating to the current value of
  * the variable. It may also appear any number of times as the {@code variable}
- * of a {@link SetVar} expression.
+ * of a {@link VarSet} expression.
  *
  * <p>A variable is associated with a storage location in the activation record
  * of its function. The storage location is identified by its index. Indices are
@@ -17,30 +18,23 @@ import org.jetbrains.annotations.Nullable;
  * it is detected if a variable does not appear as an argument or a let binding
  * exactly once, as required.
  */
-public class Var extends AtomicExpression {
-    @Nullable private final String name;
-    /*internal*/ int index = -1;
-    /*internal*/ final ValueProfile profile = new ValueProfile();
+public class VarRef extends AtomicExpression {
+    @NotNull /*intenal*/ final Variable variable;
 
-    Var(@Nullable String name) {
-        this.name = name;
+    VarRef(@NotNull Variable variable) {
+        this.variable = variable;
     }
 
-    public String name() {
-        return name;
-    }
-
-    public int index() {
-        return index;
+    public Variable variable() {
+        return variable;
     }
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitVar(this);
+        return visitor.visitVarRef(this);
     }
 
-    @Override
     public String toString() {
-        return name != null ? name : "<var" + hashCode() + ">";
+        return variable.toString();
     }
 }

@@ -2,6 +2,8 @@
 
 package com.github.vassilibykov.enfilade;
 
+import com.github.vassilibykov.enfilade.core.SquarePegException;
+
 public class Scratch {
     public static void main(String[] args) {
         int n = 35;
@@ -19,5 +21,9 @@ public class Scratch {
         } else {
             return fib(n - 1) + fib(n - 2);
         }
+    }
+
+    private static void foo() {
+        throw SquarePegException.with("hello");
     }
 }

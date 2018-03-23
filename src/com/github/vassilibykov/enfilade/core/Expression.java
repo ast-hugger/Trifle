@@ -35,8 +35,8 @@ public abstract class Expression {
         T visitPrimitive2(Primitive2 primitive);
         T visitProg(Prog prog);
         T visitRet(Ret ret);
-        T visitSetVar(SetVar set);
-        T visitVar(Var var);
+        T visitVarSet(VarSet set);
+        T visitVarRef(VarRef var);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -73,7 +73,6 @@ public abstract class Expression {
 
         @Override
         public T visitLet(Let let) {
-            let.variable().accept(this);
             let.initializer().accept(this);
             let.body().accept(this);
             return null;
@@ -101,14 +100,13 @@ public abstract class Expression {
         }
 
         @Override
-        public T visitSetVar(SetVar set) {
-            set.variable().accept(this);
+        public T visitVarSet(VarSet set) {
             set.value().accept(this);
             return null;
         }
 
         @Override
-        public T visitVar(Var var) {
+        public T visitVarRef(VarRef var) {
             return null;
         }
 

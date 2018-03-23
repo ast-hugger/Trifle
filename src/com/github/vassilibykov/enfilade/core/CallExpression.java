@@ -12,11 +12,11 @@ import org.jetbrains.annotations.NotNull;
  * future this can easily be relaxed to a more pluggable policy to support
  * late-bound calls.
  */
-public abstract class Call extends ComplexExpression {
+public abstract class CallExpression extends ComplexExpression {
     @NotNull private Function function;
     /*internal*/ final ValueProfile profile = new ValueProfile();
 
-    Call(@NotNull Function function) {
+    CallExpression(@NotNull Function function) {
         if (function.arity() != arity()) {
             throw new AssertionError("a function of arity " + arity() + " required");
         }

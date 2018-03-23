@@ -8,16 +8,16 @@ import org.jetbrains.annotations.NotNull;
  * An expression mutating a variable to have a new value. The new value, which
  * is also the value of this expression, must be an atomic expression.
  */
-public class SetVar extends ComplexExpression {
-    @NotNull private final Var variable;
+public class VarSet extends ComplexExpression {
+    @NotNull /*internal*/ final Variable variable;
     @NotNull private final AtomicExpression value;
 
-    SetVar(@NotNull Var variable, @NotNull AtomicExpression value) {
+    VarSet(@NotNull Variable variable, @NotNull AtomicExpression value) {
         this.variable = variable;
         this.value = value;
     }
 
-    public Var variable() {
+    public Variable variable() {
         return variable;
     }
 
@@ -27,7 +27,7 @@ public class SetVar extends ComplexExpression {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitSetVar(this);
+        return visitor.visitVarSet(this);
     }
 
     @Override

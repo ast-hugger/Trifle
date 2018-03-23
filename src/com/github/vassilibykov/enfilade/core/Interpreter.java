@@ -13,10 +13,10 @@ public class Interpreter {
         }
     }
 
-    static class Evaluator implements Expression.Visitor<Object> {
+    public static class Evaluator implements Expression.Visitor<Object> {
         protected final Object[] frame;
 
-        Evaluator(Object[] frame) {
+        public Evaluator(Object[] frame) {
             this.frame = frame;
         }
 
@@ -56,7 +56,7 @@ public class Interpreter {
         @Override
         public Object visitLet(Let let) {
             Object value = let.initializer().accept(this);
-            Var variable = let.variable();
+            Variable variable = let.variable();
             frame[variable.index()] = value;
             return let.body().accept(this);
         }
@@ -88,16 +88,15 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitSetVar(SetVar set) {
+        public Object visitVarSet(VarSet set) {
             Object value = set.value().accept(this);
-            Var variable = set.variable();
-            frame[variable.index()] = value;
+            frame[set.variable.index()] = value;
             return value;
         }
 
         @Override
-        public Object visitVar(Var var) {
-            return frame[var.index()];
+        public Object visitVarRef(VarRef varRef) {
+            return frame[varRef.variable.index()];
         }
     }
 

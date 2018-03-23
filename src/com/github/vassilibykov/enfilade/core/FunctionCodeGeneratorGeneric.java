@@ -6,7 +6,7 @@ import org.objectweb.asm.MethodVisitor;
 
 import java.lang.invoke.MethodType;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOLEAN;
+import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 
@@ -81,7 +81,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     @Override
     public TypeCategory visitIf(If anIf) {
         TypeCategory testType = anIf.condition().accept(this);
-        writer.adaptType(testType, BOOLEAN);
+        writer.adaptType(testType, BOOL);
         writer.withLabelAtEnd(end -> {
             writer.withLabelAtEnd(elseStart -> {
                 writer.jumpIf0(elseStart);
@@ -138,18 +138,18 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitSetVar(SetVar set) {
+    public TypeCategory visitVarSet(VarSet set) {
         TypeCategory varType = set.value().accept(this);
         writer
             .adaptType(varType, REFERENCE)
             .dup()
-            .storeLocal(REFERENCE, set.variable().index());
+            .storeLocal(REFERENCE, set.variable.index());
         return REFERENCE;
     }
 
     @Override
-    public TypeCategory visitVar(Var var) {
-        writer.loadLocal(REFERENCE, var.index());
+    public TypeCategory visitVarRef(VarRef var) {
+        writer.loadLocal(REFERENCE, var.variable.index());
         return REFERENCE;
     }
 }

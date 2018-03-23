@@ -15,6 +15,7 @@ import static org.objectweb.asm.Opcodes.*;
  * A convenience wrapper around ASM's {@link MethodVisitor} to more concisely
  * support our specific code writing needs.
  */
+@SuppressWarnings("UnusedReturnValue") // normal in this class
 public class GhostWriter {
     private static final int[] SPECIAL_LOAD_INT_OPCODES = new int[] {
         ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
@@ -45,48 +46,38 @@ public class GhostWriter {
         from.match(new TypeCategory.VoidMatcher() {
             public void ifReference() {
                 to.match(new TypeCategory.VoidMatcher() {
-                    public void ifReference() {
-                        // nothing to do
-                    }
-                    public void ifInt() {
-                        checkCast(Integer.class);
-                        invokeVirtual(Integer.class, "intValue", int.class);
-                    }
-                    public void ifBoolean() {
-                        checkCast(Boolean.class);
-                        invokeVirtual(Boolean.class, "booleanValue", boolean.class);
-                    }
+                    public void ifReference() { }
+                    public void ifInt() { unboxInteger(); }
+                    public void ifBoolean() { unboxBoolean(); }
                 });
             }
             public void ifInt() {
                 to.match(new TypeCategory.VoidMatcher() {
-                    public void ifReference() {
-                        invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
-//                        checkCast(Object.class);
-                    }
-                    public void ifInt() {
-                        // nothing to do
-                    }
-                    public void ifBoolean() {
-                        throw new CompilerError("cannot adapt int to boolean");
-                    }
+                    public void ifReference() { boxInteger(); }
+                    public void ifInt() { }
+                    public void ifBoolean() { throw new CompilerError("cannot adapt int to boolean"); }
                 });
             }
             public void ifBoolean() {
                 to.match(new TypeCategory.VoidMatcher() {
-                    public void ifReference() {
-                        invokeStatic(Boolean.class, "valueOf", Boolean.class, boolean.class);
-//                        checkCast(Object.class);
-                    }
+                    public void ifReference() { boxBoolean(); }
                     public void ifInt() {
                         throw new CompilerError("cannot adapt boolean to int");
                     }
-                    public void ifBoolean() {
-                        // nothing to do
-                    }
+                    public void ifBoolean() { }
                 });
             }
         });
+        return this;
+    }
+
+    public GhostWriter boxBoolean() {
+        invokeStatic(Boolean.class, "valueOf", Boolean.class, boolean.class);
+        return this;
+    }
+
+    public GhostWriter boxInteger() {
+        invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
         return this;
     }
 
@@ -213,6 +204,24 @@ public class GhostWriter {
 
     public GhostWriter swap() {
         asmWriter.visitInsn(SWAP);
+        return this;
+    }
+
+    public GhostWriter throwSquarePegException() {
+        invokeStatic(SquarePegException.class, "with", SquarePegException.class, Object.class);
+        asmWriter.visitInsn(ATHROW);
+        return this;
+    }
+
+    public GhostWriter unboxBoolean() {
+        checkCast(Boolean.class);
+        invokeVirtual(Boolean.class, "booleanValue", boolean.class);
+        return this;
+    }
+
+    public GhostWriter unboxInteger() {
+        checkCast(Integer.class);
+        invokeVirtual(Integer.class, "intValue", int.class);
         return this;
     }
 

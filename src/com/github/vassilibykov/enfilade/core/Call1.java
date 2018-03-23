@@ -4,7 +4,7 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
-public class Call1 extends Call {
+public class Call1 extends CallExpression {
     @NotNull private final AtomicExpression arg;
 
     Call1(Function function, @NotNull AtomicExpression arg) {

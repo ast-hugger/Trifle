@@ -2,49 +2,69 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Objects;
-import java.util.Optional;
 
 /**
- * An annotation associated with an expression by the compiler analyzer.
- * Summarizes the values the expression can evaluate to, as observed by the
- * profiling interpreter and/or inferred by the analyzer.
- *
- * <p>If in future the compiler needs to associate more information with
- * expressions as it compiles them, this is the place to do that.
+ * An annotation associated with an expression by the compiler analyzer. Holds
+ * whatever information the compiler wants to associate with that expression.
  */
 public class CompilerAnnotation {
-    private InferredType inferredType;
-    private TypeCategory observedType;
+    private ExpressionType inferredType;
+    private ExpressionType observedType;
 
     CompilerAnnotation() {}
 
-    /**
-     * The category of values this expression has been observed to evaluate to,
-     * or inferred by the analyzer.
-     */
-    @Deprecated
-    public TypeCategory valueCategory() {
-        return observedType;
-    }
-
-    public synchronized InferredType inferredType() {
+    public synchronized ExpressionType inferredType() {
         return Objects.requireNonNull(inferredType, "types have not been inferred yet");
     }
 
-    /*internal*/ synchronized void setInferredType(InferredType inferredType) {
-        this.inferredType = inferredType;
+    public synchronized ExpressionType observedType() {
+        return Objects.requireNonNull(observedType, "observed types have not been recorded yet");
     }
 
-    /*internal*/ synchronized void unifyInferredTypeWith(InferredType type) {
-        inferredType = inferredType.union(type);
+    /**
+     * Return a type the expression should be assumed to produced while
+     * generating specialized code. Because specialized code is opportunistic,
+     * observed type trumps the inferred type because it's potentially more
+     * specific, even if in general incorrect.
+     */
+    public synchronized TypeCategory specializationType() {
+        return observedType.typeCategory()
+            .orElseGet(() -> inferredType.typeCategory()
+                .orElse(TypeCategory.REFERENCE));
     }
 
-    public synchronized Optional<TypeCategory> observedType() {
-        return Optional.ofNullable(observedType);
+    /*internal*/ synchronized void setInferredType(@NotNull ExpressionType expressionType) {
+        this.inferredType = expressionType;
     }
 
-    /*internal*/ synchronized void setObservedType(TypeCategory type) {
+    /**
+     * Replace the inferred type of this annotation with the union of the
+     * specified inferred type and the current one. Return a boolean indicating
+     * whether the unified inferred type is different from the original.
+     */
+    /*internal*/ synchronized boolean unifyInferredTypeWith(ExpressionType type) {
+        ExpressionType newType = inferredType.union(type);
+        boolean changed = !inferredType.equals(newType);
+        inferredType = newType;
+        return changed;
+    }
+
+    /*internal*/ synchronized void setObservedType(@NotNull ExpressionType type) {
         observedType = type;
+    }
+
+    /*internal*/ synchronized boolean unifyObservedTypeWith(ExpressionType type) {
+        ExpressionType newType = observedType.union(type);
+        boolean changed = !observedType.equals(newType);
+        observedType = newType;
+        return changed;
+    }
+
+    @Override
+    public String toString() {
+        return "Inferred: " + inferredType + ", observed: " + observedType;
     }
 }

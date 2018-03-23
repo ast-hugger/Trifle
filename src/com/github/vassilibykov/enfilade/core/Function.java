@@ -14,12 +14,12 @@ import java.util.Set;
  */
 public class Function {
 
-    public static Function with(Var[] arguments, Expression body) {
+    public static Function with(Variable[] arguments, Expression body) {
         return new Function(arguments, body);
     }
 
-    public static Function withRecursion(Var[] arguments, java.util.function.Function<Function, Expression> bodyMaker) {
-        return new Function(arguments, bodyMaker);
+    public static Function withRecursion(Variable[] arguments, java.util.function.Function<Function, Expression> bodyBuilder) {
+        return new Function(arguments, bodyBuilder);
     }
 
     /**
@@ -30,7 +30,7 @@ public class Function {
      */
     private class VariableIndexer extends Expression.VisitorSkeleton<Void> {
         private int index;
-        private final Set<Var> scope = new HashSet<>();
+        private final Set<Variable> scope = new HashSet<>();
 
         private VariableIndexer() {
             for (int i = 0; i < arguments.length; i++) {
@@ -46,7 +46,7 @@ public class Function {
 
         @Override
         public Void visitLet(Let let) {
-            Var var = let.variable();
+            Variable var = let.variable();
             if (var.index() >= 0) {
                 throw new AssertionError("variable reuse detected: " + var);
             }
@@ -59,9 +59,9 @@ public class Function {
         }
 
         @Override
-        public Void visitVar(Var var) {
-            if (!scope.contains(var)) {
-                throw new AssertionError("variable used outside of its scope: " + var);
+        public Void visitVarRef(VarRef varRef) {
+            if (!scope.contains(varRef.variable)) {
+                throw new AssertionError("variable used outside of its scope: " + varRef);
             }
             return null;
         }
@@ -71,13 +71,13 @@ public class Function {
         Instance
      */
 
-    @NotNull private final Var[] arguments;
+    @NotNull private final Variable[] arguments;
     @NotNull private final Expression body;
     private final int localsCount;
     /*internal*/ final Nexus nexus;
     /*internal*/ final FunctionProfile profile;
 
-    private Function(@NotNull Var[] arguments, @NotNull Expression body) {
+    private Function(@NotNull Variable[] arguments, @NotNull Expression body) {
         this.arguments = arguments;
         this.body = body;
         this.localsCount = computeLocalsCount();
@@ -85,7 +85,7 @@ public class Function {
         this.profile = new FunctionProfile(this);
     }
 
-    private Function(@NotNull Var[] arguments, java.util.function.Function<Function, Expression> recursiveBodyMaker) {
+    private Function(@NotNull Variable[] arguments, java.util.function.Function<Function, Expression> recursiveBodyMaker) {
         this.arguments = arguments;
         this.body = recursiveBodyMaker.apply(this);
         this.localsCount = computeLocalsCount();
@@ -93,7 +93,7 @@ public class Function {
         this.profile = new FunctionProfile(this);
     }
 
-    public Var[] arguments() {
+    public Variable[] arguments() {
         return arguments;
     }
 

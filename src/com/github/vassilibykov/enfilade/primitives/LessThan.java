@@ -4,16 +4,18 @@ package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.AtomicExpression;
 import com.github.vassilibykov.enfilade.core.CompilerError;
+import com.github.vassilibykov.enfilade.core.Expression;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.If;
 import com.github.vassilibykov.enfilade.core.Primitive2;
 import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
-import org.objectweb.asm.Opcodes;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOLEAN;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 import static org.objectweb.asm.Opcodes.IF_ICMPGE;
 
 public class LessThan extends Primitive2 {
@@ -23,7 +25,7 @@ public class LessThan extends Primitive2 {
 
     @Override
     public TypeCategory valueCategory() {
-        return TypeCategory.BOOLEAN;
+        return TypeCategory.BOOL;
     }
 
     @Override
@@ -47,11 +49,11 @@ public class LessThan extends Primitive2 {
                 return arg2Category.match(new TypeCategory.Matcher<TypeCategory>() {
                     public TypeCategory ifReference() { // (Object, Object)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, Object.class, Object.class);
-                        return BOOLEAN;
+                        return BOOL;
                     }
                     public TypeCategory ifInt() { // (Object, int)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, Object.class, int.class);
-                        return BOOLEAN;
+                        return BOOL;
                     }
                     public TypeCategory ifBoolean() { // (Object, boolean)
                         throw new CompilerError("LT is not applicable to a boolean");
@@ -63,11 +65,11 @@ public class LessThan extends Primitive2 {
                 return arg2Category.match(new TypeCategory.Matcher<TypeCategory>() {
                     public TypeCategory ifReference() { // (int, Object)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, int.class, Object.class);
-                        return BOOLEAN;
+                        return BOOL;
                     }
                     public TypeCategory ifInt() { // (int, int)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, int.class, int.class);
-                        return BOOLEAN;
+                        return BOOL;
                     }
                     public TypeCategory ifBoolean() {
                         throw new CompilerError("SUB is not applicable to a boolean");
@@ -97,20 +99,21 @@ public class LessThan extends Primitive2 {
         return a < b;
     }
 
-    public TypeCategory generateIf(If theIf, Visitor<TypeCategory> generator, GhostWriter writer) {
-        TypeCategory arg1Type = argument1().accept(generator);
-        writer.adaptType(arg1Type, INT);
-        TypeCategory arg2Type = argument2().accept(generator);
-        writer.adaptType(arg2Type, INT);
-        TypeCategory[] branchTypes = new TypeCategory[2];
+    public void generateIf(
+        BiConsumer<TypeCategory, Expression> argGenerator,
+        Runnable trueBranchGenerator,
+        Runnable falseBranchGenerator,
+        GhostWriter writer)
+    {
+        argGenerator.accept(INT, argument1());
+        argGenerator.accept(INT, argument2());
         writer.withLabelAtEnd(end -> {
             writer.withLabelAtEnd(elseStart -> {
                 writer.asm().visitJumpInsn(IF_ICMPGE, elseStart);
-                branchTypes[0] = theIf.trueBranch().accept(generator);
+                trueBranchGenerator.run();
                 writer.jump(end);
             });
-            branchTypes[1] = theIf.falseBranch().accept(generator);
+            falseBranchGenerator.run();
         });
-        return branchTypes[0].union(branchTypes[1]);
     }
 }

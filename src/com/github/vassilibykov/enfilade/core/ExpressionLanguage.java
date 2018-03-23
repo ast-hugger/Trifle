@@ -5,9 +5,7 @@ package com.github.vassilibykov.enfilade.core;
 import com.github.vassilibykov.enfilade.primitives.*;
 
 import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 
 /**
  * A set of static factory methods for creating expressions in a readable form,
@@ -16,18 +14,18 @@ import java.util.function.UnaryOperator;
 public class ExpressionLanguage {
 
     public static Function nullaryFunction(Supplier<Expression> bodyBuilder) {
-        return Function.with(new Var[0], bodyBuilder.get());
+        return Function.with(new Variable[0], bodyBuilder.get());
     }
 
-    public static Function unaryFunction(java.util.function.Function<Var, Expression> bodyBuilder) {
-        Var arg = var("a1");
-        return Function.with(new Var[]{arg}, bodyBuilder.apply(arg));
+    public static Function unaryFunction(java.util.function.Function<Variable, Expression> bodyBuilder) {
+        Variable arg = var("a1");
+        return Function.with(new Variable[]{arg}, bodyBuilder.apply(arg));
     }
 
-    public static Function binaryFunction(BiFunction<Var, Var, Expression> bodyBuilder) {
-        Var arg1 = var("a1");
-        Var arg2 = var("a2");
-        return Function.with(new Var[]{arg1, arg2}, bodyBuilder.apply(arg1, arg2));
+    public static Function binaryFunction(BiFunction<Variable, Variable, Expression> bodyBuilder) {
+        Variable arg1 = var("a1");
+        Variable arg2 = var("a2");
+        return Function.with(new Variable[]{arg1, arg2}, bodyBuilder.apply(arg1, arg2));
     }
 
     public static Call0 call(Function function) {
@@ -50,7 +48,7 @@ public class ExpressionLanguage {
         return new If(condition, trueBranch, falseBranch);
     }
 
-    public static Let let(Var variable, Expression initializer, Expression body) {
+    public static Let let(Variable variable, Expression initializer, Expression body) {
         return new Let(variable, initializer, body);
     }
 
@@ -78,16 +76,20 @@ public class ExpressionLanguage {
         return new Prog(expressions);
     }
 
+    public static VarRef ref(Variable variable) {
+        return new VarRef(variable);
+    }
+
     public static Ret ret(AtomicExpression value) {
         return new Ret(value);
     }
 
-    public static SetVar set(Var variable, AtomicExpression value) {
-        return new SetVar(variable, value);
+    public static VarSet set(Variable variable, AtomicExpression value) {
+        return new VarSet(variable, value);
     }
 
-    public static Var var(String name) {
-        return new Var(name);
+    public static Variable var(String name) {
+        return new Variable(name);
     }
 
 }

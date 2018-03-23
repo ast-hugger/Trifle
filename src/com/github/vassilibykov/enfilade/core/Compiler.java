@@ -79,7 +79,6 @@ public class Compiler {
     private final Function function;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-    private TypeCategory bodyType;
     @Nullable private MethodType specializationType = null;
 
     private Compiler(Function function) {
@@ -88,7 +87,8 @@ public class Compiler {
     }
 
     public Result compile() {
-        bodyType = ExpressionTypeAnalyzer.analyze(function);
+        ExpressionTypeInferencer.inferTypesIn(function);
+        ExpressionTypeObserver.analyze(function);
         setupClassWriter();
         generateGenericMethod();
         if (function.profile.canBeSpecialized()) {
@@ -145,8 +145,17 @@ public class Compiler {
 
     private MethodType computeSpecializationType() {
         Class<?>[] argClasses = Stream.of(function.arguments())
-            .map(var -> var.compilerAnnotation.valueCategory().representativeType())
+            .map(var -> representativeType(var.compilerAnnotation.observedType()))
             .toArray(Class[]::new);
-        return MethodType.methodType(bodyType.representativeType(), argClasses);
+        return MethodType.methodType(
+            representativeType(function.body().compilerAnnotation.observedType()),
+            argClasses);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Class<?> representativeType(ExpressionType observedType) {
+        return observedType.typeCategory()
+            .map(it -> (Class<Object>) it.representativeClass())
+            .orElse(Object.class);
     }
 }
