@@ -4,9 +4,7 @@ package com.github.vassilibykov.enfilade.acode;
 
 import com.github.vassilibykov.enfilade.core.AtomicExpression;
 import com.github.vassilibykov.enfilade.core.CallExpression;
-import com.github.vassilibykov.enfilade.core.Expression;
 import com.github.vassilibykov.enfilade.core.ExpressionLanguage;
-import com.github.vassilibykov.enfilade.core.Function;
 import com.github.vassilibykov.enfilade.core.Primitive1;
 import com.github.vassilibykov.enfilade.core.Primitive2;
 import com.github.vassilibykov.enfilade.core.Variable;
@@ -25,8 +23,8 @@ public class AssemblyLanguage {
         return new Goto(address);
     }
 
-    public static If jump(AtomicExpression test, int address) {
-        return new If(test, address);
+    public static Branch jump(AtomicExpression test, int address) {
+        return new Branch(test, address);
     }
 
     public static Load load(int value) {

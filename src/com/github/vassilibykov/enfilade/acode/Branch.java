@@ -8,17 +8,17 @@ import com.github.vassilibykov.enfilade.core.AtomicExpression;
  * Set the instruction pointer to the specified address if the test evaluates to
  * true.
  */
-public class If extends Instruction {
+public class Branch extends Instruction {
     /*internal*/ final AtomicExpression test;
-    /*internal*/ final int address;
+    /*internal*/ int address;
 
-    If(AtomicExpression test, int address) {
+    Branch(AtomicExpression test, int address) {
         this.test = test;
         this.address = address;
     }
 
     @Override
     public void accept(VoidVisitor visitor) {
-        visitor.visitIf(this);
+        visitor.visitBranch(this);
     }
 }

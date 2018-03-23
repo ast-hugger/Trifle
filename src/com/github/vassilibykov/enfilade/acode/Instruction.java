@@ -5,10 +5,10 @@ package com.github.vassilibykov.enfilade.acode;
 public abstract class Instruction {
 
     public interface VoidVisitor {
+        void visitBranch(Branch branch);
         void visitCall(Call call);
         void visitDrop(Drop drop);
         void visitGoto(Goto aGoto);
-        void visitIf(If anIf);
         void visitLoad(Load load);
         void visitReturn(Return aReturn);
         void visitStore(Store store);

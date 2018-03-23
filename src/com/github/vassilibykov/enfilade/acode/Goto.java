@@ -6,7 +6,7 @@ package com.github.vassilibykov.enfilade.acode;
  * Unconditionally set the instruction pointer to the specified address.
  */
 public class Goto extends Instruction {
-    /*internal*/ final int address;
+    /*internal*/ int address;
 
     Goto(int address) {
         this.address = address;

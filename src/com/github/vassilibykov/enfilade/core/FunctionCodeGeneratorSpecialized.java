@@ -12,6 +12,7 @@ import java.util.Deque;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
 
 class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategory> {
     private final GhostWriter writer;
@@ -170,7 +171,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
         int i;
         for (i = 0; i < expressions.length - 1; i++) {
             Expression expr = expressions[i];
-            generateExpecting(expr.compilerAnnotation.specializationType(), expr);
+            generateExpecting(VOID, expr);
             writer.pop();
         }
         generateForCurrentContinuation(expressions[i]);
@@ -220,6 +221,9 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
      * the general case be converted to a value of 'to', for example {@code
      * reference -> int}, the generated code will throw an exception to complete
      * the evaluation in emergency mode.
+     *
+     * <p>If the 'to' type is VOID, that means the value passed to the continuation
+     * will be discarded. In that case it can be anything.
      */
     private void assertPassage(TypeCategory from, TypeCategory to) {
         from.match(new TypeCategory.VoidMatcher() {
@@ -228,6 +232,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
                     public void ifReference() { }
                     public void ifInt() { writer.throwSquarePegException(); }
                     public void ifBoolean() { writer.throwSquarePegException(); }
+                    public void ifVoid() { }
                 });
             }
             public void ifInt() {
@@ -235,6 +240,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
                     public void ifReference() { writer.boxInteger(); }
                     public void ifInt() { }
                     public void ifBoolean() { writer.boxInteger().throwSquarePegException(); }
+                    public void ifVoid() { }
                 });
             }
             public void ifBoolean() {
@@ -242,6 +248,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
                     public void ifReference() { writer.boxBoolean(); }
                     public void ifInt() { writer.boxBoolean().throwSquarePegException(); }
                     public void ifBoolean() { }
+                    public void ifVoid() { }
                 });
             }
         });

@@ -9,7 +9,8 @@ package com.github.vassilibykov.enfilade.core;
 public enum TypeCategory {
     REFERENCE(Object.class),
     INT(int.class),
-    BOOL(boolean.class);
+    BOOL(boolean.class),
+    VOID(void.class);
 
     public static TypeCategory ofObject(Object value) {
         if (value instanceof Integer) {
@@ -25,12 +26,24 @@ public enum TypeCategory {
         T ifReference();
         T ifInt();
         T ifBoolean();
+        default T ifVoid() {
+            // A void type category is only used in one specific case, as the type of
+            // a continuation that will discard its value. We don't expect to see it in other
+            // scenarios. This default method allows us to just ignore its potential existence.
+            throw new AssertionError("a VOID type category is not expected here");
+        }
     }
 
     public interface VoidMatcher {
         void ifReference();
         void ifInt();
         void ifBoolean();
+        default void ifVoid() {
+            // A void type category is only used in one specific case, as the type of
+            // a continuation that will discard its value. We don't expect to see it in other
+            // scenarios. This default method allows us to just ignore its potential existence.
+            throw new AssertionError("a VOID type category is not expected here");
+        }
     }
 
     /*
@@ -60,6 +73,7 @@ public enum TypeCategory {
             case REFERENCE: return matcher.ifReference();
             case INT: return matcher.ifInt();
             case BOOL: return matcher.ifBoolean();
+            case VOID: return matcher.ifVoid();
             default:
                 throw new AssertionError("missing matcher case");
         }
@@ -75,6 +89,9 @@ public enum TypeCategory {
                 break;
             case BOOL:
                 matcher.ifBoolean();
+                break;
+            case VOID:
+                matcher.ifVoid();
                 break;
             default:
                 throw new AssertionError("missing matcher case");

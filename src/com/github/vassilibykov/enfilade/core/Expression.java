@@ -36,7 +36,7 @@ public abstract class Expression {
         T visitProg(Prog prog);
         T visitRet(Ret ret);
         T visitVarSet(VarSet set);
-        T visitVarRef(VarRef var);
+        T visitVarRef(VarRef varRef);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {

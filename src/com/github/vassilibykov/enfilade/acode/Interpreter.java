@@ -8,9 +8,9 @@ public class Interpreter implements Instruction.VoidVisitor {
 
     @NotNull private Instruction[] code;
     @NotNull private Object[] frame;
+    private final com.github.vassilibykov.enfilade.core.Interpreter.Evaluator evaluator;
     private int pc;
     private Object register;
-    private final com.github.vassilibykov.enfilade.core.Interpreter.Evaluator evaluator;
 
     Interpreter(@NotNull Instruction[] code, @NotNull Object[] frame, int pc) {
         this.code = code;
@@ -27,6 +27,13 @@ public class Interpreter implements Instruction.VoidVisitor {
     }
 
     @Override
+    public void visitBranch(Branch anIf) {
+        if ((Boolean) anIf.test.accept(evaluator)) {
+            pc = anIf.address;
+        }
+    }
+
+    @Override
     public void visitCall(Call call) {
         register = call.callExpression.accept(evaluator);
     }
@@ -38,13 +45,6 @@ public class Interpreter implements Instruction.VoidVisitor {
     @Override
     public void visitGoto(Goto aGoto) {
         pc = aGoto.address;
-    }
-
-    @Override
-    public void visitIf(If anIf) {
-        if ((Boolean) anIf.test.accept(evaluator)) {
-            pc = anIf.address;
-        }
     }
 
     @Override
