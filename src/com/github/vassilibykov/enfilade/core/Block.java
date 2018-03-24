@@ -5,14 +5,15 @@ package com.github.vassilibykov.enfilade.core;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A sequence, like {@code begin} in Scheme or {@code progn} in Common Lisp.
- * In theory it's expressible as a chain of {@code let}s, but it's convenient
- * to treat it as a distinct construct.
+ * A sequence, like {@code begin} in Scheme or {@code progn} in Common Lisp. In
+ * theory it's expressible as a chain of {@code let}s (in our variant, not in
+ * classical A-normal forms), but it's convenient to treat it as a distinct
+ * construct.
  */
-public class Prog extends ComplexExpression {
+public class Block extends ComplexExpression {
     @NotNull private final Expression[] expressions;
 
-    Prog(@NotNull Expression[] expressions) {
+    Block(@NotNull Expression[] expressions) {
         this.expressions = expressions;
     }
 
@@ -22,7 +23,7 @@ public class Prog extends ComplexExpression {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitProg(this);
+        return visitor.visitBlock(this);
     }
 
     @Override

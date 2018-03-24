@@ -28,4 +28,9 @@ public abstract class CallExpression extends ComplexExpression {
     }
 
     protected abstract int arity();
+
+    @Override
+    public String toString() {
+        return "call #" + FunctionRegistry.INSTANCE.lookup(function);
+    }
 }

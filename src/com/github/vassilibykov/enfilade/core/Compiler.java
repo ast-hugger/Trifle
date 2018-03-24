@@ -23,7 +23,7 @@ public class Compiler {
     public static final String GENERIC_METHOD_NAME = "generic";
     public static final String SPECIALIZED_METHOD_NAME = "specialized";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
-    private static final String GENERATED_CLASS_NAME_PREFIX = "$g$";
+    private static final String GENERATED_CLASS_NAME_PREFIX = "$gen$";
 
     /**
      * The access point: compile a function.
@@ -132,13 +132,8 @@ public class Compiler {
             specializationType.toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        FunctionCodeGeneratorSpecialized generator = new FunctionCodeGeneratorSpecialized(methodWriter);
-        TypeCategory returnType = generator.generate(function);
-        returnType.match(new TypeCategory.VoidMatcher() {
-            public void ifReference() { methodWriter.visitInsn(Opcodes.ARETURN); }
-            public void ifInt() { methodWriter.visitInsn(Opcodes.IRETURN); }
-            public void ifBoolean() { methodWriter.visitInsn(Opcodes.IRETURN); }
-        });
+        FunctionCodeGeneratorSpecialized generator = new FunctionCodeGeneratorSpecialized(function, methodWriter);
+        generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
     }

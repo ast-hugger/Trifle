@@ -21,4 +21,9 @@ public class Branch extends Instruction {
     public void accept(VoidVisitor visitor) {
         visitor.visitBranch(this);
     }
+
+    @Override
+    public String toString() {
+        return "BRANCH " + test + " " + address;
+    }
 }

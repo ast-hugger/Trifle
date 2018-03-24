@@ -19,4 +19,9 @@ public class Store extends Instruction {
     public void accept(VoidVisitor visitor) {
         visitor.visitStore(this);
     }
+
+    @Override
+    public String toString() {
+        return "STORE " + variable;
+    }
 }

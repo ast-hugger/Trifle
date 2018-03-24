@@ -103,12 +103,12 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitProg(Prog prog) {
+    public ExpressionType visitBlock(Block block) {
         ExpressionType type = ExpressionType.known(TypeCategory.REFERENCE);
-        for (Expression each : prog.expressions()) {
+        for (Expression each : block.expressions()) {
             type = each.accept(this);
         }
-        return andSetIn(prog, type);
+        return andSetIn(block, type);
     }
 
     @Override

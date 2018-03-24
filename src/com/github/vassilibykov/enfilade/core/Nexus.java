@@ -56,6 +56,7 @@ class Nexus {
         this.function = function;
         this.state = State.PROFILING;
         this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }
 

@@ -51,4 +51,10 @@ public class Negate extends Primitive1 {
             }
         });
     }
+
+
+    @Override
+    public String toString() {
+        return "(NEGATE " + argument() + ")";
+    }
 }

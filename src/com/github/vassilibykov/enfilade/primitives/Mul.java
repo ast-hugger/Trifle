@@ -71,6 +71,11 @@ public class Mul extends Primitive2 {
         });
     }
 
+    @Override
+    public String toString() {
+        return "(MUL " + argument1() + " " + argument2() + ")";
+    }
+
     public static int mul(Object a, Object b) {
         return (Integer) a * (Integer) b;
     }

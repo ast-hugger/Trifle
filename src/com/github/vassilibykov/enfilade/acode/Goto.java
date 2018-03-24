@@ -16,4 +16,9 @@ public class Goto extends Instruction {
     public void accept(VoidVisitor visitor) {
         visitor.visitGoto(this);
     }
+
+    @Override
+    public String toString() {
+        return "GOTO " + address;
+    }
 }

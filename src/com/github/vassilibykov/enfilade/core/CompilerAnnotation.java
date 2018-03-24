@@ -13,6 +13,7 @@ import java.util.Objects;
 public class CompilerAnnotation {
     private ExpressionType inferredType;
     private ExpressionType observedType;
+    private int acodeBookmark = -1;
 
     CompilerAnnotation() {}
 
@@ -22,6 +23,10 @@ public class CompilerAnnotation {
 
     public synchronized ExpressionType observedType() {
         return Objects.requireNonNull(observedType, "observed types have not been recorded yet");
+    }
+
+    public int acodeBookmark() {
+        return acodeBookmark;
     }
 
     /**
@@ -61,6 +66,10 @@ public class CompilerAnnotation {
         boolean changed = !observedType.equals(newType);
         observedType = newType;
         return changed;
+    }
+
+    public void setAcodeBookmark(int acodeBookmark) {
+        this.acodeBookmark = acodeBookmark;
     }
 
     @Override

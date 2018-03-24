@@ -19,4 +19,9 @@ public class Load extends Instruction {
     public void accept(VoidVisitor visitor) {
         visitor.visitLoad(this);
     }
+
+    @Override
+    public String toString() {
+        return "LOAD " + expression;
+    }
 }

@@ -23,7 +23,11 @@ public class Scratch {
         }
     }
 
-    private static void foo() {
-        throw SquarePegException.with("hello");
+    private static int foo(Object arg) {
+        if (arg instanceof Integer) {
+            return (int) arg;
+        } else {
+            throw new IllegalArgumentException();
+        }
     }
 }

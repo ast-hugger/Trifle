@@ -15,4 +15,9 @@ public class Drop extends Instruction {
     public void accept(VoidVisitor visitor) {
         visitor.visitDrop(this);
     }
+
+    @Override
+    public String toString() {
+        return "DROP";
+    }
 }

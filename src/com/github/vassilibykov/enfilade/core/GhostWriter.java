@@ -7,6 +7,7 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
 import java.lang.invoke.MethodType;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -91,6 +92,28 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter handleSquarePegException(Label begin, Label end, Label handler) {
+        asmWriter.visitTryCatchBlock(begin, end, handler, SquarePegException.INTERNAL_CLASS_NAME);
+        return this;
+    }
+
+    public GhostWriter ifThenElse(Runnable trueBranchGenerator, Runnable falseBranchGenerator) {
+        withLabelAtEnd(end -> {
+            withLabelAtEnd(elseStart -> {
+                jumpIf0(elseStart);
+                trueBranchGenerator.run();
+                jump(end);
+            });
+            falseBranchGenerator.run();
+        });
+        return this;
+    }
+
+    public GhostWriter instanceOf(Class<?> targetClass) {
+        asmWriter.visitTypeInsn(INSTANCEOF, internalClassName(targetClass));
+        return this;
+    }
+
     public GhostWriter invokeDynamic(Handle bootstrapper, String name, MethodType callSiteType, Object... bootstrapperArgs) {
         asmWriter.visitInvokeDynamicInsn(
             name,
@@ -146,6 +169,7 @@ public class GhostWriter {
     }
 
     public GhostWriter loadLocal(TypeCategory category, int index) {
+        // FIXME switch to pattern matching style
         switch (category) {
             case REFERENCE:
                 asmWriter.visitVarInsn(ALOAD, index);
@@ -169,12 +193,19 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter newObjectArray(int size) {
+        loadInt(size);
+        asmWriter.visitTypeInsn(ANEWARRAY, internalClassName(Object.class));
+        return this;
+    }
+
     public GhostWriter pop() {
         asmWriter.visitInsn(POP);
         return this;
     }
 
     public GhostWriter ret(TypeCategory category) {
+        // FIXME: 3/23/18 change to pattern matching style
         switch (category) {
             case REFERENCE:
                 asmWriter.visitInsn(ARETURN);
@@ -188,7 +219,16 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter storeArray(int index, Runnable valueGenerator) {
+        dup();
+        loadInt(index);
+        valueGenerator.run();
+        asmWriter.visitInsn(AASTORE);
+        return this;
+    }
+
     public GhostWriter storeLocal(TypeCategory category, int index) {
+        // FIXME: 3/23/18 change to pattern matching style
         switch (category) {
             case REFERENCE:
                 asmWriter.visitVarInsn(ASTORE, index);
@@ -229,6 +269,15 @@ public class GhostWriter {
         Label label = new Label();
         emitter.accept(label);
         asmWriter.visitLabel(label);
+        return this;
+    }
+
+    public GhostWriter withLabelsAround(BiConsumer<Label, Label> emitter) {
+        Label start = new Label();
+        Label end = new Label();
+        asmWriter.visitLabel(start);
+        emitter.accept(start, end);
+        asmWriter.visitLabel(end);
         return this;
     }
 }

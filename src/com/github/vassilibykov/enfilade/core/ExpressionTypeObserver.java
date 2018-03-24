@@ -168,12 +168,12 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitProg(Prog prog) {
+    public ExpressionType visitBlock(Block block) {
         ExpressionType type = ExpressionType.known(TypeCategory.REFERENCE);
-        for (Expression each : prog.expressions()) {
+        for (Expression each : block.expressions()) {
             type = each.accept(this);
         }
-        prog.compilerAnnotation.setObservedType(type);
+        block.compilerAnnotation.setObservedType(type);
         return type;
     }
 

@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 public abstract class Expression {
 
     public interface Visitor<T> {
+        T visitBlock(Block block);
         T visitCall0(Call0 call);
         T visitCall1(Call1 call);
         T visitCall2(Call2 call);
@@ -33,13 +34,18 @@ public abstract class Expression {
         T visitLet(Let let);
         T visitPrimitive1(Primitive1 primitive);
         T visitPrimitive2(Primitive2 primitive);
-        T visitProg(Prog prog);
         T visitRet(Ret ret);
         T visitVarSet(VarSet set);
         T visitVarRef(VarRef varRef);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
+        @Override
+        public T visitBlock(Block block) {
+            Stream.of(block.expressions()).forEach(this::visit);
+            return null;
+        }
+
         @Override
         public T visitCall0(Call0 call) {
             return null;
@@ -89,12 +95,6 @@ public abstract class Expression {
         }
 
         @Override
-        public T visitProg(Prog prog) {
-            Stream.of(prog.expressions()).forEach(this::visit);
-            return null;
-        }
-
-        @Override
         public T visitRet(Ret ret) {
             return ret.value().accept(this);
         }
@@ -120,6 +120,10 @@ public abstract class Expression {
      */
 
     /*internal*/ final CompilerAnnotation compilerAnnotation = new CompilerAnnotation();
+
+    public CompilerAnnotation compilerAnnotation() {
+        return compilerAnnotation;
+    }
 
     public abstract <T> T accept(Visitor<T> visitor);
 }

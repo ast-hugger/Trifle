@@ -2,12 +2,15 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.acode.Instruction;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A registry translating between {@link Function} objects and integer IDs.
@@ -47,4 +50,5 @@ public class FunctionRegistry {
             return null;
         }
     }
+
 }

@@ -83,4 +83,9 @@ public class Add extends Primitive2 {
     public static int add(int arg1, Object arg2) {
         return arg1 + (Integer) arg2;
     }
+
+    @Override
+    public String toString() {
+        return "(ADD " + argument1() + " " + argument2() + ")";
+    }
 }

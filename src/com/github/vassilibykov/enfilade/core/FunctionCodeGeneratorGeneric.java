@@ -82,16 +82,16 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     public TypeCategory visitIf(If anIf) {
         TypeCategory testType = anIf.condition().accept(this);
         writer.adaptType(testType, BOOL);
-        writer.withLabelAtEnd(end -> {
-            writer.withLabelAtEnd(elseStart -> {
-                writer.jumpIf0(elseStart);
+        writer.ifThenElse(
+            () -> {
                 TypeCategory type = anIf.trueBranch().accept(this);
                 writer.adaptType(type, REFERENCE);
-                writer.jump(end);
-            });
-            TypeCategory type = anIf.falseBranch().accept(this);
-            writer.adaptType(type, REFERENCE);
-        });
+            },
+            () -> {
+                TypeCategory type = anIf.falseBranch().accept(this);
+                writer.adaptType(type, REFERENCE);
+            }
+        );
         return REFERENCE;
     }
 
@@ -117,8 +117,8 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitProg(Prog prog) {
-        Expression[] expressions = prog.expressions();
+    public TypeCategory visitBlock(Block block) {
+        Expression[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer.loadNull();
             return REFERENCE;

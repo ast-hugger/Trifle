@@ -37,6 +37,7 @@ package com.github.vassilibykov.enfilade.core;
  * type is quite literally a square peg in a round hole.
  */
 public class SquarePegException extends RuntimeException {
+    public static final String INTERNAL_CLASS_NAME = GhostWriter.internalClassName(SquarePegException.class);
 
     public static SquarePegException with(Object value) {
         return new SquarePegException(value);
@@ -46,5 +47,9 @@ public class SquarePegException extends RuntimeException {
 
     private SquarePegException(Object value) {
         this.value = value;
+    }
+
+    public Object value() {
+        return value;
     }
 }

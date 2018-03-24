@@ -2,12 +2,19 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.acode.Interpreter;
+import com.github.vassilibykov.enfilade.acode.Translator;
 import com.github.vassilibykov.enfilade.primitives.LessThan;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
 import java.lang.invoke.MethodType;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
@@ -15,10 +22,28 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
 
 class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategory> {
+    private final Function function;
     private final GhostWriter writer;
     private final Deque<TypeCategory> continuationTypes = new ArrayDeque<>();
+    private final List<Variable> liveLocals = new ArrayList<>();
+    private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
+    private final TypeCategory functionReturnType;
 
-    FunctionCodeGeneratorSpecialized(MethodVisitor writer) {
+    private static class SquarePegHandler {
+        private final Label handlerStart;
+        private final List<Variable> capturedLocals;
+        private final int acodeInitialPC;
+
+        private SquarePegHandler(Label handlerStart, List<Variable> capturedLocals, int acodeInitialPC) {
+            this.handlerStart = handlerStart;
+            this.capturedLocals = capturedLocals;
+            this.acodeInitialPC = acodeInitialPC;
+        }
+    }
+
+    FunctionCodeGeneratorSpecialized(Function function, MethodVisitor writer) {
+        this.function = function;
+        this.functionReturnType = function.body().compilerAnnotation.specializationType();
         this.writer = new GhostWriter(writer);
     }
 
@@ -26,12 +51,20 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
         return writer;
     }
 
-    TypeCategory generate(Function function) {
-        TypeCategory returnType = function.body().compilerAnnotation.specializationType();
-        continuationTypes.push(returnType);
+    void generate() {
+        function.acode = Translator.translate(function.body());
+        continuationTypes.push(functionReturnType);
         function.body().accept(this);
         continuationTypes.pop();
-        return returnType;
+        writer.ret(functionReturnType);
+        if (!squarePegHandlers.isEmpty()) {
+            Label epilogue = new Label();
+            for (int i = 0; i < squarePegHandlers.size(); i++) {
+                boolean isLastHandler = i == squarePegHandlers.size() - 1;
+                generateSquarePegHandler(squarePegHandlers.get(i), isLastHandler, epilogue);
+            }
+            generateEpilogue(epilogue);
+        }
     }
 
     private TypeCategory currentContinuationType() {
@@ -118,14 +151,10 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
             return null;
         }
         generateExpecting(BOOL, anIf.condition());
-        writer.withLabelAtEnd(end -> {
-            writer.withLabelAtEnd(elseStart -> {
-                writer.jumpIf0(elseStart);
-                generateForCurrentContinuation(anIf.trueBranch());
-                writer.jump(end);
-            });
-            generateForCurrentContinuation(anIf.falseBranch());
-        });
+        writer.ifThenElse(
+            () -> generateForCurrentContinuation(anIf.trueBranch()),
+            () -> generateForCurrentContinuation(anIf.falseBranch())
+        );
         return null;
     }
 
@@ -133,9 +162,15 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     public TypeCategory visitLet(Let let) {
         Variable var = let.variable();
         TypeCategory varType = var.compilerAnnotation.specializationType();
-        generateExpecting(varType, let.initializer());
+        if (varType == REFERENCE) {
+            generateExpecting(REFERENCE, let.initializer());
+        } else {
+            withSquarePegRecovery(let, () -> generateExpecting(varType, let.initializer()));
+        }
         writer.storeLocal(varType, var.index());
+        liveLocals.add(var);
         generateForCurrentContinuation(let.body());
+        liveLocals.remove(var);
         return null;
     }
 
@@ -160,8 +195,8 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitProg(Prog prog) {
-        Expression[] expressions = prog.expressions();
+    public TypeCategory visitBlock(Block block) {
+        Expression[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer
                 .loadNull()
@@ -250,6 +285,113 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
                     public void ifBoolean() { }
                     public void ifVoid() { }
                 });
+            }
+        });
+    }
+
+    private void withSquarePegRecovery(Let requestor, Runnable generate) {
+        Label handlerStart = new Label();
+        SquarePegHandler handler = new SquarePegHandler(
+            handlerStart,
+            new ArrayList<>(liveLocals),
+            requestor.compilerAnnotation().acodeBookmark());
+        squarePegHandlers.add(handler);
+        writer.withLabelsAround((begin, end) -> {
+            generate.run();
+            writer.handleSquarePegException(begin, end, handlerStart);
+        });
+    }
+
+    /**
+     * Generate code that loads onto the stack a replica of the frame locals
+     * live for the specified handler (an Object[]) and the restart position in
+     * A-code, then jumps to the epilogue unless this is the last handler.
+     */
+    private void generateSquarePegHandler(SquarePegHandler handler, boolean isLastHandler, Label epilogueStart) {
+        // TODO: 3/23/18 an optimization opportunity
+        // Each handler is currently loading the entire set of its live locals, as
+        // generated by generateFrameReplicator(). These sets often have common subsets.
+        // For example, each of them includes the function arguments. A smarter approach
+        // would be to detect these commonalities and factor them out similarly to how the
+        // function epilogue is factored out.
+        writer.asm().visitLabel(handler.handlerStart);
+        // stack: SquarePegException
+        writer.loadInt(handler.acodeInitialPC);
+        generateFrameReplicator(handler);
+        // stack: SPE, int, Object[]
+        if (!isLastHandler) writer.jump(epilogueStart);
+    }
+
+    /**
+     * Generate a code fragment creating an object array of size equal to the
+     * function's locals count and populating it with the values of currently
+     * live local variables. The array is left on the stack.
+     */
+    private void generateFrameReplicator(SquarePegHandler handler) {
+        int size = function.localsCount();
+        writer.newObjectArray(size);
+        handler.capturedLocals.forEach(this::storeInFrameReplica);
+    }
+
+    private void storeInFrameReplica(Variable local) {
+        TypeCategory localType = local.compilerAnnotation.specializationType();
+        writer.storeArray(local.index, () -> {
+            writer.loadLocal(localType, local.index);
+            writer.adaptType(localType, REFERENCE);
+        });
+    }
+
+    private void generateEpilogue(Label epilogueStart) {
+        writer.asm().visitLabel(epilogueStart);
+        // stack: SPE, int initialPC, Object[] frame
+        Stream.of(function.arguments()).forEach(this::storeInFrameReplica);
+        // stack: SPE, int initialPC, Object[] frame
+        writer
+            .loadInt(FunctionRegistry.INSTANCE.lookup(function))
+            // stack: SPE, int initialPC, Object[] frame, int functionId
+            .invokeStatic(Interpreter.class, "forRecovery", Interpreter.class, int.class, Object[].class, int.class)
+            // stack: SPE, Interpreter
+            .swap()
+            // stack: Interpreter, SPE
+            .invokeVirtual(SquarePegException.class, "value", Object.class)
+            // stack: Interpreter, Object
+            .invokeVirtual(Interpreter.class, "interpret", Object.class, Object.class);
+        functionReturnType.match(new TypeCategory.VoidMatcher() {
+            @Override
+            public void ifReference() {
+                writer.ret(REFERENCE);
+            }
+
+            @Override
+            public void ifInt() {
+                writer.dup();
+                writer.instanceOf(Integer.class);
+                writer.ifThenElse(
+                    () -> {
+                        writer.checkCast(Integer.class);
+                        writer.invokeVirtual(Integer.class, "intValue", int.class);
+                        writer.ret(INT);
+                    },
+                    () -> {
+                        writer.throwSquarePegException();
+                    }
+                );
+            }
+
+            @Override
+            public void ifBoolean() {
+                writer.dup();
+                writer.instanceOf(Boolean.class);
+                writer.ifThenElse(
+                    () -> {
+                        writer.checkCast(Boolean.class);
+                        writer.invokeVirtual(Boolean.class, "booleanValue", boolean.class);
+                        writer.ret(BOOL);
+                    },
+                    () -> {
+                        writer.throwSquarePegException();
+                    }
+                );
             }
         });
     }

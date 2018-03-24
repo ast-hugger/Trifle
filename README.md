@@ -13,16 +13,13 @@ A proof of concept currently able to:
   * Blend generic and specialized forms to switch to the
     specialized path when applicable.
   * Throw SquarePegExceptions at the right times.
+  * Catch SPEs at the right places and recover using a-code. 
 
 The profiling interpreter and the generic and specialized form compilers work
 for the Fibonacci example. See [early benchmarks and code samples](doc/perf-observations.md).
 
-Specialization failures are generated in specialized code, but there 
-are no handlers to transition execution to the emergency interpreter.
+## TODO
 
-Started work on the emergency interpreter. Emergency interpreter is needed for
-recovery from specialization failures, as intermediary execution state can't be
-mapped onto the state of the existing profiling interpreter. Depending on its
-performance, emergency interpreter might even be better suited to be the
-profiling interpreter as well.
+  * Properly handle Return throughout (should be just a matter of programming)
+  * Handle call sites with a specialized signature not matching the available specialization.
 

@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.acode.Instruction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -14,11 +15,23 @@ import java.util.Set;
  */
 public class Function {
 
+    public static Function with(Expression body) {
+        return new Function(new Variable[0], body);
+    }
+
+    public static Function with(Variable arg, Expression body) {
+        return new Function(new Variable[]{arg}, body);
+    }
+
     public static Function with(Variable[] arguments, Expression body) {
         return new Function(arguments, body);
     }
 
-    public static Function withRecursion(Variable[] arguments, java.util.function.Function<Function, Expression> bodyBuilder) {
+    public static Function recursive(Variable var, java.util.function.Function<Function, Expression> bodyBuilder) {
+        return recursive(new Variable[]{var}, bodyBuilder);
+    }
+
+    public static Function recursive(Variable[] arguments, java.util.function.Function<Function, Expression> bodyBuilder) {
         return new Function(arguments, bodyBuilder);
     }
 
@@ -76,6 +89,7 @@ public class Function {
     private final int localsCount;
     /*internal*/ final Nexus nexus;
     /*internal*/ final FunctionProfile profile;
+    /*internal*/ Instruction[] acode;
 
     private Function(@NotNull Variable[] arguments, @NotNull Expression body) {
         this.arguments = arguments;
@@ -107,6 +121,10 @@ public class Function {
 
     public int localsCount() {
         return localsCount;
+    }
+
+    public Instruction[] acode() {
+        return acode;
     }
 
     private int computeLocalsCount() {

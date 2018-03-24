@@ -3,6 +3,7 @@
 package com.github.vassilibykov.enfilade.acode;
 
 import com.github.vassilibykov.enfilade.core.CallExpression;
+import com.github.vassilibykov.enfilade.core.FunctionRegistry;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -18,5 +19,10 @@ public class Call extends Instruction {
     @Override
     public void accept(VoidVisitor visitor) {
         visitor.visitCall(this);
+    }
+
+    @Override
+    public String toString() {
+        return "CALL #" + FunctionRegistry.INSTANCE.lookup(callExpression.function());
     }
 }

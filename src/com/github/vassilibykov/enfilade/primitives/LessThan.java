@@ -116,4 +116,9 @@ public class LessThan extends Primitive2 {
             falseBranchGenerator.run();
         });
     }
+
+    @Override
+    public String toString() {
+        return "(LT " + argument1() + " " + argument2() + ")";
+    }
 }

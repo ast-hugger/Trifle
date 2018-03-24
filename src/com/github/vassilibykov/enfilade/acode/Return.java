@@ -13,4 +13,9 @@ public class Return extends Instruction {
     public void accept(VoidVisitor visitor) {
         visitor.visitReturn(this);
     }
+
+    @Override
+    public String toString() {
+        return "RETURN";
+    }
 }

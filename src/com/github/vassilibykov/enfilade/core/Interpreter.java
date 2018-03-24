@@ -74,8 +74,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitProg(Prog prog) {
-            Expression[] expressions = prog.expressions();
+        public Object visitBlock(Block block) {
+            Expression[] expressions = block.expressions();
             int bodySize = expressions.length - 1;
             int i;
             for (i = 0; i < bodySize; i++) expressions[i].accept(this);
@@ -107,7 +107,7 @@ public class Interpreter {
     public Object interpret(Function function) {
         Object[] frame = new Object[function.localsCount()];
         try {
-            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
+            return function.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
@@ -117,7 +117,7 @@ public class Interpreter {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg;
         try {
-            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
+            return function.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
@@ -128,7 +128,7 @@ public class Interpreter {
         frame[0] = arg1;
         frame[1] = arg2;
         try {
-            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
+            return function.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
@@ -138,7 +138,7 @@ public class Interpreter {
         Object[] frame = new Object[function.localsCount()];
         System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
         try {
-            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
+            return function.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }

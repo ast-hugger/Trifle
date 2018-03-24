@@ -69,6 +69,11 @@ public class Sub extends Primitive2 {
         });
     }
 
+    @Override
+    public String toString() {
+        return "(SUB " + argument1() + " " + argument2() + ")";
+    }
+
     @SuppressWarnings("unused") // called by generated code
     public static int sub(Object arg1, Object arg2) {
         return (Integer) arg1 - (Integer) arg2;

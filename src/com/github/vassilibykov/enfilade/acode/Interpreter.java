@@ -2,9 +2,44 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
+import com.github.vassilibykov.enfilade.core.Function;
+import com.github.vassilibykov.enfilade.core.FunctionRegistry;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 public class Interpreter implements Instruction.VoidVisitor {
+
+    public static Interpreter on(Instruction[] code) {
+        return new Interpreter(code, new Object[0], 0);
+    }
+
+    public static Interpreter on(Instruction[] code, Object[] frame) {
+        return new Interpreter(code, frame, 0);
+    }
+
+    public static Interpreter on(Instruction[] code, Object[] frame, int initialPC) {
+        return new Interpreter(code, frame, initialPC);
+    }
+
+    /**
+     * Called by generated code to create an interpreter to recover from a
+     * specialization failure (a square peg exception). The order of the
+     * arguments is different from the customary for this class because it
+     * allows us to generate better function epilogues.
+     */
+    @SuppressWarnings("unused") // called by generated code
+    public static Interpreter forRecovery(int initialPC, Object[] frame, int functionId) {
+        Function function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId),
+            "there is no function with ID " + functionId);
+        Instruction[] code = Objects.requireNonNull(function.acode(),
+            "function has no acode associated with it");
+        return new Interpreter(code, frame, initialPC);
+    }
+
+    /*
+        Instance
+     */
 
     @NotNull private Instruction[] code;
     @NotNull private Object[] frame;
@@ -12,14 +47,22 @@ public class Interpreter implements Instruction.VoidVisitor {
     private int pc;
     private Object register;
 
-    Interpreter(@NotNull Instruction[] code, @NotNull Object[] frame, int pc) {
+    Interpreter(@NotNull Instruction[] code, @NotNull Object[] frame, int initialPc) {
         this.code = code;
         this.frame = frame;
-        this.pc = pc;
+        this.pc = initialPc;
         this.evaluator = new com.github.vassilibykov.enfilade.core.Interpreter.Evaluator(frame);
     }
 
     public Object interpret() {
+        while (pc >= 0) {
+            code[pc++].accept(this);
+        }
+        return register;
+    }
+
+    public Object interpret(Object registerValue) {
+        register = registerValue;
         while (pc >= 0) {
             code[pc++].accept(this);
         }

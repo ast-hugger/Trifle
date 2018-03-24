@@ -4,7 +4,22 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.junit.Test;
 
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.*;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.add;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.binaryFunction;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.call;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.const_;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.if_;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.lessThan;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.let;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.mul;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.negate;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.nullaryFunction;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.prog;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.ref;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.set;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.sub;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.unaryFunction;
+import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.var;
 import static org.junit.Assert.assertEquals;
 
 @SuppressWarnings("Convert2MethodRef")
@@ -112,18 +127,13 @@ public class InterpreterEvaluationTests {
         assertEquals("error", fibonacci.invoke(-1));
     }
 
-//    @Test
-    public void timeFib() {
-        // Now that the compiler is enabled, this in fact doesn't time the interpreter,
-        // as most of the computation is done in compiled mode.
-        int n = 35;
-        Function fibonacci = fibonacci();
-        Object[] args = {n};
-        for (int i = 0; i < 20; i++) fibonacci.invoke(n);
-        long start = System.nanoTime();
-        int result = (Integer) fibonacci.invoke(n);
-        long elapsed = System.nanoTime() - start;
-        System.out.format("fibonacci(%s) = %s in %s ms", n, result, elapsed / 1_000_000L);
+    @Test
+    public void testVeryEvilFibonacci() {
+        Function fibonacci = veryEvilFibonacci();
+        fibonacci.invoke(35); // enough to force compilation
+        assertEquals(1, fibonacci.invoke(0));
+        assertEquals(8, fibonacci.invoke(5));
+        assertEquals("error", fibonacci.invoke(-1));
     }
 
     /*
@@ -131,14 +141,14 @@ public class InterpreterEvaluationTests {
      */
 
     private Object eval(Expression methodBody) {
-        Function function = Function.with(new Variable[0], methodBody);
+        Function function = Function.with(methodBody);
         return function.invoke();
     }
 
     static Function factorial() {
         Variable n = var("n");
         Variable t = var("t");
-        return Function.withRecursion(new Variable[]{n}, factorial ->
+        return Function.recursive(n, factorial ->
             if_(lessThan(ref(n), const_(1)),
                 const_(1),
                 let(t, call(factorial, sub(ref(n), const_(1))),
@@ -149,7 +159,7 @@ public class InterpreterEvaluationTests {
         Variable n = var("n");
         Variable t1 = var("t1");
         Variable t2 = var("t2");
-        return Function.withRecursion(new Variable[]{n}, fibonacci ->
+        return Function.recursive(n, fibonacci ->
             if_(lessThan(ref(n), const_(2)),
                 const_(1),
                 let(t1, call(fibonacci, sub(ref(n), const_(1))),
@@ -167,7 +177,7 @@ public class InterpreterEvaluationTests {
         Variable n = var("n");
         Variable t1 = var("t1");
         Variable t2 = var("t2");
-        return Function.withRecursion(new Variable[]{n}, fibonacci ->
+        return Function.recursive(n, fibonacci ->
             if_(lessThan(ref(n), const_(0)),
                 const_("error"),
                 if_(lessThan(ref(n), const_(2)),
@@ -175,5 +185,26 @@ public class InterpreterEvaluationTests {
                     let(t1, call(fibonacci, sub(ref(n), const_(1))),
                         let(t2, call(fibonacci, sub(ref(n), const_(2))),
                             add(ref(t1), ref(t2)))))));
+    }
+
+    /**
+     * Here, unlike the simply evil version, the "error" constant is not in the
+     * tail position, so the continuation which should but can't receive its
+     * value lies within the function.
+     */
+    static Function veryEvilFibonacci() {
+        Variable n = var("n");
+        Variable t0 = var("t0");
+        Variable t1 = var("t1");
+        Variable t2 = var("t2");
+        return Function.recursive(n, fibonacci ->
+            let(t0, if_(lessThan(ref(n), const_(0)),
+                        const_("error"),
+                        if_(lessThan(ref(n), const_(2)),
+                            const_(1),
+                            let(t1, call(fibonacci, sub(ref(n), const_(1))),
+                                let(t2, call(fibonacci, sub(ref(n), const_(2))),
+                                    add(ref(t1), ref(t2)))))),
+                ref(t0)));
     }
 }

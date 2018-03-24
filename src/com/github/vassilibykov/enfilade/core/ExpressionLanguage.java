@@ -72,8 +72,8 @@ public class ExpressionLanguage {
         return new Negate(arg);
     }
 
-    public static Prog prog(Expression... expressions) {
-        return new Prog(expressions);
+    public static Block prog(Expression... expressions) {
+        return new Block(expressions);
     }
 
     public static VarRef ref(Variable variable) {
