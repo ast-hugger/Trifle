@@ -10,6 +10,12 @@ public enum TypeCategory {
     REFERENCE(Object.class),
     INT(int.class),
     BOOL(boolean.class),
+    /**
+     * The type of a continuation which accepts any value, such as a non-tail
+     * expression of a {@link Block}, or the type of an expression which
+     * produces no value (does not call its continuation), such as the {@link
+     * Ret}.
+     */
     VOID(void.class);
 
     public static TypeCategory ofObject(Object value) {
@@ -60,9 +66,15 @@ public enum TypeCategory {
         return representativeType;
     }
 
+    /**
+     * Return a union of this type and another, with {@link #VOID} being
+     * the zero: a union of it with any type is the other type.
+     */
     public TypeCategory union(TypeCategory another) {
-        if (this == another) {
+        if (this == another || another == VOID) {
             return this;
+        } else if (this == VOID) {
+            return another;
         } else {
             return REFERENCE;
         }

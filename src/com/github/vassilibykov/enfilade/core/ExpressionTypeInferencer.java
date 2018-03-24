@@ -4,6 +4,8 @@ package com.github.vassilibykov.enfilade.core;
 
 import java.util.stream.Stream;
 
+import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
+
 /**
  * Infers and sets the inferred types of compiler annotations in an expression.
  * The inferencing is of a simple bottom up kind. A minor wrinkle is that if a
@@ -24,7 +26,7 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
     static void inferTypesIn(Function function) {
         Stream.of(function.arguments()).forEach(
             each -> each.compilerAnnotation.setInferredType(ExpressionType.unknown()));
-        ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer();
+        ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
         do {
             inferencer.needsRevisiting = false;
             function.body().accept(inferencer);
@@ -38,10 +40,18 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
         Instance
      */
 
+    private final Expression functionBody;
     private boolean firstVisit = true;
     private boolean needsRevisiting = false;
 
-    private ExpressionTypeInferencer() {}
+    private ExpressionTypeInferencer(Function function) {
+        this.functionBody = function.body();
+        // Because Rets unify the type of their value with the type of the function body,
+        // the body must have its return type set prior to visiting. A Known VOID is the
+        // right choice of the initial type, because it functions as the zero element
+        // with respect to ExpressionType.union().
+        this.functionBody.compilerAnnotation.setInferredType(ExpressionType.known(VOID));
+    }
 
     @Override
     public ExpressionType visitCall0(Call0 call) {
@@ -111,9 +121,17 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
         return andSetIn(block, type);
     }
 
+    /**
+     * A Ret is unusual compared to others in that its own type is void
+     * because its continuation never receives any value, but the type
+     * of the returned value must be incorporated into the type of the
+     * function body.
+     */
     @Override
     public ExpressionType visitRet(Ret ret) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO need to think about this
+        ExpressionType valueType = ret.value().accept(this);
+        functionBody.compilerAnnotation.unifyInferredTypeWith(valueType);
+        return andSetIn(ret, ExpressionType.known(VOID));
     }
 
     @Override

@@ -6,7 +6,6 @@ enough) to get stable timings. Pharo/Cog doesn't seem to benefit from warmup.
 None of the mainstream interpreted languages respond to warming up. For Enfilade,
 compiling with @NotNull runtime assertions turned off makes a slight difference.
 
-* 6250: Javascript - Firefox 56.0
 * 6080: Javasacript - Firefox Quantum (58.0.2)
 * 2510: Enfilade, interpreter + type profiler
 * 2440: Python 2.7.12
@@ -18,10 +17,13 @@ compiling with @NotNull runtime assertions turned off makes a slight difference.
 * 85: Enfilade, generic compiled form (wrapped ints)
 * 66: gcc -O0
 * 48: gcc -O1
-* 39: Enfilade, adaptively specialized
-* 39: Java
+* 37: Java
+* 33: (really?) Enfilade, adaptively specialized 
 * 35: gcc -O2
 * 21: gcc -O3
+
+Can't explain the difference between Java (fib() defined as a private static
+final method) and Enfilade (see the bytecode below).
 
 ## Benchmark function definition in Enfilade
 

@@ -171,8 +171,6 @@ class Nexus {
         For now let's just keep all the machinery here.
      */
 
-    private static final GeneratedClassLoader classLoader = new GeneratedClassLoader(Nexus.class.getClassLoader());
-
     private synchronized void scheduleCompilation() {
         // For now no scheduling, just compile and set synchronously.
         if (state == State.PROFILING) {
@@ -184,9 +182,8 @@ class Nexus {
 
     void forceCompile() {
         Compiler.Result result = Compiler.compile(function);
-        classLoader.add(result);
         try {
-            Class<?> implClass = classLoader.loadClass(result.className());
+            Class<?> implClass = GeneratedCode.defineClass(result);
             MethodHandle genericMethod = MethodHandles.lookup()
                 .findStatic(implClass, Compiler.GENERIC_METHOD_NAME, MethodType.genericMethodType(function.arity()));
             MethodType specializedType = result.specializationType();
@@ -196,7 +193,7 @@ class Nexus {
                     .findStatic(implClass, Compiler.SPECIALIZED_METHOD_NAME, specializedType);
             }
             updateCompiledForm(genericMethod, specializedType, specializedMethod);
-        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+        } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
     }

@@ -159,14 +159,14 @@ public abstract class ExpressionType {
     public abstract Optional<TypeCategory> typeCategory();
 
     /**
-     * Compute a union of this type with another type, such that if one of the
-     * types is unknown the result is unknown.
+     * Return the upper-bound union of this type and another: if one of the
+     * types is unknown, the result is unknown.
      */
     public abstract ExpressionType union(ExpressionType other);
 
     /**
-     * Compute a union of this type with anotherType, such that if at least one
-     * of the types is known, the result is known.
+     * Return the lower-bound union of this type and another: if at least one of
+     * the types is known, the result is known.
      */
     public abstract ExpressionType opportunisticUnion(ExpressionType other);
 }

@@ -23,7 +23,8 @@ public class Compiler {
     public static final String GENERIC_METHOD_NAME = "generic";
     public static final String SPECIALIZED_METHOD_NAME = "specialized";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
-    private static final String GENERATED_CLASS_NAME_PREFIX = "$gen$";
+    private static final String GENERATED_CODE_PACKAGE = "com.github.vassilibykov.enfilade.core";
+    private static final String GENERATED_CLASS_NAME_PREFIX = GENERATED_CODE_PACKAGE + ".$gen$";
 
     /**
      * The access point: compile a function.
