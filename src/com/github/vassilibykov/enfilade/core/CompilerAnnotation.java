@@ -11,8 +11,15 @@ import java.util.Objects;
  * whatever information the compiler wants to associate with that expression.
  */
 public class CompilerAnnotation {
-    private ExpressionType inferredType;
-    private ExpressionType observedType;
+    private static final ExpressionType KNOWN_VOID = ExpressionType.known(TypeCategory.VOID);
+    private static final ExpressionType UNKNOWN = ExpressionType.unknown();
+
+    /*
+        Instance
+     */
+
+    @NotNull private ExpressionType inferredType = KNOWN_VOID;
+    @NotNull private ExpressionType observedType = UNKNOWN;
     private int acodeBookmark = -1;
 
     CompilerAnnotation() {}
@@ -62,7 +69,7 @@ public class CompilerAnnotation {
     }
 
     /*internal*/ synchronized boolean unifyObservedTypeWith(ExpressionType type) {
-        ExpressionType newType = observedType.union(type);
+        ExpressionType newType = observedType.opportunisticUnion(type);
         boolean changed = !observedType.equals(newType);
         observedType = newType;
         return changed;
