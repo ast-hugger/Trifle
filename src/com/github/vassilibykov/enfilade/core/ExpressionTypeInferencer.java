@@ -30,7 +30,6 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
         do {
             inferencer.needsRevisiting = false;
             function.body().accept(inferencer);
-            inferencer.firstVisit = false;
         } while (inferencer.needsRevisiting);
         // These iterative revisits are guaranteed to terminate because a revisit is
         // triggered by a type widening, and widening has an upper bound.
@@ -41,16 +40,10 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
      */
 
     private final Expression functionBody;
-    private boolean firstVisit = true;
     private boolean needsRevisiting = false;
 
     private ExpressionTypeInferencer(Function function) {
         this.functionBody = function.body();
-        // Because Rets unify the type of their value with the type of the function body,
-        // the body must have its return type set prior to visiting. A Known VOID is the
-        // right choice of the initial type, because it functions as the zero element
-        // with respect to ExpressionType.union().
-        this.functionBody.compilerAnnotation.setInferredType(ExpressionType.known(VOID));
     }
 
     @Override
@@ -92,10 +85,8 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
 
     @Override
     public ExpressionType visitLet(Let let) {
-        if (firstVisit) {
-            ExpressionType initType = let.initializer().accept(this);
-            let.variable().compilerAnnotation.setInferredType(initType);
-        }
+        ExpressionType initType = let.initializer().accept(this);
+        let.variable().compilerAnnotation.unifyInferredTypeWith(initType);
         return andSetIn(let, let.body().accept(this));
     }
 
@@ -146,12 +137,14 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
     @Override
     public ExpressionType visitVarRef(VarRef varRef) {
         ExpressionType inferredType = varRef.variable.compilerAnnotation.inferredType();
-        varRef.compilerAnnotation.setInferredType(inferredType);
+        if (varRef.compilerAnnotation.unifyInferredTypeWith(inferredType)) {
+            needsRevisiting = true;
+        }
         return inferredType;
     }
 
     private ExpressionType andSetIn(Expression expression, ExpressionType type) {
-        expression.compilerAnnotation.setInferredType(type);
+        expression.compilerAnnotation.unifyInferredTypeWith(type);
         return type;
     }
 }

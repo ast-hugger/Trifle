@@ -63,9 +63,10 @@ import java.util.stream.Stream;
  * deterministic if the all the involved types are deterministic.
  */
 class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
+    private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     static void analyze(Function function) {
-        ExpressionTypeObserver observer = new ExpressionTypeObserver();
+        ExpressionTypeObserver observer = new ExpressionTypeObserver(function);
         Stream.of(function.arguments()).forEach(
             each -> each.compilerAnnotation.setObservedType(each.profile.observedType()));
         function.body().accept(observer);
@@ -75,14 +76,18 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         Instance
      */
 
-    private ExpressionTypeObserver() {}
+    private final Expression functionBody;
+
+    private ExpressionTypeObserver(Function function) {
+        this.functionBody = function.body();
+    }
 
     @Override
     public ExpressionType visitCall0(Call0 call) {
         if (call.profile.hasProfileData()) {
             return setKnownType(call, call.profile.valueCategory());
         } else {
-            return setUnknownType(call);
+            return UNKNOWN;
         }
     }
 
@@ -92,7 +97,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         if (call.profile.hasProfileData()) {
             return setKnownType(call, call.profile.valueCategory());
         } else {
-            return setUnknownType(call);
+            return UNKNOWN;
         }
     }
 
@@ -103,7 +108,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         if (call.profile.hasProfileData()) {
             return setKnownType(call, call.profile.valueCategory());
         } else {
-            return setUnknownType(call);
+            return UNKNOWN;
         }
     }
 
@@ -117,7 +122,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
     public ExpressionType visitConst(Const aConst) {
         return aConst.evaluatedWhileProfiling
             ? setKnownType(aConst, TypeCategory.ofObject(aConst.value()))
-            : setUnknownType(aConst);
+            : UNKNOWN;
     }
 
     @Override
@@ -126,7 +131,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         ExpressionType trueType = anIf.trueBranch().accept(this);
         ExpressionType falseType = anIf.falseBranch().accept(this);
         ExpressionType unified = trueType.opportunisticUnion(falseType);
-        anIf.compilerAnnotation.setObservedType(unified);
+        anIf.compilerAnnotation.unifyObservedTypeWith(unified);
         return unified;
     }
 
@@ -140,9 +145,9 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
     public ExpressionType visitLet(Let let) {
         let.initializer().accept(this);
         Variable var = let.variable();
-        var.compilerAnnotation.setObservedType(var.profile.observedType());
+        var.compilerAnnotation.unifyObservedTypeWith(var.profile.observedType());
         ExpressionType bodyType = let.body().accept(this);
-        let.compilerAnnotation.setObservedType(bodyType);
+        let.compilerAnnotation.unifyObservedTypeWith(bodyType);
         return bodyType;
     }
 
@@ -155,7 +160,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         primitive.argument().accept(this);
         return primitive.evaluatedWhileProfiling
             ? setKnownType(primitive, primitive.valueCategory())
-            : setUnknownType(primitive);
+            : UNKNOWN;
     }
 
     @Override
@@ -164,7 +169,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         primitive.argument2().accept(this);
         return primitive.evaluatedWhileProfiling
             ? setKnownType(primitive, primitive.valueCategory())
-            : setUnknownType(primitive);
+            : UNKNOWN;
     }
 
     @Override
@@ -173,13 +178,19 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         for (Expression each : block.expressions()) {
             type = each.accept(this);
         }
-        block.compilerAnnotation.setObservedType(type);
+        block.compilerAnnotation.unifyObservedTypeWith(type);
         return type;
     }
 
+    /**
+     * The observed type of the return expression is folded into the function
+     * body type, while the return itself has the void type.
+     */
     @Override
     public ExpressionType visitRet(Ret ret) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        ExpressionType valueType = ret.value().accept(this);
+        functionBody.compilerAnnotation.unifyObservedTypeWith(valueType);
+        return setKnownType(ret, TypeCategory.VOID);
     }
 
     @Override
@@ -190,7 +201,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         } else {
             observed = ExpressionType.unknown();
         }
-        varRef.compilerAnnotation.setObservedType(observed);
+        varRef.compilerAnnotation.unifyObservedTypeWith(observed);
         return observed;
     }
 
@@ -205,19 +216,13 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
     @Override
     public ExpressionType visitVarSet(VarSet set) {
         ExpressionType valueType = set.value().accept(this);
-        set.compilerAnnotation.setObservedType(valueType);
+        set.compilerAnnotation.unifyObservedTypeWith(valueType);
         return valueType;
     }
 
     private ExpressionType setKnownType(Expression expression, TypeCategory type) {
         ExpressionType expressionType = ExpressionType.known(type);
-        expression.compilerAnnotation.setObservedType(expressionType);
-        return expressionType;
-    }
-
-    private ExpressionType setUnknownType(Expression expression) {
-        ExpressionType expressionType = ExpressionType.unknown();
-        expression.compilerAnnotation.setObservedType(expressionType);
+        expression.compilerAnnotation.unifyObservedTypeWith(expressionType);
         return expressionType;
     }
 }
