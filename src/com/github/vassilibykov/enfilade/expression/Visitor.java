@@ -8,7 +8,7 @@ public interface Visitor<T> {
     T visitConst(Const aConst);
     T visitIf(If anIf);
     T visitLet(Let let);
-    T visitPrimitive();
+    T visitPrimitiveCall(PrimitiveCall primitiveCall);
     T visitReturn(Return aReturn);
     T visitSetVariable(SetVariable setVariable);
     T visitVariable(Variable variable);

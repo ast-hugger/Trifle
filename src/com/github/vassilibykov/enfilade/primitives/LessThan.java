@@ -2,24 +2,21 @@
 
 package com.github.vassilibykov.enfilade.primitives;
 
-import com.github.vassilibykov.enfilade.core.AtomicExpression;
 import com.github.vassilibykov.enfilade.core.CompilerError;
-import com.github.vassilibykov.enfilade.core.Expression;
+import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.If;
-import com.github.vassilibykov.enfilade.core.Primitive2;
+import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static org.objectweb.asm.Opcodes.IF_ICMPGE;
 
-public class LessThan extends Primitive2 {
-    public LessThan(@NotNull AtomicExpression argument1, @NotNull AtomicExpression argument2) {
+public class LessThan extends Primitive2Node {
+    public LessThan(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
         super(argument1, argument2);
     }
 
@@ -100,7 +97,7 @@ public class LessThan extends Primitive2 {
     }
 
     public void generateIf(
-        BiConsumer<TypeCategory, Expression> argGenerator,
+        BiConsumer<TypeCategory, EvaluatorNode> argGenerator,
         Runnable trueBranchGenerator,
         Runnable falseBranchGenerator,
         GhostWriter writer)

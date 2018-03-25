@@ -12,9 +12,9 @@ public enum TypeCategory {
     BOOL(boolean.class),
     /**
      * The type of a continuation which accepts any value, such as a non-tail
-     * expression of a {@link Block}, or the type of an expression which
+     * expression of a {@link BlockNode}, or the type of an expression which
      * produces no value (does not call its continuation), such as the {@link
-     * Ret}.
+     * ReturnNode}.
      */
     VOID(void.class);
 

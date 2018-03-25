@@ -12,11 +12,11 @@
  * are actual objects of the specified types.
  *
  * <ul>
- *     <li>load AtomicExpression</li>
- *     <li>call CallExpression</li>
- *     <li>store Variable</li>
+ *     <li>load EvaluatorNode</li>
+ *     <li>call CallNode</li>
+ *     <li>store VariableDefinition</li>
  *     <li>drop</li>
- *     <li>branch AtomicExpression int</li>
+ *     <li>branch EvaluatorNode int</li>
  *     <li>goto int</li>
  *     <li>return</li>
  * </ul>

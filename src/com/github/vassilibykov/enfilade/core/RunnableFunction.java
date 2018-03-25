@@ -1,5 +1,7 @@
 // Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
+// Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
+
 package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.acode.Instruction;
@@ -13,27 +15,7 @@ import java.util.Set;
  * A function is the executable unit of code in Enfilade. Execution is launched
  * using the {@link #invoke} family of methods.
  */
-public class Function {
-
-    public static Function with(Expression body) {
-        return new Function(new Variable[0], body);
-    }
-
-    public static Function with(Variable arg, Expression body) {
-        return new Function(new Variable[]{arg}, body);
-    }
-
-    public static Function with(Variable[] arguments, Expression body) {
-        return new Function(arguments, body);
-    }
-
-    public static Function recursive(Variable var, java.util.function.Function<Function, Expression> bodyBuilder) {
-        return recursive(new Variable[]{var}, bodyBuilder);
-    }
-
-    public static Function recursive(Variable[] arguments, java.util.function.Function<Function, Expression> bodyBuilder) {
-        return new Function(arguments, bodyBuilder);
-    }
+public class RunnableFunction {
 
     /**
      * Assigns indices to all let-bound variables in a function body. Also
@@ -41,9 +23,9 @@ public class Function {
      * either to a function argument or to a let-bound variable currently in
      * scope.
      */
-    private class VariableIndexer extends Expression.VisitorSkeleton<Void> {
+    private class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
         private int index;
-        private final Set<Variable> scope = new HashSet<>();
+        private final Set<VariableDefinition> scope = new HashSet<>();
 
         private VariableIndexer() {
             for (int i = 0; i < arguments.length; i++) {
@@ -58,8 +40,8 @@ public class Function {
         }
 
         @Override
-        public Void visitLet(Let let) {
-            Variable var = let.variable();
+        public Void visitLet(LetNode let) {
+            VariableDefinition var = let.variable();
             if (var.index() >= 0) {
                 throw new AssertionError("variable reuse detected: " + var);
             }
@@ -72,7 +54,7 @@ public class Function {
         }
 
         @Override
-        public Void visitVarRef(VarRef varRef) {
+        public Void visitVarRef(VariableReferenceNode varRef) {
             if (!scope.contains(varRef.variable)) {
                 throw new AssertionError("variable used outside of its scope: " + varRef);
             }
@@ -84,14 +66,19 @@ public class Function {
         Instance
      */
 
-    @NotNull private final Variable[] arguments;
-    @NotNull private final Expression body;
-    private final int localsCount;
-    /*internal*/ final Nexus nexus;
-    /*internal*/ final FunctionProfile profile;
+    @NotNull private final com.github.vassilibykov.enfilade.expression.Function source;
+    private VariableDefinition[] arguments;
+    private EvaluatorNode body;
+    private int localsCount;
+    /*internal*/ Nexus nexus;
+    /*internal*/ FunctionProfile profile;
     /*internal*/ Instruction[] acode;
 
-    private Function(@NotNull Variable[] arguments, @NotNull Expression body) {
+    RunnableFunction(@NotNull com.github.vassilibykov.enfilade.expression.Function source) {
+        this.source = source;
+    }
+
+    void setArgumentsAndBody(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body) {
         this.arguments = arguments;
         this.body = body;
         this.localsCount = computeLocalsCount();
@@ -99,19 +86,11 @@ public class Function {
         this.profile = new FunctionProfile(this);
     }
 
-    private Function(@NotNull Variable[] arguments, java.util.function.Function<Function, Expression> recursiveBodyMaker) {
-        this.arguments = arguments;
-        this.body = recursiveBodyMaker.apply(this);
-        this.localsCount = computeLocalsCount();
-        this.nexus = new Nexus(this);
-        this.profile = new FunctionProfile(this);
-    }
-
-    public Variable[] arguments() {
+    public VariableDefinition[] arguments() {
         return arguments;
     }
 
-    public Expression body() {
+    public EvaluatorNode body() {
         return body;
     }
 

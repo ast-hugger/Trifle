@@ -7,24 +7,27 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A function call.
+ */
 public class Call extends ComplexExpression {
-    public static Call with(FunctionCallTarget target, AtomicExpression... arguments) {
+    public static Call with(Function target, AtomicExpression... arguments) {
         return new Call(target, List.of(arguments));
     }
 
-    public static Call with(FunctionCallTarget target, List<AtomicExpression> arguments) {
+    public static Call with(Function target, List<AtomicExpression> arguments) {
         return new Call(target, arguments);
     }
 
-    @NotNull private final FunctionCallTarget target;
+    @NotNull private final Function target;
     @NotNull private final List<AtomicExpression> arguments;
 
-    private Call(@NotNull FunctionCallTarget target, @NotNull List<AtomicExpression> arguments) {
+    private Call(@NotNull Function target, @NotNull List<AtomicExpression> arguments) {
         this.target = target;
         this.arguments = Collections.unmodifiableList(arguments);
     }
 
-    public FunctionCallTarget target() {
+    public Function target() {
         return target;
     }
 

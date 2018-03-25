@@ -7,7 +7,7 @@ import org.jetbrains.annotations.TestOnly;
 public class ExpressionTestUtilities {
 
     @TestOnly
-    public static void setVariableIndex(Variable var, int index) {
+    public static void setVariableIndex(VariableDefinition var, int index) {
         var.index = index;
     }
 }

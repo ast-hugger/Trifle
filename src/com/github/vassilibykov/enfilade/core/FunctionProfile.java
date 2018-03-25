@@ -10,12 +10,12 @@ import java.util.stream.Stream;
  */
 public class FunctionProfile {
 
-    private final Variable[] methodArguments;
+    private final VariableDefinition[] methodArguments;
     private final int methodArity;
     private long invocationCount = 0;
     private final ValueProfile resultProfile = new ValueProfile();
 
-    FunctionProfile(Function function) {
+    FunctionProfile(RunnableFunction function) {
         this.methodArguments = function.arguments();
         this.methodArity = function.arity();
     }

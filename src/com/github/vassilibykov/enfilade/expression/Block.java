@@ -7,6 +7,12 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * A sequence, like {@code begin} in Scheme or {@code progn} in Common Lisp. In
+ * theory it could be expressed as a chain of {@code let}s (which in our
+ * variant, not in classical A-normal form, are complex expressions), but it's
+ * convenient to treat it as a distinct construct.
+ */
 public class Block extends ComplexExpression {
     public static Block with(List<? extends Expression> expressions) {
         return new Block(expressions);

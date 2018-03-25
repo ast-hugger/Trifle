@@ -2,10 +2,10 @@
 
 package com.github.vassilibykov.enfilade.primitives;
 
-import com.github.vassilibykov.enfilade.core.AtomicExpression;
 import com.github.vassilibykov.enfilade.core.CompilerError;
+import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive2;
+import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,8 +13,8 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 import static org.objectweb.asm.Opcodes.IMUL;
 
-public class Mul extends Primitive2 {
-    public Mul(@NotNull AtomicExpression argument1, @NotNull AtomicExpression argument2) {
+public class Mul extends Primitive2Node {
+    public Mul(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
         super(argument1, argument2);
     }
 

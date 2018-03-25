@@ -62,10 +62,10 @@ import java.util.stream.Stream;
  * body and all {@code ret} expressions it contains. That type is
  * deterministic if the all the involved types are deterministic.
  */
-class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
+class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
-    static void analyze(Function function) {
+    static void analyze(RunnableFunction function) {
         ExpressionTypeObserver observer = new ExpressionTypeObserver(function);
         Stream.of(function.arguments()).forEach(
             each -> each.compilerAnnotation.setObservedType(each.profile.observedType()));
@@ -76,14 +76,14 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
         Instance
      */
 
-    private final Expression functionBody;
+    private final EvaluatorNode functionBody;
 
-    private ExpressionTypeObserver(Function function) {
+    private ExpressionTypeObserver(RunnableFunction function) {
         this.functionBody = function.body();
     }
 
     @Override
-    public ExpressionType visitCall0(Call0 call) {
+    public ExpressionType visitCall0(CallNode.Call0 call) {
         if (call.profile.hasProfileData()) {
             return setKnownType(call, call.profile.valueCategory());
         } else {
@@ -92,7 +92,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitCall1(Call1 call) {
+    public ExpressionType visitCall1(CallNode.Call1 call) {
         call.arg().accept(this);
         if (call.profile.hasProfileData()) {
             return setKnownType(call, call.profile.valueCategory());
@@ -102,7 +102,7 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitCall2(Call2 call) {
+    public ExpressionType visitCall2(CallNode.Call2 call) {
         call.arg1().accept(this);
         call.arg2().accept(this);
         if (call.profile.hasProfileData()) {
@@ -119,66 +119,66 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
      * evaluated.
      */
     @Override
-    public ExpressionType visitConst(Const aConst) {
-        return aConst.evaluatedWhileProfiling
+    public ExpressionType visitConst(ConstNode aConst) {
+        return aConst.hasBeenEvaluated()
             ? setKnownType(aConst, TypeCategory.ofObject(aConst.value()))
             : UNKNOWN;
     }
 
     @Override
-    public ExpressionType visitIf(If anIf) {
+    public ExpressionType visitIf(IfNode anIf) {
         anIf.condition().accept(this);
         ExpressionType trueType = anIf.trueBranch().accept(this);
         ExpressionType falseType = anIf.falseBranch().accept(this);
         ExpressionType unified = trueType.opportunisticUnion(falseType);
-        anIf.compilerAnnotation.unifyObservedTypeWith(unified);
+        anIf.unifyObservedTypeWith(unified);
         return unified;
     }
 
     /**
-     * See the note in {@link #visitVarSet(VarSet)}. We descend into the init
+     * See the note in {@link #visitVarSet(SetVariableNode)}. We descend into the init
      * expression because it must be processed, but are not concerned with the
      * type reported by the descent. That type is already reflected in the
      * empirical variable profile.
      */
     @Override
-    public ExpressionType visitLet(Let let) {
+    public ExpressionType visitLet(LetNode let) {
         let.initializer().accept(this);
-        Variable var = let.variable();
+        VariableDefinition var = let.variable();
         var.compilerAnnotation.unifyObservedTypeWith(var.profile.observedType());
         ExpressionType bodyType = let.body().accept(this);
-        let.compilerAnnotation.unifyObservedTypeWith(bodyType);
+        let.unifyObservedTypeWith(bodyType);
         return bodyType;
     }
 
     /**
-     * Same as for {@link #visitConst(Const)}, we know the type but we can't
+     * Same as for {@link #visitConst(ConstNode)}, we know the type but we can't
      * claim we've observed the primitive produce it.
      */
     @Override
-    public ExpressionType visitPrimitive1(Primitive1 primitive) {
+    public ExpressionType visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
-        return primitive.evaluatedWhileProfiling
+        return primitive.hasBeenEvaluated()
             ? setKnownType(primitive, primitive.valueCategory())
             : UNKNOWN;
     }
 
     @Override
-    public ExpressionType visitPrimitive2(Primitive2 primitive) {
+    public ExpressionType visitPrimitive2(Primitive2Node primitive) {
         primitive.argument1().accept(this);
         primitive.argument2().accept(this);
-        return primitive.evaluatedWhileProfiling
+        return primitive.hasBeenEvaluated()
             ? setKnownType(primitive, primitive.valueCategory())
             : UNKNOWN;
     }
 
     @Override
-    public ExpressionType visitBlock(Block block) {
+    public ExpressionType visitBlock(BlockNode block) {
         ExpressionType type = ExpressionType.known(TypeCategory.REFERENCE);
-        for (Expression each : block.expressions()) {
+        for (EvaluatorNode each : block.expressions()) {
             type = each.accept(this);
         }
-        block.compilerAnnotation.unifyObservedTypeWith(type);
+        block.unifyObservedTypeWith(type);
         return type;
     }
 
@@ -187,21 +187,21 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
      * body type, while the return itself has the void type.
      */
     @Override
-    public ExpressionType visitRet(Ret ret) {
+    public ExpressionType visitRet(ReturnNode ret) {
         ExpressionType valueType = ret.value().accept(this);
-        functionBody.compilerAnnotation.unifyObservedTypeWith(valueType);
+        functionBody.unifyObservedTypeWith(valueType);
         return setKnownType(ret, TypeCategory.VOID);
     }
 
     @Override
-    public ExpressionType visitVarRef(VarRef varRef) {
+    public ExpressionType visitVarRef(VariableReferenceNode varRef) {
         ExpressionType observed;
-        if (varRef.evaluatedWhileProfiling) {
+        if (varRef.hasBeenEvaluated()) {
             observed = varRef.variable.compilerAnnotation.observedType();
         } else {
             observed = ExpressionType.unknown();
         }
-        varRef.compilerAnnotation.unifyObservedTypeWith(observed);
+        varRef.unifyObservedTypeWith(observed);
         return observed;
     }
 
@@ -209,20 +209,20 @@ class ExpressionTypeObserver implements Expression.Visitor<ExpressionType> {
      * The observed value of the new value expression does not need to be
      * iteratively unified with the current observed type of the variable the
      * way the inferencer does it in {@link
-     * ExpressionTypeInferencer#visitVarSet(VarSet)}. The observed type of
+     * ExpressionTypeInferencer#visitVarSet(SetVariableNode)}. The observed type of
      * a variable by definition already includes everything the value
      * expression has been known to produce.
      */
     @Override
-    public ExpressionType visitVarSet(VarSet set) {
+    public ExpressionType visitVarSet(SetVariableNode set) {
         ExpressionType valueType = set.value().accept(this);
-        set.compilerAnnotation.unifyObservedTypeWith(valueType);
+        set.unifyObservedTypeWith(valueType);
         return valueType;
     }
 
-    private ExpressionType setKnownType(Expression expression, TypeCategory type) {
+    private ExpressionType setKnownType(EvaluatorNode expression, TypeCategory type) {
         ExpressionType expressionType = ExpressionType.known(type);
-        expression.compilerAnnotation.unifyObservedTypeWith(expressionType);
+        expression.unifyObservedTypeWith(expressionType);
         return expressionType;
     }
 }

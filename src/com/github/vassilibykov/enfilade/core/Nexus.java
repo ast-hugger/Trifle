@@ -45,14 +45,14 @@ class Nexus {
         Instance
      */
 
-    private final Function function;
+    private final RunnableFunction function;
     private final VolatileCallSite callSite;
     private final MethodHandle callSiteInvoker;
     @Nullable private MethodType specializationType;
     @Nullable private VolatileCallSite specializationCallSite;
     private State state;
 
-    Nexus(Function function) {
+    Nexus(RunnableFunction function) {
         this.function = function;
         this.state = State.PROFILING;
         this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
@@ -90,7 +90,7 @@ class Nexus {
 
     private MethodHandle simpleInterpreterInvoker() {
         MethodType type = MethodType.genericMethodType(function.arity());
-        type = type.insertParameterTypes(0, Function.class);
+        type = type.insertParameterTypes(0, RunnableFunction.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
             return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, function);

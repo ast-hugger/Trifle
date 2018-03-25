@@ -2,16 +2,16 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.Variable;
+import com.github.vassilibykov.enfilade.core.VariableDefinition;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Store the value of the register in the specified local variable.
  */
 public class Store extends Instruction {
-    @NotNull /*internal*/ final Variable variable;
+    @NotNull /*internal*/ final VariableDefinition variable;
 
-    Store(@NotNull Variable variable) {
+    Store(@NotNull VariableDefinition variable) {
         this.variable = variable;
     }
 

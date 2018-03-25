@@ -18,27 +18,36 @@ import org.jetbrains.annotations.NotNull;
  * front end. For that purpose, these classic restrictions are unnecessary, so
  * we don't impose them (at least not until we discover that they are).
  */
-public class Let extends ComplexExpression {
-    @NotNull private final Variable variable;
-    @NotNull private final Expression initializer;
-    @NotNull private final Expression body;
+public class LetNode extends EvaluatorNode {
+    @NotNull private final VariableDefinition variable;
+    @NotNull private final EvaluatorNode initializer;
+    @NotNull private final EvaluatorNode body;
+    private int setInstructionAddress;
 
-    Let(@NotNull Variable variable, @NotNull Expression initializer, @NotNull Expression body) {
+    LetNode(@NotNull VariableDefinition variable, @NotNull EvaluatorNode initializer, @NotNull EvaluatorNode body) {
         this.variable = variable;
         this.initializer = initializer;
         this.body = body;
     }
 
-    public Variable variable() {
+    public VariableDefinition variable() {
         return variable;
     }
 
-    public Expression initializer() {
+    public EvaluatorNode initializer() {
         return initializer;
     }
 
-    public Expression body() {
+    public EvaluatorNode body() {
         return body;
+    }
+
+    public int setInstructionAddress() {
+        return setInstructionAddress;
+    }
+
+    public void setSetInstructionAddress(int setInstructionAddress) {
+        this.setInstructionAddress = setInstructionAddress;
     }
 
     @Override

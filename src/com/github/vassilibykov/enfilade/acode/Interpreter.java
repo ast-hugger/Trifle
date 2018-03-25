@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.Function;
+import com.github.vassilibykov.enfilade.core.RunnableFunction;
 import com.github.vassilibykov.enfilade.core.FunctionRegistry;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,7 +30,7 @@ public class Interpreter implements Instruction.VoidVisitor {
      */
     @SuppressWarnings("unused") // called by generated code
     public static Interpreter forRecovery(int initialPC, Object[] frame, int functionId) {
-        Function function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId),
+        RunnableFunction function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId),
             "there is no function with ID " + functionId);
         Instruction[] code = Objects.requireNonNull(function.acode(),
             "function has no acode associated with it");

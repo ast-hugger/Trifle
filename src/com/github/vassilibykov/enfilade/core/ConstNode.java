@@ -4,10 +4,10 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.Nullable;
 
-public class Const extends AtomicExpression {
+public class ConstNode extends EvaluatorNode {
     @Nullable private final Object value;
 
-    public Const(@Nullable Object value) {
+    public ConstNode(@Nullable Object value) {
         this.value = value;
     }
 

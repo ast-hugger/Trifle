@@ -15,7 +15,7 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
  * The result returned by each visitor method is the type category of the
  * value of the the subexpression compiled by the method.
  */
-class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
+class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory> {
     protected final GhostWriter writer;
 
     FunctionCodeGeneratorGeneric(MethodVisitor visitor) {
@@ -23,7 +23,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitCall0(Call0 call) {
+    public TypeCategory visitCall0(CallNode.Call0 call) {
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
         MethodType callSiteType = MethodType.methodType(Object.class);
         writer.invokeDynamic(
@@ -35,7 +35,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitCall1(Call1 call) {
+    public TypeCategory visitCall1(CallNode.Call1 call) {
         TypeCategory argType = call.arg().accept(this);
         writer.adaptType(argType, REFERENCE);
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
@@ -49,7 +49,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitCall2(Call2 call) {
+    public TypeCategory visitCall2(CallNode.Call2 call) {
         TypeCategory arg1Type = call.arg1().accept(this);
         writer.adaptType(arg1Type, REFERENCE);
         TypeCategory arg2Type = call.arg2().accept(this);
@@ -65,7 +65,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitConst(Const aConst) {
+    public TypeCategory visitConst(ConstNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -79,7 +79,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitIf(If anIf) {
+    public TypeCategory visitIf(IfNode anIf) {
         TypeCategory testType = anIf.condition().accept(this);
         writer.adaptType(testType, BOOL);
         writer.ifThenElse(
@@ -96,7 +96,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitLet(Let let) {
+    public TypeCategory visitLet(LetNode let) {
         TypeCategory initType = let.initializer().accept(this);
         writer.adaptType(initType, REFERENCE);
         writer.storeLocal(REFERENCE, let.variable().index());
@@ -104,28 +104,28 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitPrimitive1(Primitive1 primitive1) {
+    public TypeCategory visitPrimitive1(Primitive1Node primitive1) {
         TypeCategory argType = primitive1.argument().accept(this);
         return primitive1.generate(writer, argType);
     }
 
     @Override
-    public TypeCategory visitPrimitive2(Primitive2 primitive2) {
+    public TypeCategory visitPrimitive2(Primitive2Node primitive2) {
         TypeCategory arg1Type =  primitive2.argument1().accept(this);
         TypeCategory arg2Type = primitive2.argument2().accept(this);
         return primitive2.generate(writer, arg1Type, arg2Type);
     }
 
     @Override
-    public TypeCategory visitBlock(Block block) {
-        Expression[] expressions = block.expressions();
+    public TypeCategory visitBlock(BlockNode block) {
+        EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer.loadNull();
             return REFERENCE;
         }
         int i;
         for (i = 0; i < expressions.length - 1; i++) {
-            Expression expr = expressions[i];
+            EvaluatorNode expr = expressions[i];
             expr.accept(this);
             writer.pop();
         }
@@ -133,12 +133,12 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitRet(Ret ret) {
+    public TypeCategory visitRet(ReturnNode ret) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
-    public TypeCategory visitVarSet(VarSet set) {
+    public TypeCategory visitVarSet(SetVariableNode set) {
         TypeCategory varType = set.value().accept(this);
         writer
             .adaptType(varType, REFERENCE)
@@ -148,7 +148,7 @@ class FunctionCodeGeneratorGeneric implements Expression.Visitor<TypeCategory> {
     }
 
     @Override
-    public TypeCategory visitVarRef(VarRef var) {
+    public TypeCategory visitVarRef(VariableReferenceNode var) {
         writer.loadLocal(REFERENCE, var.variable.index());
         return REFERENCE;
     }

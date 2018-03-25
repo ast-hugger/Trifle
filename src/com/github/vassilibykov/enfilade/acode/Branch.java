@@ -2,17 +2,17 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.AtomicExpression;
+import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 
 /**
  * Set the instruction pointer to the specified address if the test evaluates to
  * true.
  */
 public class Branch extends Instruction {
-    /*internal*/ final AtomicExpression test;
+    /*internal*/ final EvaluatorNode test;
     /*internal*/ int address;
 
-    Branch(AtomicExpression test, int address) {
+    Branch(EvaluatorNode test, int address) {
         this.test = test;
         this.address = address;
     }

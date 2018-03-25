@@ -2,16 +2,16 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.AtomicExpression;
+import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Evaluate the atomic expression and set the value register to contain the result.
  */
 public class Load extends Instruction {
-    @NotNull /*internal*/ final AtomicExpression expression;
+    @NotNull /*internal*/ final EvaluatorNode expression;
 
-    Load(@NotNull AtomicExpression expression) {
+    Load(@NotNull EvaluatorNode expression) {
         this.expression = expression;
     }
 

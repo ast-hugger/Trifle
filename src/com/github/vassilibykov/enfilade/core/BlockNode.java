@@ -5,19 +5,17 @@ package com.github.vassilibykov.enfilade.core;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A sequence, like {@code begin} in Scheme or {@code progn} in Common Lisp. In
- * theory it's expressible as a chain of {@code let}s (in our variant, not in
- * classical A-normal forms), but it's convenient to treat it as a distinct
- * construct.
+ * An executable representation of a {@link com.github.vassilibykov.enfilade.expression.Block}
+ * expression.
  */
-public class Block extends ComplexExpression {
-    @NotNull private final Expression[] expressions;
+public class BlockNode extends EvaluatorNode {
+    @NotNull private final EvaluatorNode[] expressions;
 
-    Block(@NotNull Expression[] expressions) {
+    BlockNode(@NotNull EvaluatorNode[] expressions) {
         this.expressions = expressions;
     }
 
-    public Expression[] expressions() {
+    public EvaluatorNode[] expressions() {
         return expressions;
     }
 

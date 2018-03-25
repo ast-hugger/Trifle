@@ -7,20 +7,20 @@ import org.jetbrains.annotations.NotNull;
 /**
  * A call of a binary primitive.
  */
-public abstract class Primitive2 extends AtomicExpression {
-    @NotNull private final AtomicExpression argument1;
-    @NotNull private final AtomicExpression argument2;
+public abstract class Primitive2Node extends EvaluatorNode {
+    @NotNull private final EvaluatorNode argument1;
+    @NotNull private final EvaluatorNode argument2;
 
-    protected Primitive2(@NotNull AtomicExpression argument1, @NotNull AtomicExpression argument2) {
+    protected Primitive2Node(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
         this.argument1 = argument1;
         this.argument2 = argument2;
     }
 
-    public AtomicExpression argument1() {
+    public EvaluatorNode argument1() {
         return argument1;
     }
 
-    public AtomicExpression argument2() {
+    public EvaluatorNode argument2() {
         return argument2;
     }
 

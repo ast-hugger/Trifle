@@ -11,7 +11,6 @@ import org.objectweb.asm.MethodVisitor;
 import java.lang.invoke.MethodType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.stream.Stream;
@@ -21,29 +20,29 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
 
-class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategory> {
-    private final Function function;
+class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCategory> {
+    private final RunnableFunction function;
     private final GhostWriter writer;
     private final Deque<TypeCategory> continuationTypes = new ArrayDeque<>();
-    private final List<Variable> liveLocals = new ArrayList<>();
+    private final List<VariableDefinition> liveLocals = new ArrayList<>();
     private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
     private final TypeCategory functionReturnType;
 
     private static class SquarePegHandler {
         private final Label handlerStart;
-        private final List<Variable> capturedLocals;
+        private final List<VariableDefinition> capturedLocals;
         private final int acodeInitialPC;
 
-        private SquarePegHandler(Label handlerStart, List<Variable> capturedLocals, int acodeInitialPC) {
+        private SquarePegHandler(Label handlerStart, List<VariableDefinition> capturedLocals, int acodeInitialPC) {
             this.handlerStart = handlerStart;
             this.capturedLocals = capturedLocals;
             this.acodeInitialPC = acodeInitialPC;
         }
     }
 
-    FunctionCodeGeneratorSpecialized(Function function, MethodVisitor writer) {
+    FunctionCodeGeneratorSpecialized(RunnableFunction function, MethodVisitor writer) {
         this.function = function;
-        this.functionReturnType = function.body().compilerAnnotation.specializationType();
+        this.functionReturnType = function.body().specializationType();
         this.writer = new GhostWriter(writer);
     }
 
@@ -72,9 +71,9 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitCall0(Call0 call) {
+    public TypeCategory visitCall0(CallNode.Call0 call) {
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        TypeCategory returnType = call.compilerAnnotation.specializationType();
+        TypeCategory returnType = call.specializationType();
         MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
@@ -86,17 +85,17 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitCall1(Call1 call) {
+    public TypeCategory visitCall1(CallNode.Call1 call) {
         // FIXME this (and the 2-arg version) will fail if arguments are specialized so the call site
         // has a non-generic signature, but the specialization available in the nexus has a different signature.
         // We'll need to revise the scheme of managing implementations and call sites in Nexus
         // to fix this.
         call.arg().accept(this);
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        TypeCategory returnType = call.compilerAnnotation.specializationType();
+        TypeCategory returnType = call.specializationType();
         MethodType callSiteType = MethodType.methodType(
             returnType.representativeClass(),
-            call.arg().compilerAnnotation.specializationType().representativeClass());
+            call.arg().specializationType().representativeClass());
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
             "call#" + id,
@@ -107,15 +106,15 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitCall2(Call2 call) {
+    public TypeCategory visitCall2(CallNode.Call2 call) {
         call.arg1().accept(this);
         call.arg2().accept(this);
         int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        TypeCategory returnType = call.compilerAnnotation.specializationType();
+        TypeCategory returnType = call.specializationType();
         MethodType callSiteType = MethodType.methodType(
             returnType.representativeClass(),
-            call.arg1().compilerAnnotation.specializationType().representativeClass(),
-            call.arg2().compilerAnnotation.specializationType().representativeClass());
+            call.arg1().specializationType().representativeClass(),
+            call.arg2().specializationType().representativeClass());
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
             "call#" + id,
@@ -126,7 +125,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitConst(Const aConst) {
+    public TypeCategory visitConst(ConstNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -141,7 +140,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitIf(If anIf) {
+    public TypeCategory visitIf(IfNode anIf) {
         if (anIf.condition() instanceof LessThan) {
             ((LessThan) anIf.condition()).generateIf(
                 (type, arg) -> generateExpecting(type, arg),
@@ -159,8 +158,8 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitLet(Let let) {
-        Variable var = let.variable();
+    public TypeCategory visitLet(LetNode let) {
+        VariableDefinition var = let.variable();
         TypeCategory varType = var.compilerAnnotation.specializationType();
         if (varType == REFERENCE) {
             generateExpecting(REFERENCE, let.initializer());
@@ -175,28 +174,28 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitPrimitive1(Primitive1 primitive) {
+    public TypeCategory visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
-        primitive.generate(writer, primitive.argument().compilerAnnotation.specializationType());
+        primitive.generate(writer, primitive.argument().specializationType());
         assertPassage(primitive.valueCategory(), currentContinuationType());
         return null;
     }
 
     @Override
-    public TypeCategory visitPrimitive2(Primitive2 primitive) {
+    public TypeCategory visitPrimitive2(Primitive2Node primitive) {
         primitive.argument1().accept(this);
         primitive.argument2().accept(this);
         primitive.generate(
             writer,
-            primitive.argument1().compilerAnnotation.specializationType(),
-            primitive.argument2().compilerAnnotation.specializationType());
+            primitive.argument1().specializationType(),
+            primitive.argument2().specializationType());
         assertPassage(primitive.valueCategory(), currentContinuationType());
         return null;
     }
 
     @Override
-    public TypeCategory visitBlock(Block block) {
-        Expression[] expressions = block.expressions();
+    public TypeCategory visitBlock(BlockNode block) {
+        EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer
                 .loadNull()
@@ -205,7 +204,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
         }
         int i;
         for (i = 0; i < expressions.length - 1; i++) {
-            Expression expr = expressions[i];
+            EvaluatorNode expr = expressions[i];
             generateExpecting(VOID, expr);
             writer.pop();
         }
@@ -214,13 +213,13 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitRet(Ret ret) {
+    public TypeCategory visitRet(ReturnNode ret) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
-    public TypeCategory visitVarSet(VarSet set) {
-        Variable var = set.variable;
+    public TypeCategory visitVarSet(SetVariableNode set) {
+        VariableDefinition var = set.variable;
         TypeCategory varType = var.compilerAnnotation.specializationType();
         generateExpecting(varType, set.value());
         writer
@@ -230,20 +229,20 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
     }
 
     @Override
-    public TypeCategory visitVarRef(VarRef varRef) {
+    public TypeCategory visitVarRef(VariableReferenceNode varRef) {
         TypeCategory varType = varRef.variable.compilerAnnotation.specializationType();
         writer.loadLocal(varType, varRef.variable.index());
         assertPassage(varType, currentContinuationType());
         return null;
     }
 
-    private void generateExpecting(TypeCategory expectedType, Expression expression) {
+    private void generateExpecting(TypeCategory expectedType, EvaluatorNode expression) {
         continuationTypes.push(expectedType);
         expression.accept(this);
         continuationTypes.pop();
     }
 
-    private void generateForCurrentContinuation(Expression expression) {
+    private void generateForCurrentContinuation(EvaluatorNode expression) {
         expression.accept(this);
     }
 
@@ -289,12 +288,12 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
         });
     }
 
-    private void withSquarePegRecovery(Let requestor, Runnable generate) {
+    private void withSquarePegRecovery(LetNode requestor, Runnable generate) {
         Label handlerStart = new Label();
         SquarePegHandler handler = new SquarePegHandler(
             handlerStart,
             new ArrayList<>(liveLocals),
-            requestor.compilerAnnotation().acodeBookmark());
+            requestor.setInstructionAddress());
         squarePegHandlers.add(handler);
         writer.withLabelsAround((begin, end) -> {
             generate.run();
@@ -333,7 +332,7 @@ class FunctionCodeGeneratorSpecialized implements Expression.Visitor<TypeCategor
         handler.capturedLocals.forEach(this::storeInFrameReplica);
     }
 
-    private void storeInFrameReplica(Variable local) {
+    private void storeInFrameReplica(VariableDefinition local) {
         TypeCategory localType = local.compilerAnnotation.specializationType();
         writer.storeArray(local.index, () -> {
             writer.loadLocal(localType, local.index);

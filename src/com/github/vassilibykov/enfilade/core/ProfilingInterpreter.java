@@ -11,14 +11,14 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitCall0(Call0 call) {
+        public Object visitCall0(CallNode.Call0 call) {
             Object result = call.function().nexus.invoke();
             call.profile.recordValue(result);
             return result;
         }
 
         @Override
-        public Object visitCall1(Call1 call) {
+        public Object visitCall1(CallNode.Call1 call) {
             Object arg = call.arg().accept(this);
             Object result = call.function().nexus.invoke(arg);
             call.profile.recordValue(result);
@@ -26,7 +26,7 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitCall2(Call2 call) {
+        public Object visitCall2(CallNode.Call2 call) {
             Object arg1 = call.arg1().accept(this);
             Object arg2 = call.arg2().accept(this);
             Object result = call.function().nexus.invoke(arg1, arg2);
@@ -35,42 +35,42 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitConst(Const aConst) {
-            aConst.evaluatedWhileProfiling = true;
+        public Object visitConst(ConstNode aConst) {
+            aConst.setHasBeenEvaluated(true);
             return super.visitConst(aConst);
         }
 
         @Override
-        public Object visitLet(Let let) {
+        public Object visitLet(LetNode let) {
             Object value = let.initializer().accept(this);
-            Variable variable = let.variable();
+            VariableDefinition variable = let.variable();
             frame[variable.index()] = value;
             variable.profile.recordValue(value);
             return let.body().accept(this);
         }
 
         @Override
-        public Object visitPrimitive1(Primitive1 primitive) {
-            primitive.evaluatedWhileProfiling = true;
+        public Object visitPrimitive1(Primitive1Node primitive) {
+            primitive.setHasBeenEvaluated(true);
             return super.visitPrimitive1(primitive);
         }
 
         @Override
-        public Object visitPrimitive2(Primitive2 primitive) {
-            primitive.evaluatedWhileProfiling = true;
+        public Object visitPrimitive2(Primitive2Node primitive) {
+            primitive.setHasBeenEvaluated(true);
             return super.visitPrimitive2(primitive);
         }
 
         @Override
-        public Object visitVarRef(VarRef varRef) {
-            varRef.evaluatedWhileProfiling = true;
+        public Object visitVarRef(VariableReferenceNode varRef) {
+            varRef.setHasBeenEvaluated(true);
             return super.visitVarRef(varRef);
         }
 
         @Override
-        public Object visitVarSet(VarSet set) {
+        public Object visitVarSet(SetVariableNode set) {
             Object value = set.value().accept(this);
-            Variable variable = set.variable();
+            VariableDefinition variable = set.variable();
             frame[variable.index()] = value;
             variable.profile.recordValue(value);
             return value;
@@ -82,7 +82,7 @@ public class ProfilingInterpreter extends Interpreter {
      */
 
     @Override
-    public Object interpret(Function function) {
+    public Object interpret(RunnableFunction function) {
         Object[] frame = new Object[function.localsCount()];
         function.profile.recordInvocation(frame);
         try {
@@ -95,7 +95,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(Function function, Object arg) {
+    public Object interpret(RunnableFunction function, Object arg) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg;
         function.profile.recordInvocation(frame);
@@ -109,7 +109,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(Function function, Object arg1, Object arg2) {
+    public Object interpret(RunnableFunction function, Object arg1, Object arg2) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg1;
         frame[1] = arg2;
@@ -124,7 +124,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpretWithArgs(Function function, Object[] actualArguments) {
+    public Object interpretWithArgs(RunnableFunction function, Object[] actualArguments) {
         Object[] frame = new Object[function.localsCount()];
         System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
         function.profile.recordInvocation(frame);

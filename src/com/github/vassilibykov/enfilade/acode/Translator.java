@@ -2,19 +2,17 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.Call0;
-import com.github.vassilibykov.enfilade.core.Call1;
-import com.github.vassilibykov.enfilade.core.Call2;
-import com.github.vassilibykov.enfilade.core.Const;
-import com.github.vassilibykov.enfilade.core.Expression;
-import com.github.vassilibykov.enfilade.core.If;
-import com.github.vassilibykov.enfilade.core.Let;
-import com.github.vassilibykov.enfilade.core.Primitive1;
-import com.github.vassilibykov.enfilade.core.Primitive2;
-import com.github.vassilibykov.enfilade.core.Block;
-import com.github.vassilibykov.enfilade.core.Ret;
-import com.github.vassilibykov.enfilade.core.VarRef;
-import com.github.vassilibykov.enfilade.core.VarSet;
+import com.github.vassilibykov.enfilade.core.CallNode;
+import com.github.vassilibykov.enfilade.core.ConstNode;
+import com.github.vassilibykov.enfilade.core.EvaluatorNode;
+import com.github.vassilibykov.enfilade.core.IfNode;
+import com.github.vassilibykov.enfilade.core.LetNode;
+import com.github.vassilibykov.enfilade.core.Primitive1Node;
+import com.github.vassilibykov.enfilade.core.Primitive2Node;
+import com.github.vassilibykov.enfilade.core.BlockNode;
+import com.github.vassilibykov.enfilade.core.ReturnNode;
+import com.github.vassilibykov.enfilade.core.VariableReferenceNode;
+import com.github.vassilibykov.enfilade.core.SetVariableNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +20,9 @@ import java.util.List;
 /**
  * Translates an A-normal form expression into the equivalent A-code.
  */
-public class Translator implements Expression.Visitor<Void> {
+public class Translator implements EvaluatorNode.Visitor<Void> {
 
-    public static Instruction[] translate(Expression functionBody) {
+    public static Instruction[] translate(EvaluatorNode functionBody) {
         Translator translator = new Translator();
         functionBody.accept(translator);
         translator.emit(new Return());
@@ -40,31 +38,31 @@ public class Translator implements Expression.Visitor<Void> {
     private Translator() {}
 
     @Override
-    public Void visitCall0(Call0 call) {
+    public Void visitCall0(CallNode.Call0 call) {
         emit(new Call(call));
         return null;
     }
 
     @Override
-    public Void visitCall1(Call1 call) {
+    public Void visitCall1(CallNode.Call1 call) {
         emit(new Call(call));
         return null;
     }
 
     @Override
-    public Void visitCall2(Call2 call) {
+    public Void visitCall2(CallNode.Call2 call) {
         emit(new Call(call));
         return null;
     }
 
     @Override
-    public Void visitConst(Const aConst) {
+    public Void visitConst(ConstNode aConst) {
         emit(new Load(aConst));
         return null;
     }
 
     @Override
-    public Void visitIf(If anIf) {
+    public Void visitIf(IfNode anIf) {
         Branch branch = new Branch(anIf.condition(), Integer.MAX_VALUE);
         emit(branch);
         anIf.falseBranch().accept(this);
@@ -77,31 +75,31 @@ public class Translator implements Expression.Visitor<Void> {
     }
 
     @Override
-    public Void visitLet(Let let) {
+    public Void visitLet(LetNode let) {
         let.initializer().accept(this);
-        let.compilerAnnotation().setAcodeBookmark(nextInstructionAddress());
+        let.setSetInstructionAddress(nextInstructionAddress());
         emit(new Store(let.variable()));
         let.body().accept(this);
         return null;
     }
 
     @Override
-    public Void visitPrimitive1(Primitive1 primitive) {
+    public Void visitPrimitive1(Primitive1Node primitive) {
         emit(new Load(primitive));
         return null;
     }
 
     @Override
-    public Void visitPrimitive2(Primitive2 primitive) {
+    public Void visitPrimitive2(Primitive2Node primitive) {
         emit(new Load(primitive));
         return null;
     }
 
     @Override
-    public Void visitBlock(Block block) {
-        Expression[] expressions = block.expressions();
+    public Void visitBlock(BlockNode block) {
+        EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
-            emit(new Load(new Const(null)));
+            emit(new Load(new ConstNode(null)));
             return null;
         }
         for (int i = 0; i < expressions.length - 1; i++) {
@@ -113,21 +111,21 @@ public class Translator implements Expression.Visitor<Void> {
     }
 
     @Override
-    public Void visitRet(Ret ret) {
+    public Void visitRet(ReturnNode ret) {
         ret.value().accept(this);
         emit(new Return());
         return null;
     }
 
     @Override
-    public Void visitVarSet(VarSet set) {
+    public Void visitVarSet(SetVariableNode set) {
         set.value().accept(this);
         emit(new Store(set.variable()));
         return null;
     }
 
     @Override
-    public Void visitVarRef(VarRef varRef) {
+    public Void visitVarRef(VariableReferenceNode varRef) {
         emit(new Load(varRef));
         return null;
     }

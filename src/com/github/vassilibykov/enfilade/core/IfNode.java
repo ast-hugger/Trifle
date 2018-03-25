@@ -7,26 +7,26 @@ import org.jetbrains.annotations.NotNull;
 /**
  * The conditional.
  */
-public class If extends ComplexExpression {
-    @NotNull private final AtomicExpression condition;
-    @NotNull private final Expression trueBranch;
-    @NotNull private final Expression falseBranch;
+public class IfNode extends EvaluatorNode {
+    @NotNull private final EvaluatorNode condition;
+    @NotNull private final EvaluatorNode trueBranch;
+    @NotNull private final EvaluatorNode falseBranch;
 
-    If(@NotNull AtomicExpression condition, @NotNull Expression trueBranch, @NotNull Expression falseBranch) {
+    IfNode(@NotNull EvaluatorNode condition, @NotNull EvaluatorNode trueBranch, @NotNull EvaluatorNode falseBranch) {
         this.condition = condition;
         this.trueBranch = trueBranch;
         this.falseBranch = falseBranch;
     }
 
-    public AtomicExpression condition() {
+    public EvaluatorNode condition() {
         return condition;
     }
 
-    public Expression trueBranch() {
+    public EvaluatorNode trueBranch() {
         return trueBranch;
     }
 
-    public Expression falseBranch() {
+    public EvaluatorNode falseBranch() {
         return falseBranch;
     }
 

@@ -5,27 +5,27 @@ package com.github.vassilibykov.enfilade.core;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A variable reference in a program, not to be confused with {@link Variable}
+ * A variable reference in a program, not to be confused with {@link VariableDefinition}
  * which is a variable definition. A variable object must appear exactly once as
- * a function argument, or as a {@link Let}-bound variable. It may appear any
+ * a function argument, or as a {@link LetNode}-bound variable. It may appear any
  * number of times in an expression position, evaluating to the current value of
  * the variable. It may also appear any number of times as the {@code variable}
- * of a {@link VarSet} expression.
+ * of a {@link SetVariableNode} expression.
  *
  * <p>A variable is associated with a storage location in the activation record
  * of its function. The storage location is identified by its index. Indices are
- * assigned by the {@link Function} object when it is constructed. At that time
+ * assigned by the {@link RunnableFunction} object when it is constructed. At that time
  * it is detected if a variable does not appear as an argument or a let binding
  * exactly once, as required.
  */
-public class VarRef extends AtomicExpression {
-    @NotNull /*intenal*/ final Variable variable;
+public class VariableReferenceNode extends EvaluatorNode {
+    @NotNull /*internal*/ final VariableDefinition variable;
 
-    VarRef(@NotNull Variable variable) {
+    public VariableReferenceNode(@NotNull VariableDefinition variable) {
         this.variable = variable;
     }
 
-    public Variable variable() {
+    public VariableDefinition variable() {
         return variable;
     }
 

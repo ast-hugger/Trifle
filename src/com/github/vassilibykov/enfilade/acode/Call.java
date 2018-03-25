@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.CallExpression;
+import com.github.vassilibykov.enfilade.core.CallNode;
 import com.github.vassilibykov.enfilade.core.FunctionRegistry;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,9 +10,9 @@ import org.jetbrains.annotations.NotNull;
  * Perform the call and set the register to contain the result.
  */
 public class Call extends Instruction {
-    @NotNull /*internal*/ final CallExpression callExpression;
+    @NotNull /*internal*/ final CallNode callExpression;
 
-    Call(@NotNull CallExpression callExpression) {
+    Call(@NotNull CallNode callExpression) {
         this.callExpression = callExpression;
     }
 

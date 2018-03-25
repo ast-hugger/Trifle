@@ -2,31 +2,33 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.acode.Instruction;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
- * A registry translating between {@link Function} objects and integer IDs.
+ * A registry translating between {@link RunnableFunction} objects and integer IDs.
  */
 public class FunctionRegistry {
 
     public static final FunctionRegistry INSTANCE = new FunctionRegistry();
 
-    private final List<Function> functionsById = new ArrayList<>();
-    private final Map<Function, Integer> functionIds = new HashMap<>();
+    private final List<RunnableFunction> functionsById = new ArrayList<>();
+    private final Map<RunnableFunction, Integer> functionIds = new HashMap<>();
+    private final Map<com.github.vassilibykov.enfilade.expression.Function, RunnableFunction> functionsBySource = new HashMap<>();
+
+    public synchronized RunnableFunction lookupOrMake(com.github.vassilibykov.enfilade.expression.Function source) {
+        return functionsBySource.computeIfAbsent(source, k -> new RunnableFunction(source));
+    }
 
     /**
      * Return the ID associated with the function. The function is added to the
      * registry if it was not registered. The existing ID is returned if it was.
      */
-    public synchronized int lookup(Function function) {
+    public synchronized int lookup(RunnableFunction function) {
         Integer id = functionIds.get(function);
         if (id != null) {
             return id;
@@ -43,7 +45,7 @@ public class FunctionRegistry {
      * mapped to a function.
      */
     @Nullable
-    public synchronized Function lookup(int id) {
+    public synchronized RunnableFunction lookup(int id) {
         try {
             return functionsById.get(id);
         } catch (IndexOutOfBoundsException e) {

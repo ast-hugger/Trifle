@@ -2,20 +2,21 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.Function;
-import com.github.vassilibykov.enfilade.core.Variable;
+import com.github.vassilibykov.enfilade.core.FunctionTranslator;
+import com.github.vassilibykov.enfilade.core.RunnableFunction;
+import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Variable;
 import org.junit.Test;
 
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.add;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.const_;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.if_;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.let;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.nullaryFunction;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.prog;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.ref;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.set;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.unaryFunction;
-import static com.github.vassilibykov.enfilade.core.ExpressionLanguage.var;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.let;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.nullaryFunction;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.prog;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.set;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.unaryFunction;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.var;
+import static com.github.vassilibykov.enfilade.primitives.PrimitiveExpressionLanguage.add;
 import static org.junit.Assert.*;
 
 public class TranslatorTest {
@@ -30,7 +31,7 @@ public class TranslatorTest {
     public void testIf() {
         Function function = unaryFunction(
             arg ->
-                if_(ref(arg),
+                if_(arg,
                     const_("true"),
                     const_("false")));
         assertEquals("true", interpretAsACode(function, true));
@@ -45,7 +46,7 @@ public class TranslatorTest {
             () ->
                 let(t, const_(3),
                     let(u, const_(4),
-                        add(ref(t), ref(u)))));
+                        add(t, u))));
         assertEquals(7, interpretAsACode(function));
     }
 
@@ -55,13 +56,15 @@ public class TranslatorTest {
             arg ->
                 prog(
                     set(arg, const_(42)),
-                    ref(arg)));
+                    arg));
         assertEquals(42, interpretAsACode(function, 3));
     }
 
     private Object interpretAsACode(Function function, Object... args) {
-        Instruction[] code = Translator.translate(function.body());
-        Object[] locals = new Object[function.localsCount()];
+        RunnableFunction runnableFunction =
+            FunctionTranslator.translate(function);
+        Instruction[] code = Translator.translate(runnableFunction.body());
+        Object[] locals = new Object[runnableFunction.localsCount()];
         System.arraycopy(args, 0, locals, 0, args.length);
         Interpreter interpreter = Interpreter.on(code, locals);
         return interpreter.interpret();

@@ -5,7 +5,7 @@ package com.github.vassilibykov.enfilade.expression;
 import org.jetbrains.annotations.NotNull;
 
 public class Let extends ComplexExpression {
-    private static Let with(Variable variable, Expression initializer, Expression body) {
+    public static Let with(Variable variable, Expression initializer, Expression body) {
         return new Let(variable, initializer, body);
     }
 

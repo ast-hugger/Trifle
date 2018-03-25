@@ -10,7 +10,7 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
  * Infers and sets the inferred types of compiler annotations in an expression.
  * The inferencing is of a simple bottom up kind. A minor wrinkle is that if a
  * type originally assigned to a let-bound variable is widened as a result of
- * processing a {@code VarSet} expression, the entire expression tree needs to
+ * processing a {@code SetVariableNode} expression, the entire expression tree needs to
  * be revisited as this may have changed the type of other expressions.
  *
  <p>An expression's inferred type, not to be confused with <em>observed
@@ -21,9 +21,9 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
  * in many other places by type we mean the {@link TypeCategory} of a value, not
  * its type in the Java sense.
  * */
-class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
+class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> {
 
-    static void inferTypesIn(Function function) {
+    static void inferTypesIn(RunnableFunction function) {
         Stream.of(function.arguments()).forEach(
             each -> each.compilerAnnotation.setInferredType(ExpressionType.unknown()));
         ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
@@ -39,38 +39,38 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
         Instance
      */
 
-    private final Expression functionBody;
+    private final EvaluatorNode functionBody;
     private boolean needsRevisiting = false;
 
-    private ExpressionTypeInferencer(Function function) {
+    private ExpressionTypeInferencer(RunnableFunction function) {
         this.functionBody = function.body();
     }
 
     @Override
-    public ExpressionType visitCall0(Call0 call) {
+    public ExpressionType visitCall0(CallNode.Call0 call) {
         return andSetIn(call, ExpressionType.unknown());
     }
 
     @Override
-    public ExpressionType visitCall1(Call1 call) {
+    public ExpressionType visitCall1(CallNode.Call1 call) {
         call.arg().accept(this);
         return andSetIn(call, ExpressionType.unknown());
     }
 
     @Override
-    public ExpressionType visitCall2(Call2 call) {
+    public ExpressionType visitCall2(CallNode.Call2 call) {
         call.arg1().accept(this);
         call.arg2().accept(this);
         return andSetIn(call, ExpressionType.unknown());
     }
 
     @Override
-    public ExpressionType visitConst(Const aConst) {
+    public ExpressionType visitConst(ConstNode aConst) {
         return andSetIn(aConst, ExpressionType.known(TypeCategory.ofObject(aConst.value())));
     }
 
     @Override
-    public ExpressionType visitIf(If anIf) {
+    public ExpressionType visitIf(IfNode anIf) {
         ExpressionType testType = anIf.condition().accept(this);
         if (testType.typeCategory()
             .map(it -> !(it.equals(TypeCategory.BOOL) || it.equals(TypeCategory.REFERENCE)))
@@ -84,49 +84,49 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitLet(Let let) {
+    public ExpressionType visitLet(LetNode let) {
         ExpressionType initType = let.initializer().accept(this);
         let.variable().compilerAnnotation.unifyInferredTypeWith(initType);
         return andSetIn(let, let.body().accept(this));
     }
 
     @Override
-    public ExpressionType visitPrimitive1(Primitive1 primitive) {
+    public ExpressionType visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
         return andSetIn(primitive, ExpressionType.known(primitive.valueCategory()));
     }
 
     @Override
-    public ExpressionType visitPrimitive2(Primitive2 primitive) {
+    public ExpressionType visitPrimitive2(Primitive2Node primitive) {
         primitive.argument1().accept(this);
         primitive.argument2().accept(this);
         return andSetIn(primitive, ExpressionType.known(primitive.valueCategory()));
     }
 
     @Override
-    public ExpressionType visitBlock(Block block) {
+    public ExpressionType visitBlock(BlockNode block) {
         ExpressionType type = ExpressionType.known(TypeCategory.REFERENCE);
-        for (Expression each : block.expressions()) {
+        for (EvaluatorNode each : block.expressions()) {
             type = each.accept(this);
         }
         return andSetIn(block, type);
     }
 
     /**
-     * A Ret is unusual compared to others in that its own type is void
+     * A ReturnNode is unusual compared to others in that its own type is void
      * because its continuation never receives any value, but the type
      * of the returned value must be incorporated into the type of the
      * function body.
      */
     @Override
-    public ExpressionType visitRet(Ret ret) {
+    public ExpressionType visitRet(ReturnNode ret) {
         ExpressionType valueType = ret.value().accept(this);
-        functionBody.compilerAnnotation.unifyInferredTypeWith(valueType);
+        functionBody.unifyInferredTypeWith(valueType);
         return andSetIn(ret, ExpressionType.known(VOID));
     }
 
     @Override
-    public ExpressionType visitVarSet(VarSet set) {
+    public ExpressionType visitVarSet(SetVariableNode set) {
         ExpressionType valueType = set.value().accept(this);
         if (set.variable().compilerAnnotation.unifyInferredTypeWith(valueType)) {
             needsRevisiting = true;
@@ -135,16 +135,16 @@ class ExpressionTypeInferencer implements Expression.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitVarRef(VarRef varRef) {
+    public ExpressionType visitVarRef(VariableReferenceNode varRef) {
         ExpressionType inferredType = varRef.variable.compilerAnnotation.inferredType();
-        if (varRef.compilerAnnotation.unifyInferredTypeWith(inferredType)) {
+        if (varRef.unifyInferredTypeWith(inferredType)) {
             needsRevisiting = true;
         }
         return inferredType;
     }
 
-    private ExpressionType andSetIn(Expression expression, ExpressionType type) {
-        expression.compilerAnnotation.unifyInferredTypeWith(type);
+    private ExpressionType andSetIn(EvaluatorNode expression, ExpressionType type) {
+        expression.unifyInferredTypeWith(type);
         return type;
     }
 }

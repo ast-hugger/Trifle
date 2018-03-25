@@ -7,15 +7,15 @@ import org.jetbrains.annotations.NotNull;
 /**
  * A call of a unary primitive.
  */
-public abstract class Primitive1 extends AtomicExpression {
+public abstract class Primitive1Node extends EvaluatorNode {
     @NotNull
-    private final AtomicExpression argument;
+    private final EvaluatorNode argument;
 
-    protected Primitive1(@NotNull AtomicExpression argument) {
+    protected Primitive1Node(@NotNull EvaluatorNode argument) {
         this.argument = argument;
     }
 
-    public AtomicExpression argument() {
+    public EvaluatorNode argument() {
         return argument;
     }
 

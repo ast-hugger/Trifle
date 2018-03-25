@@ -24,8 +24,16 @@ public class PrimitiveCall extends AtomicExpression {
         this.arguments = Collections.unmodifiableList(arguments);
     }
 
+    public PrimitiveCallTarget target() {
+        return target;
+    }
+
+    public List<AtomicExpression> arguments() {
+        return arguments;
+    }
+
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitPrimitive();
+        return visitor.visitPrimitiveCall(this);
     }
 }

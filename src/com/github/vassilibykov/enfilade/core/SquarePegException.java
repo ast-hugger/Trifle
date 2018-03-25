@@ -6,7 +6,7 @@ package com.github.vassilibykov.enfilade.core;
  * Thrown in generated code when the result of the preceding computation
  * currently on the stack cannot be accepted by its continuation because the
  * continuation if of a narrower type. The value is wrapped as the {@link
- * #value} field of this exception. The structure of the {@link Expression}
+ * #value} field of this exception. The structure of the {@link EvaluatorNode}
  * language allows us to generate code in such a way that there are no
  * other values on the stack at this point.
  *

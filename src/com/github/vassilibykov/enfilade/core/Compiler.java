@@ -16,7 +16,7 @@ import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
- * Compiles a {@link Function} into a class with a single static method.
+ * Compiles a {@link RunnableFunction} into a class with a single static method.
  */
 public class Compiler {
 
@@ -29,7 +29,7 @@ public class Compiler {
     /**
      * The access point: compile a function.
      */
-    public static Result compile(Function function) {
+    public static Result compile(RunnableFunction function) {
         Compiler compiler = new Compiler(function);
         return compiler.compile();
     }
@@ -77,12 +77,12 @@ public class Compiler {
         Instance
      */
 
-    private final Function function;
+    private final RunnableFunction function;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     @Nullable private MethodType specializationType = null;
 
-    private Compiler(Function function) {
+    private Compiler(RunnableFunction function) {
         this.function = function;
         this.className = allocateClassName();
     }
@@ -144,7 +144,7 @@ public class Compiler {
             .map(var -> representativeType(var.compilerAnnotation.observedType()))
             .toArray(Class[]::new);
         return MethodType.methodType(
-            representativeType(function.body().compilerAnnotation.observedType()),
+            representativeType(function.body().observedType()),
             argClasses);
     }
 

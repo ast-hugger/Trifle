@@ -7,14 +7,14 @@ import org.jetbrains.annotations.NotNull;
 /**
  * An explicit return (a bypass in the normal chain of continuations).
  */
-public class Ret extends ComplexExpression {
-    @NotNull private final AtomicExpression value;
+public class ReturnNode extends EvaluatorNode {
+    @NotNull private final EvaluatorNode value;
 
-    Ret(@NotNull AtomicExpression value) {
+    ReturnNode(@NotNull EvaluatorNode value) {
         this.value = value;
     }
 
-    public AtomicExpression value() {
+    public EvaluatorNode value() {
         return value;
     }
 

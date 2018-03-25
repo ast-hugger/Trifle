@@ -25,7 +25,7 @@ public class DirectCall {
 
     @SuppressWarnings("unused") // called by generated code
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
-        Function target = FunctionRegistry.INSTANCE.lookup(targetId);
+        RunnableFunction target = FunctionRegistry.INSTANCE.lookup(targetId);
         if (target == null) {
             throw new AssertionError("target function ID not found: " + targetId);
         }

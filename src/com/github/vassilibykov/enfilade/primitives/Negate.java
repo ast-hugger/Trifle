@@ -2,10 +2,10 @@
 
 package com.github.vassilibykov.enfilade.primitives;
 
-import com.github.vassilibykov.enfilade.core.AtomicExpression;
 import com.github.vassilibykov.enfilade.core.CompilerError;
+import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive1;
+import com.github.vassilibykov.enfilade.core.Primitive1Node;
 import com.github.vassilibykov.enfilade.core.TypeCategory;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,8 +13,8 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
 import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
 import static org.objectweb.asm.Opcodes.ISUB;
 
-public class Negate extends Primitive1 {
-    public Negate(@NotNull AtomicExpression argument) {
+public class Negate extends Primitive1Node {
+    public Negate(@NotNull EvaluatorNode argument) {
         super(argument);
     }
 
