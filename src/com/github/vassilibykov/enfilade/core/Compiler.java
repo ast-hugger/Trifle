@@ -104,6 +104,7 @@ public class Compiler {
     public Result compile() {
         ExpressionTypeInferencer.inferTypesIn(function);
         ExpressionTypeObserver.analyze(function);
+//        NodePrettyPrinter.print(function.body());
         setupClassWriter();
         generateGenericMethod();
         if (function.profile.canBeSpecialized()) {
