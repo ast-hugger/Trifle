@@ -160,7 +160,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     @Override
     public JvmType visitLet(LetNode let) {
         VariableDefinition var = let.variable();
-        JvmType varType = var.compilerAnnotation.specializationType();
+        JvmType varType = var.specializationType();
         if (varType == REFERENCE) {
             generateExpecting(REFERENCE, let.initializer());
         } else {
@@ -220,7 +220,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     @Override
     public JvmType visitVarSet(SetVariableNode set) {
         VariableDefinition var = set.variable;
-        JvmType varType = var.compilerAnnotation.specializationType();
+        JvmType varType = var.specializationType();
         generateExpecting(varType, set.value());
         writer
             .dup()
@@ -230,7 +230,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitVarRef(VariableReferenceNode varRef) {
-        JvmType varType = varRef.variable.compilerAnnotation.specializationType();
+        JvmType varType = varRef.variable.specializationType();
         writer.loadLocal(varType, varRef.variable.index());
         assertPassage(varType, currentContinuationType());
         return null;
@@ -333,7 +333,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     private void storeInFrameReplica(VariableDefinition local) {
-        JvmType localType = local.compilerAnnotation.specializationType();
+        JvmType localType = local.specializationType();
         writer.storeArray(local.index, () -> {
             writer.loadLocal(localType, local.index);
             writer.adaptType(localType, REFERENCE);

@@ -6,8 +6,7 @@ import java.util.stream.Stream;
 
 /**
  * Analyzes a function body after it has been evaluated a number of times by the
- * {@link ProfilingInterpreter}. Populates {@link CompilerAnnotation}s attached
- * to expressions with types observed by the interpreter.
+ * {@link ProfilingInterpreter}. Populates evaluator nodes with observed types.
  *
  * <p>Each compiler annotation informs the compiler about the values the
  * associated expression can take. For simplicity below we refer to them as
@@ -68,7 +67,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     static void analyze(RuntimeFunction function) {
         ExpressionTypeObserver observer = new ExpressionTypeObserver(function);
         Stream.of(function.arguments()).forEach(
-            each -> each.compilerAnnotation.setObservedType(each.profile.observedType()));
+            each -> each.setObservedType(each.profile.observedType()));
         function.body().accept(observer);
     }
 
@@ -145,7 +144,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     public ExpressionType visitLet(LetNode let) {
         let.initializer().accept(this);
         VariableDefinition var = let.variable();
-        var.compilerAnnotation.unifyObservedTypeWith(var.profile.observedType());
+        var.unifyObservedTypeWith(var.profile.observedType());
         ExpressionType bodyType = let.body().accept(this);
         let.unifyObservedTypeWith(bodyType);
         return bodyType;
@@ -197,7 +196,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     public ExpressionType visitVarRef(VariableReferenceNode varRef) {
         ExpressionType observed;
         if (varRef.hasBeenEvaluated()) {
-            observed = varRef.variable.compilerAnnotation.observedType();
+            observed = varRef.variable.observedType();
         } else {
             observed = ExpressionType.unknown();
         }

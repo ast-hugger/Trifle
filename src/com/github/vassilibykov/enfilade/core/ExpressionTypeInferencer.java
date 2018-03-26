@@ -25,7 +25,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
 
     static void inferTypesIn(RuntimeFunction function) {
         Stream.of(function.arguments()).forEach(
-            each -> each.compilerAnnotation.setInferredType(ExpressionType.unknown()));
+            each -> each.setInferredType(ExpressionType.unknown()));
         ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
         do {
             inferencer.needsRevisiting = false;
@@ -86,7 +86,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitLet(LetNode let) {
         ExpressionType initType = let.initializer().accept(this);
-        let.variable().compilerAnnotation.unifyInferredTypeWith(initType);
+        let.variable().unifyInferredTypeWith(initType);
         return andSetIn(let, let.body().accept(this));
     }
 
@@ -128,7 +128,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitVarSet(SetVariableNode set) {
         ExpressionType valueType = set.value().accept(this);
-        if (set.variable().compilerAnnotation.unifyInferredTypeWith(valueType)) {
+        if (set.variable().unifyInferredTypeWith(valueType)) {
             needsRevisiting = true;
         }
         return andSetIn(set, valueType);
@@ -136,7 +136,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
 
     @Override
     public ExpressionType visitVarRef(VariableReferenceNode varRef) {
-        ExpressionType inferredType = varRef.variable.compilerAnnotation.inferredType();
+        ExpressionType inferredType = varRef.variable.inferredType();
         if (varRef.unifyInferredTypeWith(inferredType)) {
             needsRevisiting = true;
         }

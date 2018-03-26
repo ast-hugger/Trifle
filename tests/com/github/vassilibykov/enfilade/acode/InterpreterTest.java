@@ -2,22 +2,17 @@
 
 package com.github.vassilibykov.enfilade.acode;
 
-import com.github.vassilibykov.enfilade.core.CallNode;
 import com.github.vassilibykov.enfilade.core.FunctionTranslator;
-import com.github.vassilibykov.enfilade.core.Primitive1Node;
 import com.github.vassilibykov.enfilade.core.RuntimeFunction;
 import com.github.vassilibykov.enfilade.core.VariableDefinition;
-import com.github.vassilibykov.enfilade.expression.ExpressionLanguage;
-import com.github.vassilibykov.enfilade.core.ExpressionTestUtilities;
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.core.BackdoorsForTests;
 import com.github.vassilibykov.enfilade.primitives.Add;
 import com.github.vassilibykov.enfilade.primitives.LessThan;
 import com.github.vassilibykov.enfilade.primitives.Negate;
-import com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage;
 import org.junit.Test;
 
 import static com.github.vassilibykov.enfilade.acode.AssemblyLanguage.*;
-import static com.github.vassilibykov.enfilade.core.ExpressionTestUtilities.varDef;
+import static com.github.vassilibykov.enfilade.core.BackdoorsForTests.varDef;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.binaryFunction;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static org.junit.Assert.assertEquals;
@@ -119,7 +114,7 @@ public class InterpreterTest {
         code = Asm
             .vars(arg1)
             .code(
-                call(ExpressionTestUtilities.call(adder, ref(arg1), ref(arg1))),
+                call(BackdoorsForTests.call(adder, ref(arg1), ref(arg1))),
                 ret());
         assertEquals(6, code.interpretWith(3));
     }
@@ -136,7 +131,7 @@ public class InterpreterTest {
 
         private Asm(VariableDefinition... vars) {
             for (int i = 0; i < vars.length; i++) {
-                ExpressionTestUtilities.setVariableIndex(vars[i], i);
+                BackdoorsForTests.setVariableIndex(vars[i], i);
             }
             frame = new Object[vars.length];
         }

@@ -5,6 +5,7 @@ package com.github.vassilibykov.enfilade.core;
 import com.github.vassilibykov.enfilade.expression.Block;
 import com.github.vassilibykov.enfilade.expression.Call;
 import com.github.vassilibykov.enfilade.expression.Const;
+import com.github.vassilibykov.enfilade.expression.Function;
 import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Let;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
@@ -19,12 +20,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Translates a function definition from the expression package into an
- * executable object.
+ * Translates a pure function definition ({@link Function})
+ * into an equivalent executable {@link RuntimeFunction}.
  */
 public class FunctionTranslator implements Visitor<EvaluatorNode> {
 
-    public static RuntimeFunction translate(com.github.vassilibykov.enfilade.expression.Function function) {
+    public static RuntimeFunction translate(Function function) {
         RuntimeFunction result = Environment.INSTANCE.lookupOrMake(function);
         FunctionTranslator translator = new FunctionTranslator(function);
         EvaluatorNode body = function.body().accept(translator);
@@ -50,10 +51,10 @@ public class FunctionTranslator implements Visitor<EvaluatorNode> {
         Instance
      */
 
-    private final com.github.vassilibykov.enfilade.expression.Function function;
+    private final Function function;
     private final Map<Variable, VariableDefinition> variableDefinitions = new HashMap<>();
 
-    private FunctionTranslator(com.github.vassilibykov.enfilade.expression.Function function) {
+    private FunctionTranslator(Function function) {
         this.function = function;
         translatedArguments();
     }

@@ -155,7 +155,7 @@ public class Compiler {
 
     private MethodType computeSpecializationType() {
         Class<?>[] argClasses = Stream.of(function.arguments())
-            .map(var -> representativeType(var.compilerAnnotation.observedType()))
+            .map(var -> representativeType(var.observedType()))
             .toArray(Class[]::new);
         return MethodType.methodType(
             representativeType(function.body().observedType()),
