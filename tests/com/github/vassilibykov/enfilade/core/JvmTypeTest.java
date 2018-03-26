@@ -7,27 +7,27 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
+import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
+import static com.github.vassilibykov.enfilade.core.JvmType.INT;
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 import static org.junit.Assert.*;
 
-public class TypeCategoryTest {
+public class JvmTypeTest {
 
     private static class Expectation {
-        private final TypeCategory first;
-        private final TypeCategory second;
-        private final TypeCategory result;
+        private final JvmType first;
+        private final JvmType second;
+        private final JvmType result;
 
-        Expectation(TypeCategory first, TypeCategory second, TypeCategory result) {
+        Expectation(JvmType first, JvmType second, JvmType result) {
             this.first = first;
             this.second = second;
             this.result = result;
         }
     }
 
-    private static Expectation expect(TypeCategory first, TypeCategory second, TypeCategory result) {
+    private static Expectation expect(JvmType first, JvmType second, JvmType result) {
         return new Expectation(first, second, result);
     }
 

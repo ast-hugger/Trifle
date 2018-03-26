@@ -3,7 +3,7 @@
 package com.github.vassilibykov.enfilade.acode;
 
 import com.github.vassilibykov.enfilade.core.CallNode;
-import com.github.vassilibykov.enfilade.core.FunctionRegistry;
+import com.github.vassilibykov.enfilade.core.Environment;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -23,6 +23,6 @@ public class Call extends Instruction {
 
     @Override
     public String toString() {
-        return "CALL #" + FunctionRegistry.INSTANCE.lookup(callExpression.function());
+        return "CALL #" + Environment.INSTANCE.lookup(callExpression.function());
     }
 }

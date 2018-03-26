@@ -41,6 +41,23 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
+        public Object visitIf(IfNode anIf) {
+            Object testValue = anIf.condition().accept(this);
+            if ((Boolean) testValue) {
+                Object result = anIf.trueBranch().accept(this);
+                // The count must be incremented after the branch. Counts logically track the cases
+                // when a value has been produced by a branch, not when it has been invoked.
+                // Descending into a branch may fail to produce a value if there is a return in the branch.
+                anIf.trueBranchCount.incrementAndGet();
+                return result;
+            } else {
+                Object result = anIf.falseBranch().accept(this);
+                anIf.falseBranchCount.incrementAndGet();
+                return result;
+            }
+        }
+
+        @Override
         public Object visitLet(LetNode let) {
             Object value = let.initializer().accept(this);
             VariableDefinition variable = let.variable();

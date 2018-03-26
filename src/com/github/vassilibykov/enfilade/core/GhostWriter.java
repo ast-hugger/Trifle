@@ -43,24 +43,24 @@ public class GhostWriter {
         return asmWriter;
     }
 
-    public GhostWriter adaptType(TypeCategory from, TypeCategory to) {
-        from.match(new TypeCategory.VoidMatcher() {
+    public GhostWriter adaptType(JvmType from, JvmType to) {
+        from.match(new JvmType.VoidMatcher() {
             public void ifReference() {
-                to.match(new TypeCategory.VoidMatcher() {
+                to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { }
                     public void ifInt() { unboxInteger(); }
                     public void ifBoolean() { unboxBoolean(); }
                 });
             }
             public void ifInt() {
-                to.match(new TypeCategory.VoidMatcher() {
+                to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { boxInteger(); }
                     public void ifInt() { }
                     public void ifBoolean() { throw new CompilerError("cannot adapt int to boolean"); }
                 });
             }
             public void ifBoolean() {
-                to.match(new TypeCategory.VoidMatcher() {
+                to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { boxBoolean(); }
                     public void ifInt() {
                         throw new CompilerError("cannot adapt boolean to int");
@@ -168,7 +168,7 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter loadLocal(TypeCategory category, int index) {
+    public GhostWriter loadLocal(JvmType category, int index) {
         // FIXME switch to pattern matching style
         switch (category) {
             case REFERENCE:
@@ -204,7 +204,7 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter ret(TypeCategory category) {
+    public GhostWriter ret(JvmType category) {
         // FIXME: 3/23/18 change to pattern matching style
         switch (category) {
             case REFERENCE:
@@ -227,7 +227,7 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter storeLocal(TypeCategory category, int index) {
+    public GhostWriter storeLocal(JvmType category, int index) {
         // FIXME: 3/23/18 change to pattern matching style
         switch (category) {
             case REFERENCE:

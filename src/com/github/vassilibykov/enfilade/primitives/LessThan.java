@@ -6,13 +6,13 @@ import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.Primitive2Node;
-import com.github.vassilibykov.enfilade.core.TypeCategory;
+import com.github.vassilibykov.enfilade.core.JvmType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.BiConsumer;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
+import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
+import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static org.objectweb.asm.Opcodes.IF_ICMPGE;
 
 public class LessThan extends Primitive2Node {
@@ -21,8 +21,8 @@ public class LessThan extends Primitive2Node {
     }
 
     @Override
-    public TypeCategory valueCategory() {
-        return TypeCategory.BOOL;
+    public JvmType valueCategory() {
+        return JvmType.BOOL;
     }
 
     @Override
@@ -40,41 +40,41 @@ public class LessThan extends Primitive2Node {
     }
 
     @Override
-    public TypeCategory generate(GhostWriter writer, TypeCategory arg1Category, TypeCategory arg2Category) {
-        return arg1Category.match(new TypeCategory.Matcher<TypeCategory>() {
-            public TypeCategory ifReference() {
-                return arg2Category.match(new TypeCategory.Matcher<TypeCategory>() {
-                    public TypeCategory ifReference() { // (Object, Object)
+    public JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category) {
+        return arg1Category.match(new JvmType.Matcher<JvmType>() {
+            public JvmType ifReference() {
+                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                    public JvmType ifReference() { // (Object, Object)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, Object.class, Object.class);
                         return BOOL;
                     }
-                    public TypeCategory ifInt() { // (Object, int)
+                    public JvmType ifInt() { // (Object, int)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, Object.class, int.class);
                         return BOOL;
                     }
-                    public TypeCategory ifBoolean() { // (Object, boolean)
+                    public JvmType ifBoolean() { // (Object, boolean)
                         throw new CompilerError("LT is not applicable to a boolean");
                     }
                 });
             }
 
-            public TypeCategory ifInt() {
-                return arg2Category.match(new TypeCategory.Matcher<TypeCategory>() {
-                    public TypeCategory ifReference() { // (int, Object)
+            public JvmType ifInt() {
+                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                    public JvmType ifReference() { // (int, Object)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, int.class, Object.class);
                         return BOOL;
                     }
-                    public TypeCategory ifInt() { // (int, int)
+                    public JvmType ifInt() { // (int, int)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, int.class, int.class);
                         return BOOL;
                     }
-                    public TypeCategory ifBoolean() {
+                    public JvmType ifBoolean() {
                         throw new CompilerError("SUB is not applicable to a boolean");
                     }
                 });
             }
 
-            public TypeCategory ifBoolean() {
+            public JvmType ifBoolean() {
                 throw new CompilerError("SUB is not applicable to a boolean");
             }
         });
@@ -97,7 +97,7 @@ public class LessThan extends Primitive2Node {
     }
 
     public void generateIf(
-        BiConsumer<TypeCategory, EvaluatorNode> argGenerator,
+        BiConsumer<JvmType, EvaluatorNode> argGenerator,
         Runnable trueBranchGenerator,
         Runnable falseBranchGenerator,
         GhostWriter writer)

@@ -4,7 +4,7 @@ package com.github.vassilibykov.enfilade.core;
 
 import java.util.stream.Stream;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
+import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
  * Infers and sets the inferred types of compiler annotations in an expression.
@@ -18,7 +18,7 @@ import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
  * about the value of the expression from static analysis of the expression
  * itself. For example, the inferred type of {@code (const 1)} is {@code int}
  * and the inferred type of {@code (const "foo")} is {@code reference}. Here, as
- * in many other places by type we mean the {@link TypeCategory} of a value, not
+ * in many other places by type we mean the {@link JvmType} of a value, not
  * its type in the Java sense.
  * */
 class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> {
@@ -66,14 +66,14 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
 
     @Override
     public ExpressionType visitConst(ConstNode aConst) {
-        return andSetIn(aConst, ExpressionType.known(TypeCategory.ofObject(aConst.value())));
+        return andSetIn(aConst, ExpressionType.known(JvmType.ofObject(aConst.value())));
     }
 
     @Override
     public ExpressionType visitIf(IfNode anIf) {
         ExpressionType testType = anIf.condition().accept(this);
         if (testType.typeCategory()
-            .map(it -> !(it.equals(TypeCategory.BOOL) || it.equals(TypeCategory.REFERENCE)))
+            .map(it -> !(it.equals(JvmType.BOOL) || it.equals(JvmType.REFERENCE)))
             .orElse(false))
         {
             throw new CompilerError("if() condition is not a boolean");
@@ -105,7 +105,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
 
     @Override
     public ExpressionType visitBlock(BlockNode block) {
-        ExpressionType type = ExpressionType.known(TypeCategory.REFERENCE);
+        ExpressionType type = ExpressionType.known(JvmType.REFERENCE);
         for (EvaluatorNode each : block.expressions()) {
             type = each.accept(this);
         }

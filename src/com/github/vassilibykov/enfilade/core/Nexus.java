@@ -17,7 +17,7 @@ import java.lang.invoke.VolatileCallSite;
  */
 class Nexus {
     /** The number of times a function is profiled before it's queued for compilation. */
-    private static final int PROFILING_TARGET = 100;
+    private static final long PROFILING_TARGET = Long.MAX_VALUE;
 
     private enum State {
         /**

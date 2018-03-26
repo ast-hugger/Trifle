@@ -28,7 +28,7 @@ class PrimitiveKey implements PrimitiveCallTarget {
     }
 
     @Override
-    public EvaluatorNode translate(List<EvaluatorNode> args) {
+    public EvaluatorNode link(List<EvaluatorNode> args) {
         switch (args.size()) {
             case 1:
                 if (arity1Factory == null) {

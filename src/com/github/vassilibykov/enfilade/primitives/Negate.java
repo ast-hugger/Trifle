@@ -6,11 +6,11 @@ import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.Primitive1Node;
-import com.github.vassilibykov.enfilade.core.TypeCategory;
+import com.github.vassilibykov.enfilade.core.JvmType;
 import org.jetbrains.annotations.NotNull;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.JvmType.INT;
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static org.objectweb.asm.Opcodes.ISUB;
 
 public class Negate extends Primitive1Node {
@@ -19,7 +19,7 @@ public class Negate extends Primitive1Node {
     }
 
     @Override
-    public TypeCategory valueCategory() {
+    public JvmType valueCategory() {
         return INT;
     }
 
@@ -29,9 +29,9 @@ public class Negate extends Primitive1Node {
     }
 
     @Override
-    public TypeCategory generate(GhostWriter writer, TypeCategory argCategory) {
-        return argCategory.match(new TypeCategory.Matcher<TypeCategory>() {
-            public TypeCategory ifReference() {
+    public JvmType generate(GhostWriter writer, JvmType argCategory) {
+        return argCategory.match(new JvmType.Matcher<JvmType>() {
+            public JvmType ifReference() {
                 writer
                     .adaptType(REFERENCE, INT)
                     .loadInt(0)
@@ -39,14 +39,14 @@ public class Negate extends Primitive1Node {
                     .asm().visitInsn(ISUB);
                 return INT;
             }
-            public TypeCategory ifInt() {
+            public JvmType ifInt() {
                 writer
                     .loadInt(0)
                     .swap()
                     .asm().visitInsn(ISUB);
                 return INT;
             }
-            public TypeCategory ifBoolean() {
+            public JvmType ifBoolean() {
                 throw new CompilerError("NEGATE is not applicable to a boolean");
             }
         });

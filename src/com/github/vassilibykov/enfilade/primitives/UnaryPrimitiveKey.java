@@ -22,7 +22,7 @@ class UnaryPrimitiveKey implements PrimitiveCallTarget {
     }
 
     @Override
-    public EvaluatorNode translate(List<EvaluatorNode> args) {
+    public EvaluatorNode link(List<EvaluatorNode> args) {
         if (args.size() != 1) {
             throw new CompilerError("incorrect number of arguments");
         }

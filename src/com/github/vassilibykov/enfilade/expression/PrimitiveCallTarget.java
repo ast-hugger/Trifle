@@ -7,5 +7,5 @@ import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import java.util.List;
 
 public interface PrimitiveCallTarget {
-    EvaluatorNode translate(List<EvaluatorNode> args);
+    EvaluatorNode link(List<EvaluatorNode> args);
 }

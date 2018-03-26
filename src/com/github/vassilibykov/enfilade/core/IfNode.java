@@ -4,6 +4,8 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * The conditional.
  */
@@ -11,6 +13,8 @@ public class IfNode extends EvaluatorNode {
     @NotNull private final EvaluatorNode condition;
     @NotNull private final EvaluatorNode trueBranch;
     @NotNull private final EvaluatorNode falseBranch;
+    /*internal*/ final AtomicLong trueBranchCount = new AtomicLong();
+    /*internal*/ final AtomicLong falseBranchCount = new AtomicLong();
 
     IfNode(@NotNull EvaluatorNode condition, @NotNull EvaluatorNode trueBranch, @NotNull EvaluatorNode falseBranch) {
         this.condition = condition;

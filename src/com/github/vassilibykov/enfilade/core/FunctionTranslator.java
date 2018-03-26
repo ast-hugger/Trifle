@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class FunctionTranslator implements Visitor<EvaluatorNode> {
 
     public static RunnableFunction translate(com.github.vassilibykov.enfilade.expression.Function function) {
-        RunnableFunction result = FunctionRegistry.INSTANCE.lookupOrMake(function);
+        RunnableFunction result = Environment.INSTANCE.lookupOrMake(function);
         FunctionTranslator translator = new FunctionTranslator(function);
         EvaluatorNode body = function.body().accept(translator);
         result.setArgumentsAndBody(translator.translatedArguments(), body);
@@ -87,7 +87,7 @@ public class FunctionTranslator implements Visitor<EvaluatorNode> {
 
     @Override
     public EvaluatorNode visitCall(Call call) {
-        RunnableFunction target = FunctionRegistry.INSTANCE.lookupOrMake(call.target());
+        RunnableFunction target = Environment.INSTANCE.lookupOrMake(call.target());
         switch (call.arguments().size()) {
             case 0:
                 return new CallNode.Call0(target);
@@ -131,7 +131,7 @@ public class FunctionTranslator implements Visitor<EvaluatorNode> {
         List<EvaluatorNode> args = primitiveCall.arguments().stream()
             .map(each -> each.accept(this))
             .collect(Collectors.toList());
-        return primitiveCall.target().translate(args);
+        return primitiveCall.target().link(args);
     }
 
     @Override

@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.*;
-import static com.github.vassilibykov.enfilade.primitives.PrimitiveExpressionLanguage.*;
+import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.*;
 import static org.junit.Assert.assertEquals;
 
 @SuppressWarnings("Convert2MethodRef")

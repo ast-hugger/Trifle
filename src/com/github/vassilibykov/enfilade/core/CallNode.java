@@ -25,7 +25,7 @@ public abstract class CallNode extends EvaluatorNode {
 
     @Override
     public String toString() {
-        return "call #" + FunctionRegistry.INSTANCE.lookup(function);
+        return "call #" + Environment.INSTANCE.lookup(function);
     }
 
     /*

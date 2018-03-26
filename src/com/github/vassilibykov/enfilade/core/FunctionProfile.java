@@ -40,6 +40,6 @@ public class FunctionProfile {
     }
 
     public boolean canBeSpecialized() {
-        return Stream.of(methodArguments).anyMatch(some -> some.profile.valueCategory() != TypeCategory.REFERENCE);
+        return Stream.of(methodArguments).anyMatch(some -> some.profile.valueCategory() != JvmType.REFERENCE);
     }
 }

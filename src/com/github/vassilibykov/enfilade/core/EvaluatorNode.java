@@ -111,7 +111,7 @@ public abstract class EvaluatorNode {
         }
     }
 
-    private static final ExpressionType KNOWN_VOID = ExpressionType.known(TypeCategory.VOID);
+    private static final ExpressionType KNOWN_VOID = ExpressionType.known(JvmType.VOID);
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     /*
@@ -130,10 +130,10 @@ public abstract class EvaluatorNode {
      * observed type trumps the inferred type because it's potentially more
      * specific, even if incorrect for the general case.
      */
-    public synchronized TypeCategory specializationType() {
+    public synchronized JvmType specializationType() {
         return observedType.typeCategory()
             .orElseGet(() -> inferredType.typeCategory()
-                .orElse(TypeCategory.REFERENCE));
+                .orElse(JvmType.REFERENCE));
     }
 
     /*internal*/ synchronized ExpressionType inferredType() {

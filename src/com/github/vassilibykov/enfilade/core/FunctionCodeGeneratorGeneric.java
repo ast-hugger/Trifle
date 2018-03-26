@@ -6,16 +6,16 @@ import org.objectweb.asm.MethodVisitor;
 
 import java.lang.invoke.MethodType;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
+import static com.github.vassilibykov.enfilade.core.JvmType.INT;
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 
 /**
  * A code generator producing code for the generic version of a function.
  * The result returned by each visitor method is the type category of the
  * value of the the subexpression compiled by the method.
  */
-class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory> {
+class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     protected final GhostWriter writer;
 
     FunctionCodeGeneratorGeneric(MethodVisitor visitor) {
@@ -23,8 +23,8 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitCall0(CallNode.Call0 call) {
-        int id = FunctionRegistry.INSTANCE.lookup(call.function());
+    public JvmType visitCall0(CallNode.Call0 call) {
+        int id = Environment.INSTANCE.lookup(call.function());
         MethodType callSiteType = MethodType.methodType(Object.class);
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
@@ -35,10 +35,10 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitCall1(CallNode.Call1 call) {
-        TypeCategory argType = call.arg().accept(this);
+    public JvmType visitCall1(CallNode.Call1 call) {
+        JvmType argType = call.arg().accept(this);
         writer.adaptType(argType, REFERENCE);
-        int id = FunctionRegistry.INSTANCE.lookup(call.function());
+        int id = Environment.INSTANCE.lookup(call.function());
         MethodType callSiteType = MethodType.methodType(Object.class, Object.class);
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
@@ -49,12 +49,12 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitCall2(CallNode.Call2 call) {
-        TypeCategory arg1Type = call.arg1().accept(this);
+    public JvmType visitCall2(CallNode.Call2 call) {
+        JvmType arg1Type = call.arg1().accept(this);
         writer.adaptType(arg1Type, REFERENCE);
-        TypeCategory arg2Type = call.arg2().accept(this);
+        JvmType arg2Type = call.arg2().accept(this);
         writer.adaptType(arg2Type, REFERENCE);
-        int id = FunctionRegistry.INSTANCE.lookup(call.function());
+        int id = Environment.INSTANCE.lookup(call.function());
         MethodType callSiteType = MethodType.methodType(Object.class, Object.class, Object.class);
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
@@ -65,7 +65,7 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitConst(ConstNode aConst) {
+    public JvmType visitConst(ConstNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -79,16 +79,16 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitIf(IfNode anIf) {
-        TypeCategory testType = anIf.condition().accept(this);
+    public JvmType visitIf(IfNode anIf) {
+        JvmType testType = anIf.condition().accept(this);
         writer.adaptType(testType, BOOL);
         writer.ifThenElse(
             () -> {
-                TypeCategory type = anIf.trueBranch().accept(this);
+                JvmType type = anIf.trueBranch().accept(this);
                 writer.adaptType(type, REFERENCE);
             },
             () -> {
-                TypeCategory type = anIf.falseBranch().accept(this);
+                JvmType type = anIf.falseBranch().accept(this);
                 writer.adaptType(type, REFERENCE);
             }
         );
@@ -96,28 +96,28 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitLet(LetNode let) {
-        TypeCategory initType = let.initializer().accept(this);
+    public JvmType visitLet(LetNode let) {
+        JvmType initType = let.initializer().accept(this);
         writer.adaptType(initType, REFERENCE);
         writer.storeLocal(REFERENCE, let.variable().index());
         return let.body().accept(this);
     }
 
     @Override
-    public TypeCategory visitPrimitive1(Primitive1Node primitive1) {
-        TypeCategory argType = primitive1.argument().accept(this);
+    public JvmType visitPrimitive1(Primitive1Node primitive1) {
+        JvmType argType = primitive1.argument().accept(this);
         return primitive1.generate(writer, argType);
     }
 
     @Override
-    public TypeCategory visitPrimitive2(Primitive2Node primitive2) {
-        TypeCategory arg1Type =  primitive2.argument1().accept(this);
-        TypeCategory arg2Type = primitive2.argument2().accept(this);
+    public JvmType visitPrimitive2(Primitive2Node primitive2) {
+        JvmType arg1Type =  primitive2.argument1().accept(this);
+        JvmType arg2Type = primitive2.argument2().accept(this);
         return primitive2.generate(writer, arg1Type, arg2Type);
     }
 
     @Override
-    public TypeCategory visitBlock(BlockNode block) {
+    public JvmType visitBlock(BlockNode block) {
         EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer.loadNull();
@@ -133,13 +133,13 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitRet(ReturnNode ret) {
+    public JvmType visitRet(ReturnNode ret) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
-    public TypeCategory visitVarSet(SetVariableNode set) {
-        TypeCategory varType = set.value().accept(this);
+    public JvmType visitVarSet(SetVariableNode set) {
+        JvmType varType = set.value().accept(this);
         writer
             .adaptType(varType, REFERENCE)
             .dup()
@@ -148,7 +148,7 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<TypeCategory
     }
 
     @Override
-    public TypeCategory visitVarRef(VariableReferenceNode var) {
+    public JvmType visitVarRef(VariableReferenceNode var) {
         writer.loadLocal(REFERENCE, var.variable.index());
         return REFERENCE;
     }

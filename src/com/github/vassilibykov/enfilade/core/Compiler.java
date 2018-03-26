@@ -7,6 +7,9 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.invoke.MethodType;
 import java.util.stream.Stream;
 
@@ -31,9 +34,20 @@ public class Compiler {
      */
     public static Result compile(RunnableFunction function) {
         Compiler compiler = new Compiler(function);
-        return compiler.compile();
+        Result result = compiler.compile();
+        dumpClassFile("generated", result.bytecode());
+        return result;
     }
-
+    private static void dumpClassFile(String name, byte[] bytecode) {
+        File classFile = new File(name + ".class");
+        try {
+            FileOutputStream classStream = new FileOutputStream(classFile);
+            classStream.write(bytecode);
+            classStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     public static class Result {
         private final String className;
         private final byte[] bytecode;
@@ -117,8 +131,8 @@ public class Compiler {
             null, null);
         methodWriter.visitCode();
         FunctionCodeGeneratorGeneric generator = new FunctionCodeGeneratorGeneric(methodWriter);
-        TypeCategory resultType = function.body().accept(generator);
-        generator.writer.adaptType(resultType, TypeCategory.REFERENCE);
+        JvmType resultType = function.body().accept(generator);
+        generator.writer.adaptType(resultType, JvmType.REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();

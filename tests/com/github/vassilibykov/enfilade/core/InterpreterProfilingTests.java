@@ -35,7 +35,7 @@ public class InterpreterProfilingTests {
             runnableCaller.invoke();
         }
         assertEquals(7, runnableCaller.profile.invocationCount());
-        assertEquals(14, runnableCaller.profile.invocationCount());
+        assertEquals(14, runnableCallee.profile.invocationCount());
     }
 
     @Test
@@ -63,17 +63,20 @@ public class InterpreterProfilingTests {
 
     @Test
     public void testLetVarProfile() {
-//        Variable arg = var("arg");
-//        Variable t = var("t");
-//        Function function = Function.with(new VariableDefinition[]{arg},
-//            let(t, ref(arg), ref(t)));
-//        for (int i = 0; i < 3; i++) {
-//            function.invoke("hello");
-//        }
-//        for (int i = 0; i < 4; i++) {
-//            function.invoke(42);
-//        }
-//        assertEquals(3, t.profile.referenceCases());
-//        assertEquals(4, t.profile.intCases());
+        Variable arg = var("arg");
+        Variable t = var("t");
+        RunnableFunction function = FunctionTranslator.translate(
+            Function.with(List.of(arg),
+                let(t, arg, t)));
+        for (int i = 0; i < 3; i++) {
+            function.invoke("hello");
+        }
+        for (int i = 0; i < 4; i++) {
+            function.invoke(42);
+        }
+        LetNode let = (LetNode) function.body();
+        VariableDefinition tDef = let.variable();
+        assertEquals(3, tDef.profile.referenceCases());
+        assertEquals(4, tDef.profile.intCases());
     }
 }

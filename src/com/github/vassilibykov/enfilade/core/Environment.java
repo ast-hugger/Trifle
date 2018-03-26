@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.expression.Function;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -12,13 +13,22 @@ import java.util.Map;
 /**
  * A registry translating between {@link RunnableFunction} objects and integer IDs.
  */
-public class FunctionRegistry {
-
-    public static final FunctionRegistry INSTANCE = new FunctionRegistry();
+public class Environment {
+    public static final Environment INSTANCE = new Environment();
 
     private final List<RunnableFunction> functionsById = new ArrayList<>();
     private final Map<RunnableFunction, Integer> functionIds = new HashMap<>();
     private final Map<com.github.vassilibykov.enfilade.expression.Function, RunnableFunction> functionsBySource = new HashMap<>();
+
+    public void compile(List<Function> functions) {
+        functions.forEach(FunctionTranslator::translate);
+    }
+
+    public synchronized RunnableFunction lookup(Function source) {
+        return functionsBySource.computeIfAbsent(source, k -> {
+            throw new CompilerError("function not found: " + source);
+        });
+    }
 
     public synchronized RunnableFunction lookupOrMake(com.github.vassilibykov.enfilade.expression.Function source) {
         return functionsBySource.computeIfAbsent(source, k -> new RunnableFunction(source));

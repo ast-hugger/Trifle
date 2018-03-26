@@ -15,18 +15,18 @@ import java.util.Deque;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.VOID;
+import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
+import static com.github.vassilibykov.enfilade.core.JvmType.INT;
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
-class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCategory> {
+class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType> {
     private final RunnableFunction function;
     private final GhostWriter writer;
-    private final Deque<TypeCategory> continuationTypes = new ArrayDeque<>();
+    private final Deque<JvmType> continuationTypes = new ArrayDeque<>();
     private final List<VariableDefinition> liveLocals = new ArrayList<>();
     private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
-    private final TypeCategory functionReturnType;
+    private final JvmType functionReturnType;
 
     private static class SquarePegHandler {
         private final Label handlerStart;
@@ -66,14 +66,14 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
         }
     }
 
-    private TypeCategory currentContinuationType() {
+    private JvmType currentContinuationType() {
         return continuationTypes.peek();
     }
 
     @Override
-    public TypeCategory visitCall0(CallNode.Call0 call) {
-        int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        TypeCategory returnType = call.specializationType();
+    public JvmType visitCall0(CallNode.Call0 call) {
+        int id = Environment.INSTANCE.lookup(call.function());
+        JvmType returnType = call.specializationType();
         MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
         writer.invokeDynamic(
             DirectCall.BOOTSTRAP,
@@ -85,14 +85,14 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitCall1(CallNode.Call1 call) {
+    public JvmType visitCall1(CallNode.Call1 call) {
         // FIXME this (and the 2-arg version) will fail if arguments are specialized so the call site
         // has a non-generic signature, but the specialization available in the nexus has a different signature.
         // We'll need to revise the scheme of managing implementations and call sites in Nexus
         // to fix this.
         call.arg().accept(this);
-        int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        TypeCategory returnType = call.specializationType();
+        int id = Environment.INSTANCE.lookup(call.function());
+        JvmType returnType = call.specializationType();
         MethodType callSiteType = MethodType.methodType(
             returnType.representativeClass(),
             call.arg().specializationType().representativeClass());
@@ -106,11 +106,11 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitCall2(CallNode.Call2 call) {
+    public JvmType visitCall2(CallNode.Call2 call) {
         call.arg1().accept(this);
         call.arg2().accept(this);
-        int id = FunctionRegistry.INSTANCE.lookup(call.function());
-        TypeCategory returnType = call.specializationType();
+        int id = Environment.INSTANCE.lookup(call.function());
+        JvmType returnType = call.specializationType();
         MethodType callSiteType = MethodType.methodType(
             returnType.representativeClass(),
             call.arg1().specializationType().representativeClass(),
@@ -125,7 +125,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitConst(ConstNode aConst) {
+    public JvmType visitConst(ConstNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -140,7 +140,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitIf(IfNode anIf) {
+    public JvmType visitIf(IfNode anIf) {
         if (anIf.condition() instanceof LessThan) {
             ((LessThan) anIf.condition()).generateIf(
                 (type, arg) -> generateExpecting(type, arg),
@@ -158,9 +158,9 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitLet(LetNode let) {
+    public JvmType visitLet(LetNode let) {
         VariableDefinition var = let.variable();
-        TypeCategory varType = var.compilerAnnotation.specializationType();
+        JvmType varType = var.compilerAnnotation.specializationType();
         if (varType == REFERENCE) {
             generateExpecting(REFERENCE, let.initializer());
         } else {
@@ -174,7 +174,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitPrimitive1(Primitive1Node primitive) {
+    public JvmType visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
         primitive.generate(writer, primitive.argument().specializationType());
         assertPassage(primitive.valueCategory(), currentContinuationType());
@@ -182,7 +182,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitPrimitive2(Primitive2Node primitive) {
+    public JvmType visitPrimitive2(Primitive2Node primitive) {
         primitive.argument1().accept(this);
         primitive.argument2().accept(this);
         primitive.generate(
@@ -194,7 +194,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitBlock(BlockNode block) {
+    public JvmType visitBlock(BlockNode block) {
         EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer
@@ -213,14 +213,14 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitRet(ReturnNode ret) {
+    public JvmType visitRet(ReturnNode ret) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
-    public TypeCategory visitVarSet(SetVariableNode set) {
+    public JvmType visitVarSet(SetVariableNode set) {
         VariableDefinition var = set.variable;
-        TypeCategory varType = var.compilerAnnotation.specializationType();
+        JvmType varType = var.compilerAnnotation.specializationType();
         generateExpecting(varType, set.value());
         writer
             .dup()
@@ -229,14 +229,14 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     @Override
-    public TypeCategory visitVarRef(VariableReferenceNode varRef) {
-        TypeCategory varType = varRef.variable.compilerAnnotation.specializationType();
+    public JvmType visitVarRef(VariableReferenceNode varRef) {
+        JvmType varType = varRef.variable.compilerAnnotation.specializationType();
         writer.loadLocal(varType, varRef.variable.index());
         assertPassage(varType, currentContinuationType());
         return null;
     }
 
-    private void generateExpecting(TypeCategory expectedType, EvaluatorNode expression) {
+    private void generateExpecting(JvmType expectedType, EvaluatorNode expression) {
         continuationTypes.push(expectedType);
         expression.accept(this);
         continuationTypes.pop();
@@ -259,10 +259,10 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
      * <p>If the 'to' type is VOID, that means the value passed to the continuation
      * will be discarded. In that case it can be anything.
      */
-    private void assertPassage(TypeCategory from, TypeCategory to) {
-        from.match(new TypeCategory.VoidMatcher() {
+    private void assertPassage(JvmType from, JvmType to) {
+        from.match(new JvmType.VoidMatcher() {
             public void ifReference() {
-                to.match(new TypeCategory.VoidMatcher() {
+                to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { }
                     public void ifInt() { writer.throwSquarePegException(); }
                     public void ifBoolean() { writer.throwSquarePegException(); }
@@ -270,7 +270,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
                 });
             }
             public void ifInt() {
-                to.match(new TypeCategory.VoidMatcher() {
+                to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { writer.boxInteger(); }
                     public void ifInt() { }
                     public void ifBoolean() { writer.boxInteger().throwSquarePegException(); }
@@ -278,7 +278,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
                 });
             }
             public void ifBoolean() {
-                to.match(new TypeCategory.VoidMatcher() {
+                to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { writer.boxBoolean(); }
                     public void ifInt() { writer.boxBoolean().throwSquarePegException(); }
                     public void ifBoolean() { }
@@ -333,7 +333,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
     }
 
     private void storeInFrameReplica(VariableDefinition local) {
-        TypeCategory localType = local.compilerAnnotation.specializationType();
+        JvmType localType = local.compilerAnnotation.specializationType();
         writer.storeArray(local.index, () -> {
             writer.loadLocal(localType, local.index);
             writer.adaptType(localType, REFERENCE);
@@ -346,7 +346,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
         Stream.of(function.arguments()).forEach(this::storeInFrameReplica);
         // stack: SPE, int initialPC, Object[] frame
         writer
-            .loadInt(FunctionRegistry.INSTANCE.lookup(function))
+            .loadInt(Environment.INSTANCE.lookup(function))
             // stack: SPE, int initialPC, Object[] frame, int functionId
             .invokeStatic(Interpreter.class, "forRecovery", Interpreter.class, int.class, Object[].class, int.class)
             // stack: SPE, Interpreter
@@ -355,7 +355,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<TypeCate
             .invokeVirtual(SquarePegException.class, "value", Object.class)
             // stack: Interpreter, Object
             .invokeVirtual(Interpreter.class, "interpret", Object.class, Object.class);
-        functionReturnType.match(new TypeCategory.VoidMatcher() {
+        functionReturnType.match(new JvmType.VoidMatcher() {
             @Override
             public void ifReference() {
                 writer.ret(REFERENCE);

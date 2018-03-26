@@ -7,7 +7,7 @@ import java.util.Optional;
 /**
  * A type assigned to an expression by the type inferencer or an analyzer
  * processing profiled types. It is essentially a wrapper around {@link
- * TypeCategory}, adding a notion of an unknown type.
+ * JvmType}, adding a notion of an unknown type.
  *
  * <p>Known vs unknown types are modeled as two nested classes, however the
  * classes are private to not expose the distinction at the class membership
@@ -23,14 +23,14 @@ public abstract class ExpressionType {
         return new Unknown();
     }
 
-    public static ExpressionType known(TypeCategory type) {
+    public static ExpressionType known(JvmType type) {
         return new Known(type);
     }
 
     /** A poor man's pattern matching. */
     public interface Matcher<T> {
         T ifUnknown();
-        T ifKnown(TypeCategory category);
+        T ifKnown(JvmType category);
     }
 
     private static class Unknown extends ExpressionType {
@@ -47,7 +47,7 @@ public abstract class ExpressionType {
         }
 
         @Override
-        public Optional<TypeCategory> typeCategory() {
+        public Optional<JvmType> typeCategory() {
             return Optional.empty();
         }
 
@@ -78,9 +78,9 @@ public abstract class ExpressionType {
     }
 
     private static class Known extends ExpressionType {
-        private final TypeCategory type;
+        private final JvmType type;
 
-        private Known(TypeCategory type) {
+        private Known(JvmType type) {
             this.type = type;
         }
 
@@ -95,7 +95,7 @@ public abstract class ExpressionType {
         }
 
         @Override
-        public Optional<TypeCategory> typeCategory() {
+        public Optional<JvmType> typeCategory() {
             return Optional.of(type);
         }
 
@@ -105,7 +105,7 @@ public abstract class ExpressionType {
                 public ExpressionType ifUnknown() {
                     return other;
                 }
-                public ExpressionType ifKnown(TypeCategory otherType) {
+                public ExpressionType ifKnown(JvmType otherType) {
                     return ExpressionType.known(type.union(otherType));
                 }
             });
@@ -117,7 +117,7 @@ public abstract class ExpressionType {
                 public ExpressionType ifUnknown() {
                     return Known.this;
                 }
-                public ExpressionType ifKnown(TypeCategory otherType) {
+                public ExpressionType ifKnown(JvmType otherType) {
                     return ExpressionType.known(type.union(otherType));
                 }
             });
@@ -156,7 +156,7 @@ public abstract class ExpressionType {
      * Return this type's category as an optional, empty if this is an unknown
      * type.
      */
-    public abstract Optional<TypeCategory> typeCategory();
+    public abstract Optional<JvmType> typeCategory();
 
     /**
      * Return the upper-bound union of this type and another: if one of the

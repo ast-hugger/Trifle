@@ -16,7 +16,7 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.pro
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.set;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.unaryFunction;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.var;
-import static com.github.vassilibykov.enfilade.primitives.PrimitiveExpressionLanguage.add;
+import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static org.junit.Assert.*;
 
 public class TranslatorTest {

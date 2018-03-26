@@ -2,9 +2,9 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import static com.github.vassilibykov.enfilade.core.TypeCategory.BOOL;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.INT;
-import static com.github.vassilibykov.enfilade.core.TypeCategory.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
+import static com.github.vassilibykov.enfilade.core.JvmType.INT;
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 
 class ValueProfile {
     private long referenceCases = 0;
@@ -46,7 +46,7 @@ class ValueProfile {
         return boolCases;
     }
 
-    public synchronized TypeCategory valueCategory() {
+    public synchronized JvmType valueCategory() {
         return hasProfileData() && isPureInt() ? INT : REFERENCE;
     }
 

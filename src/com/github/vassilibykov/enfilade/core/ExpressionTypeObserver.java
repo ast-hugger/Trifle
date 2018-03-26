@@ -11,7 +11,7 @@ import java.util.stream.Stream;
  *
  * <p>Each compiler annotation informs the compiler about the values the
  * associated expression can take. For simplicity below we refer to them as
- * "types", however we really mean a broader {@link TypeCategory}: whether the
+ * "types", however we really mean a broader {@link JvmType}: whether the
  * value is a reference or one of the primitive types, and which one. How the
  * information is obtained depends on the specific node.
  *
@@ -121,7 +121,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     @Override
     public ExpressionType visitConst(ConstNode aConst) {
         return aConst.hasBeenEvaluated()
-            ? setKnownType(aConst, TypeCategory.ofObject(aConst.value()))
+            ? setKnownType(aConst, JvmType.ofObject(aConst.value()))
             : UNKNOWN;
     }
 
@@ -174,7 +174,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
 
     @Override
     public ExpressionType visitBlock(BlockNode block) {
-        ExpressionType type = ExpressionType.known(TypeCategory.REFERENCE);
+        ExpressionType type = ExpressionType.known(JvmType.REFERENCE);
         for (EvaluatorNode each : block.expressions()) {
             type = each.accept(this);
         }
@@ -190,7 +190,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     public ExpressionType visitRet(ReturnNode ret) {
         ExpressionType valueType = ret.value().accept(this);
         functionBody.unifyObservedTypeWith(valueType);
-        return setKnownType(ret, TypeCategory.VOID);
+        return setKnownType(ret, JvmType.VOID);
     }
 
     @Override
@@ -220,7 +220,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
         return valueType;
     }
 
-    private ExpressionType setKnownType(EvaluatorNode expression, TypeCategory type) {
+    private ExpressionType setKnownType(EvaluatorNode expression, JvmType type) {
         ExpressionType expressionType = ExpressionType.known(type);
         expression.unifyObservedTypeWith(expressionType);
         return expressionType;

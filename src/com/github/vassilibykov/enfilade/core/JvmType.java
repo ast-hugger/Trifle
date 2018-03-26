@@ -6,7 +6,7 @@ package com.github.vassilibykov.enfilade.core;
  * A broad category of types as seen by the JVM, i.e. reference types vs.
  * primitive {@code int}s, vs other primitive types.
  */
-public enum TypeCategory {
+public enum JvmType {
     REFERENCE(Object.class),
     INT(int.class),
     BOOL(boolean.class),
@@ -18,7 +18,7 @@ public enum TypeCategory {
      */
     VOID(void.class);
 
-    public static TypeCategory ofObject(Object value) {
+    public static JvmType ofObject(Object value) {
         if (value instanceof Integer) {
             return INT;
         } if (value instanceof Boolean) {
@@ -58,7 +58,7 @@ public enum TypeCategory {
 
     private final Class<?> representativeType;
 
-    TypeCategory(Class<?> representativeType) {
+    JvmType(Class<?> representativeType) {
         this.representativeType = representativeType;
     }
 
@@ -70,7 +70,7 @@ public enum TypeCategory {
      * Return a union of this type and another, with {@link #VOID} being
      * the zero: a union of it with any type is the other type.
      */
-    public TypeCategory union(TypeCategory another) {
+    public JvmType union(JvmType another) {
         if (this == another || another == VOID) {
             return this;
         } else if (this == VOID) {

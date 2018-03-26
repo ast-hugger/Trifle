@@ -12,10 +12,10 @@ import static org.junit.Assert.*;
 public class ExpressionTypeTest {
 
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
-    private static final ExpressionType KNOWN_VOID = ExpressionType.known(TypeCategory.VOID);
-    private static final ExpressionType KNOWN_BOOL = ExpressionType.known(TypeCategory.BOOL);
-    private static final ExpressionType KNOWN_INT = ExpressionType.known(TypeCategory.INT);
-    private static final ExpressionType KNOWN_REFERENCE = ExpressionType.known(TypeCategory.REFERENCE);
+    private static final ExpressionType KNOWN_VOID = ExpressionType.known(JvmType.VOID);
+    private static final ExpressionType KNOWN_BOOL = ExpressionType.known(JvmType.BOOL);
+    private static final ExpressionType KNOWN_INT = ExpressionType.known(JvmType.INT);
+    private static final ExpressionType KNOWN_REFERENCE = ExpressionType.known(JvmType.REFERENCE);
 
     private static class Expectation {
         private final ExpressionType first;

@@ -5,7 +5,7 @@ package com.github.vassilibykov.enfilade.primitives;
 import com.github.vassilibykov.enfilade.expression.AtomicExpression;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
 
-public class PrimitiveExpressionLanguage {
+public class StandardPrimitiveLanguage {
 
     public static PrimitiveCall add(AtomicExpression arg1, AtomicExpression arg2) {
         return PrimitiveCall.with(new PrimitiveKey(Add::new), arg1, arg2);

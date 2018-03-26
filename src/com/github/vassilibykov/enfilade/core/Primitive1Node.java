@@ -19,11 +19,11 @@ public abstract class Primitive1Node extends EvaluatorNode {
         return argument;
     }
 
-    public abstract TypeCategory valueCategory();
+    public abstract JvmType valueCategory();
 
     public abstract Object apply(Object arg);
 
-    public abstract TypeCategory generate(GhostWriter writer, TypeCategory argCategory);
+    public abstract JvmType generate(GhostWriter writer, JvmType argCategory);
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
