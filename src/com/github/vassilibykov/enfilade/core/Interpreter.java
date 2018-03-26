@@ -22,20 +22,20 @@ public class Interpreter {
 
         @Override
         public Object visitCall0(CallNode.Call0 call) {
-            return call.function().nexus.invoke();
+            return call.function().invoke();
         }
 
         @Override
         public Object visitCall1(CallNode.Call1 call) {
             Object arg = call.arg().accept(this);
-            return call.function().nexus.invoke(arg);
+            return call.function().invoke(arg);
         }
 
         @Override
         public Object visitCall2(CallNode.Call2 call) {
             Object arg1 = call.arg1().accept(this);
             Object arg2 = call.arg2().accept(this);
-            return call.function().nexus.invoke(arg1, arg2);
+            return call.function().invoke(arg1, arg2);
         }
 
         @Override
@@ -104,7 +104,7 @@ public class Interpreter {
         Instance
      */
 
-    public Object interpret(RunnableFunction function) {
+    public Object interpret(RuntimeFunction function) {
         Object[] frame = new Object[function.localsCount()];
         try {
             return function.body().accept(new Evaluator(frame));
@@ -113,7 +113,7 @@ public class Interpreter {
         }
     }
 
-    public Object interpret(RunnableFunction function, Object arg) {
+    public Object interpret(RuntimeFunction function, Object arg) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg;
         try {
@@ -123,7 +123,7 @@ public class Interpreter {
         }
     }
 
-    public Object interpret(RunnableFunction function, Object arg1, Object arg2) {
+    public Object interpret(RuntimeFunction function, Object arg1, Object arg2) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg1;
         frame[1] = arg2;
@@ -134,7 +134,7 @@ public class Interpreter {
         }
     }
 
-    public Object interpretWithArgs(RunnableFunction function, Object[] actualArguments) {
+    public Object interpretWithArgs(RuntimeFunction function, Object[] actualArguments) {
         Object[] frame = new Object[function.localsCount()];
         System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
         try {

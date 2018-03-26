@@ -20,6 +20,10 @@ public class VariableDefinition {
         this.definition = definition;
     }
 
+    public Variable definition() {
+        return definition;
+    }
+
     public String name() {
         return definition.name();
     }

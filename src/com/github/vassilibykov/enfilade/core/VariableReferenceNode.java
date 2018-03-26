@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p>A variable is associated with a storage location in the activation record
  * of its function. The storage location is identified by its index. Indices are
- * assigned by the {@link RunnableFunction} object when it is constructed. At that time
+ * assigned by the {@link RuntimeFunction} object when it is constructed. At that time
  * it is detected if a variable does not appear as an argument or a let binding
  * exactly once, as required.
  */

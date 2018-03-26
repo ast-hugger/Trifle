@@ -5,13 +5,16 @@ package com.github.vassilibykov.enfilade.acode;
 import com.github.vassilibykov.enfilade.core.CallNode;
 import com.github.vassilibykov.enfilade.core.ConstNode;
 import com.github.vassilibykov.enfilade.core.EvaluatorNode;
-import com.github.vassilibykov.enfilade.core.VariableDefinition;
-import com.github.vassilibykov.enfilade.core.VariableReferenceNode;
-import com.github.vassilibykov.enfilade.expression.ExpressionLanguage;
 import com.github.vassilibykov.enfilade.core.Primitive1Node;
 import com.github.vassilibykov.enfilade.core.Primitive2Node;
+import com.github.vassilibykov.enfilade.core.VariableDefinition;
+import com.github.vassilibykov.enfilade.core.VariableReferenceNode;
 
 public class AssemblyLanguage {
+
+    public static ConstNode const_(Object value) {
+        return new ConstNode(value);
+    }
 
     public static Call call(CallNode callExpression) {
         return new Call(callExpression);
@@ -39,6 +42,10 @@ public class AssemblyLanguage {
 
     public static Load load(VariableDefinition var) {
         return new Load(new VariableReferenceNode(var));
+    }
+
+    public static VariableReferenceNode ref(VariableDefinition var) {
+        return new VariableReferenceNode(var);
     }
 
     public static Load load(Primitive1Node primitive) {

@@ -12,7 +12,7 @@ public class ProfilingInterpreter extends Interpreter {
 
         @Override
         public Object visitCall0(CallNode.Call0 call) {
-            Object result = call.function().nexus.invoke();
+            Object result = call.function().invoke();
             call.profile.recordValue(result);
             return result;
         }
@@ -20,7 +20,7 @@ public class ProfilingInterpreter extends Interpreter {
         @Override
         public Object visitCall1(CallNode.Call1 call) {
             Object arg = call.arg().accept(this);
-            Object result = call.function().nexus.invoke(arg);
+            Object result = call.function().invoke(arg);
             call.profile.recordValue(result);
             return result;
         }
@@ -29,7 +29,7 @@ public class ProfilingInterpreter extends Interpreter {
         public Object visitCall2(CallNode.Call2 call) {
             Object arg1 = call.arg1().accept(this);
             Object arg2 = call.arg2().accept(this);
-            Object result = call.function().nexus.invoke(arg1, arg2);
+            Object result = call.function().invoke(arg1, arg2);
             call.profile.recordValue(result);
             return result;
         }
@@ -99,7 +99,7 @@ public class ProfilingInterpreter extends Interpreter {
      */
 
     @Override
-    public Object interpret(RunnableFunction function) {
+    public Object interpret(RuntimeFunction function) {
         Object[] frame = new Object[function.localsCount()];
         function.profile.recordInvocation(frame);
         try {
@@ -112,7 +112,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(RunnableFunction function, Object arg) {
+    public Object interpret(RuntimeFunction function, Object arg) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg;
         function.profile.recordInvocation(frame);
@@ -126,7 +126,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(RunnableFunction function, Object arg1, Object arg2) {
+    public Object interpret(RuntimeFunction function, Object arg1, Object arg2) {
         Object[] frame = new Object[function.localsCount()];
         frame[0] = arg1;
         frame[1] = arg2;
@@ -141,7 +141,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpretWithArgs(RunnableFunction function, Object[] actualArguments) {
+    public Object interpretWithArgs(RuntimeFunction function, Object[] actualArguments) {
         Object[] frame = new Object[function.localsCount()];
         System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
         function.profile.recordInvocation(frame);

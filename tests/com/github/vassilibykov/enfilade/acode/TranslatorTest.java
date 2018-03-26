@@ -3,7 +3,7 @@
 package com.github.vassilibykov.enfilade.acode;
 
 import com.github.vassilibykov.enfilade.core.FunctionTranslator;
-import com.github.vassilibykov.enfilade.core.RunnableFunction;
+import com.github.vassilibykov.enfilade.core.RuntimeFunction;
 import com.github.vassilibykov.enfilade.expression.Function;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import org.junit.Test;
@@ -61,10 +61,10 @@ public class TranslatorTest {
     }
 
     private Object interpretAsACode(Function function, Object... args) {
-        RunnableFunction runnableFunction =
+        RuntimeFunction runtimeFunction =
             FunctionTranslator.translate(function);
-        Instruction[] code = Translator.translate(runnableFunction.body());
-        Object[] locals = new Object[runnableFunction.localsCount()];
+        Instruction[] code = Translator.translate(runtimeFunction.body());
+        Object[] locals = new Object[runtimeFunction.localsCount()];
         System.arraycopy(args, 0, locals, 0, args.length);
         Interpreter interpreter = Interpreter.on(code, locals);
         return interpreter.interpret();

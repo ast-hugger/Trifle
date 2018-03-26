@@ -2,6 +2,9 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.acode.Instruction;
+import com.github.vassilibykov.enfilade.expression.Function;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.CallSite;
@@ -9,15 +12,18 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * A nexus of function representation and execution. Manages function
- * compilation, keeps track of any existing compiled form(s) of the function,
- * and is able to execute the function in either interpreted or compiled mode.
+ * A function which, unlike the pure {@link Function} definition in the
+ * {@code expressions} package, can be executed.
  */
-class Nexus {
+public class RuntimeFunction {
+
     /** The number of times a function is profiled before it's queued for compilation. */
-    private static final long PROFILING_TARGET = Long.MAX_VALUE;
+    private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
 
     private enum State {
         /**
@@ -41,88 +47,109 @@ class Nexus {
         COMPILED
     }
 
+
+    /**
+     * Assigns indices to all let-bound variables in a function body. Also
+     * validates the use of variables, checking that any variable reference is
+     * either to a function argument or to a let-bound variable currently in
+     * scope.
+     */
+    private class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
+        private int index;
+        private final Set<VariableDefinition> scope = new HashSet<>();
+
+        private VariableIndexer() {
+            for (int i = 0; i < arguments.length; i++) {
+                arguments[i].index = i;
+            }
+            this.index = arguments.length;
+            scope.addAll(Arrays.asList(arguments));
+        }
+
+        public int index() {
+            return index;
+        }
+
+        @Override
+        public Void visitLet(LetNode let) {
+            VariableDefinition var = let.variable();
+            if (var.index() >= 0) {
+                throw new AssertionError("variable reuse detected: " + var);
+            }
+            var.index = index++;
+            let.initializer().accept(this);
+            scope.add(var);
+            let.body().accept(this);
+            scope.remove(var);
+            return null;
+        }
+
+        @Override
+        public Void visitVarRef(VariableReferenceNode varRef) {
+            if (!scope.contains(varRef.variable)) {
+                throw new AssertionError("variable used outside of its scope: " + varRef);
+            }
+            return null;
+        }
+    }
+
     /*
         Instance
      */
 
-    private final RunnableFunction function;
+    @NotNull private final Function origin;
+    private final int arity;
+    private State state;
     private final VolatileCallSite callSite;
     private final MethodHandle callSiteInvoker;
+    private VariableDefinition[] arguments;
+    /*internal*/ FunctionProfile profile;
+    private EvaluatorNode body;
+    private int localsCount = -1;
     @Nullable private MethodType specializationType;
     @Nullable private VolatileCallSite specializationCallSite;
-    private State state;
+    /*internal*/ Instruction[] acode;
 
-    Nexus(RunnableFunction function) {
-        this.function = function;
+    RuntimeFunction(@NotNull Function origin) {
+        this.origin = origin;
+        this.arity = origin.arguments().size();
         this.state = State.PROFILING;
         this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
-//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }
 
-    /**
-     * Return a call site invoking which executes the function in the best
-     * currently possible mode. Invokedynamics calling this function all share
-     * this call site. The type of the call site matches the arity of the
-     * function, so invokedynamics with an incompatible signature will fail at
-     * the bootstrap time unless special measures are taken by the bootstrapper.
-     */
-    public CallSite callSite(MethodType requestedType) {
-        // At the moment everything is generically typed so no adaptation is necessary.
-        if (requestedType.equals(specializationType)) {
-            return specializationCallSite;
-        } else if (requestedType.equals(callSite.type())){
-            return callSite;
-        } else {
-            throw new UnsupportedOperationException("partial specialization is not yet supported");
-        }
+    void setArgumentsAndBody(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body) {
+        this.arguments = arguments;
+        this.profile = new FunctionProfile(arguments);
+        this.body = body;
+        this.localsCount = computeLocalsCount();
     }
 
-    private MethodHandle profilingInterpreterInvoker() {
-        MethodType type = MethodType.genericMethodType(function.arity());
-        try {
-            MethodHandle interpret = MethodHandles.lookup().findVirtual(Nexus.class, "interpret", type);
-            return interpret.bindTo(this);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new AssertionError(e);
-        }
+    public VariableDefinition[] arguments() {
+        return arguments;
     }
 
-    private MethodHandle simpleInterpreterInvoker() {
-        MethodType type = MethodType.genericMethodType(function.arity());
-        type = type.insertParameterTypes(0, RunnableFunction.class);
-        try {
-            MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
-            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, function);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new AssertionError(e);
-        }
+    public EvaluatorNode body() {
+        return body;
     }
 
-    public Object interpret() {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(function);
-        if (function.profile.invocationCount() > PROFILING_TARGET) {
-            scheduleCompilation();
-        }
-        return result;
+    public int arity() {
+        return arity;
     }
 
-    public Object interpret(Object arg) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(function, arg);
-        if (function.profile.invocationCount() > PROFILING_TARGET) {
-            scheduleCompilation();
-        }
-        return result;
+    public int localsCount() {
+        return localsCount;
     }
 
-    public Object interpret(Object arg1, Object arg2) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(function, arg1, arg2);
-        if (function.profile.invocationCount() > PROFILING_TARGET) {
-            scheduleCompilation();
-        }
-        return result;
+    public Instruction[] acode() {
+        return acode;
     }
 
+    private int computeLocalsCount() {
+        VariableIndexer indexer = new VariableIndexer();
+        body.accept(indexer);
+        return indexer.index();
+    }
     public Object invoke() {
         try {
             return callSiteInvoker.invokeExact();
@@ -145,6 +172,69 @@ class Nexus {
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
+    }
+
+    /**
+     * Return a call site invoking which executes the function in the best
+     * currently possible mode. Invokedynamics calling this function all share
+     * this call site. The type of the call site matches the arity of the
+     * function, so invokedynamics with an incompatible signature will fail at
+     * the bootstrap time unless special measures are taken by the bootstrapper.
+     */
+    public CallSite callSite(MethodType requestedType) {
+        // At the moment everything is generically typed so no adaptation is necessary.
+        if (requestedType.equals(specializationType)) {
+            return specializationCallSite;
+        } else if (requestedType.equals(callSite.type())){
+            return callSite;
+        } else {
+            throw new UnsupportedOperationException("partial specialization is not yet supported");
+        }
+    }
+
+    private MethodHandle profilingInterpreterInvoker() {
+        MethodType type = MethodType.genericMethodType(arity());
+        try {
+            MethodHandle interpret = MethodHandles.lookup().findVirtual(RuntimeFunction.class, "interpret", type);
+            return interpret.bindTo(this);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private MethodHandle simpleInterpreterInvoker() {
+        MethodType type = MethodType.genericMethodType(arity());
+        type = type.insertParameterTypes(0, RuntimeFunction.class);
+        try {
+            MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
+            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, this);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    public Object interpret() {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this);
+        if (profile.invocationCount() > PROFILING_TARGET) {
+            scheduleCompilation();
+        }
+        return result;
+    }
+
+    public Object interpret(Object arg) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg);
+        if (profile.invocationCount() > PROFILING_TARGET) {
+            scheduleCompilation();
+        }
+        return result;
+    }
+
+    public Object interpret(Object arg1, Object arg2) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg1, arg2);
+        if (profile.invocationCount() > PROFILING_TARGET) {
+            scheduleCompilation();
+        }
+        return result;
     }
 
     /*internal*/ synchronized void updateCompiledForm(
@@ -181,11 +271,11 @@ class Nexus {
     }
 
     void forceCompile() {
-        Compiler.Result result = Compiler.compile(function);
+        Compiler.Result result = Compiler.compile(this);
         try {
             Class<?> implClass = GeneratedCode.defineClass(result);
             MethodHandle genericMethod = MethodHandles.lookup()
-                .findStatic(implClass, Compiler.GENERIC_METHOD_NAME, MethodType.genericMethodType(function.arity()));
+                .findStatic(implClass, Compiler.GENERIC_METHOD_NAME, MethodType.genericMethodType(arity()));
             MethodType specializedType = result.specializationType();
             MethodHandle specializedMethod = null;
             if (specializedType != null) {
@@ -216,6 +306,7 @@ class Nexus {
         return MethodHandles.catchException(generic, SquarePegException.class, EXTRACT_SQUARE_PEG);
     }
 
+    @SuppressWarnings("unused") // called by generated code
     public static boolean checkSpecializationApplicability(MethodType specialization, Object[] args) {
         for (int i = 0; i < args.length; i++) {
             Class<?> type = specialization.parameterType(i);
@@ -226,6 +317,7 @@ class Nexus {
         return true;
     }
 
+    @SuppressWarnings("unused") // called by generated code
     public static Object extractSquarePeg(SquarePegException exception) {
         return exception.value;
     }
@@ -236,11 +328,11 @@ class Nexus {
     static {
         try {
             CHECK = MethodHandles.lookup().findStatic(
-                Nexus.class,
+                RuntimeFunction.class,
                 "checkSpecializationApplicability",
                 MethodType.methodType(boolean.class, MethodType.class, Object[].class));
             EXTRACT_SQUARE_PEG = MethodHandles.lookup().findStatic(
-                Nexus.class,
+                RuntimeFunction.class,
                 "extractSquarePeg", MethodType.methodType(Object.class, SquarePegException.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);

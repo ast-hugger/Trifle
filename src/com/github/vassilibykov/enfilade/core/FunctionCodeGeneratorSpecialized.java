@@ -21,7 +21,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType> {
-    private final RunnableFunction function;
+    private final RuntimeFunction function;
     private final GhostWriter writer;
     private final Deque<JvmType> continuationTypes = new ArrayDeque<>();
     private final List<VariableDefinition> liveLocals = new ArrayList<>();
@@ -40,7 +40,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         }
     }
 
-    FunctionCodeGeneratorSpecialized(RunnableFunction function, MethodVisitor writer) {
+    FunctionCodeGeneratorSpecialized(RuntimeFunction function, MethodVisitor writer) {
         this.function = function;
         this.functionReturnType = function.body().specializationType();
         this.writer = new GhostWriter(writer);
@@ -88,7 +88,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitCall1(CallNode.Call1 call) {
         // FIXME this (and the 2-arg version) will fail if arguments are specialized so the call site
         // has a non-generic signature, but the specialization available in the nexus has a different signature.
-        // We'll need to revise the scheme of managing implementations and call sites in Nexus
+        // We'll need to revise the scheme of managing implementations and call sites in RuntimeFunction
         // to fix this.
         call.arg().accept(this);
         int id = Environment.INSTANCE.lookup(call.function());

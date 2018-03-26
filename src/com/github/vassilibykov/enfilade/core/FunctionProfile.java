@@ -15,9 +15,9 @@ public class FunctionProfile {
     private long invocationCount = 0;
     private final ValueProfile resultProfile = new ValueProfile();
 
-    FunctionProfile(RunnableFunction function) {
-        this.methodArguments = function.arguments();
-        this.methodArity = function.arity();
+    FunctionProfile(VariableDefinition[] arguments) {
+        this.methodArguments = arguments;
+        this.methodArity = arguments.length;
     }
 
     public synchronized long invocationCount() {

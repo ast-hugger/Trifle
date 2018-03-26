@@ -23,7 +23,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
  * */
 class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> {
 
-    static void inferTypesIn(RunnableFunction function) {
+    static void inferTypesIn(RuntimeFunction function) {
         Stream.of(function.arguments()).forEach(
             each -> each.compilerAnnotation.setInferredType(ExpressionType.unknown()));
         ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
@@ -42,7 +42,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     private final EvaluatorNode functionBody;
     private boolean needsRevisiting = false;
 
-    private ExpressionTypeInferencer(RunnableFunction function) {
+    private ExpressionTypeInferencer(RuntimeFunction function) {
         this.functionBody = function.body();
     }
 

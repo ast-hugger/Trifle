@@ -19,7 +19,7 @@ import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
- * Compiles a {@link RunnableFunction} into a class with a single static method.
+ * Compiles a {@link RuntimeFunction} into a class with a single static method.
  */
 public class Compiler {
 
@@ -32,7 +32,7 @@ public class Compiler {
     /**
      * The access point: compile a function.
      */
-    public static Result compile(RunnableFunction function) {
+    public static Result compile(RuntimeFunction function) {
         Compiler compiler = new Compiler(function);
         Result result = compiler.compile();
         dumpClassFile("generated", result.bytecode());
@@ -91,12 +91,12 @@ public class Compiler {
         Instance
      */
 
-    private final RunnableFunction function;
+    private final RuntimeFunction function;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     @Nullable private MethodType specializationType = null;
 
-    private Compiler(RunnableFunction function) {
+    private Compiler(RuntimeFunction function) {
         this.function = function;
         this.className = allocateClassName();
     }

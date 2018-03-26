@@ -29,8 +29,8 @@ public class InterpreterProfilingTests {
             prog(
                 call(callee),
                 call(callee)));
-        RunnableFunction runnableCallee = FunctionTranslator.translate(callee);
-        RunnableFunction runnableCaller = FunctionTranslator.translate(caller);
+        RuntimeFunction runnableCallee = FunctionTranslator.translate(callee);
+        RuntimeFunction runnableCaller = FunctionTranslator.translate(caller);
         for (int i = 0; i < 7; i++) {
             runnableCaller.invoke();
         }
@@ -47,8 +47,8 @@ public class InterpreterProfilingTests {
             prog(
                 call(function, arg2),
                 call(function, arg2)));
-        RunnableFunction runnable1 = FunctionTranslator.translate(function);
-        RunnableFunction runnable2 = FunctionTranslator.translate(function2);
+        RuntimeFunction runnable1 = FunctionTranslator.translate(function);
+        RuntimeFunction runnable2 = FunctionTranslator.translate(function2);
         for (int i = 0; i < 3; i++) {
             runnable2.invoke("hello");
         }
@@ -65,7 +65,7 @@ public class InterpreterProfilingTests {
     public void testLetVarProfile() {
         Variable arg = var("arg");
         Variable t = var("t");
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             Function.with(List.of(arg),
                 let(t, arg, t)));
         for (int i = 0; i < 3; i++) {

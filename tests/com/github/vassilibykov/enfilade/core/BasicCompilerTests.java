@@ -22,20 +22,20 @@ public class BasicCompilerTests {
 
     @Test
     public void testArg() {
-        RunnableFunction function = FunctionTranslator.translate(unaryFunction(arg -> arg));
-        function.nexus.forceCompile();
+        RuntimeFunction function = FunctionTranslator.translate(unaryFunction(arg -> arg));
+        function.forceCompile();
         assertEquals(42, function.invoke(42));
     }
 
     @Test
     public void testIf() {
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             unaryFunction(
                 arg ->
                     if_(arg,
                         const_("true"),
                         const_("false"))));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals("true", function.invoke(true));
         assertEquals("false", function.invoke(false));
     }
@@ -43,9 +43,9 @@ public class BasicCompilerTests {
     @Test
     public void testLet() {
         Variable t = var("t");
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             unaryFunction(arg -> let(t, arg, t)));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals(42, function.invoke(42));
         assertEquals("hello", function.invoke("hello"));
     }
@@ -54,70 +54,70 @@ public class BasicCompilerTests {
     public void testLet2() {
         Variable t = var("t");
         Variable u = var("u");
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             unaryFunction(arg ->
             let(t, add(arg, const_(1)),
                 let(u, add(arg, const_(2)),
                     mul(t, u)))));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals(12, function.invoke(2));
     }
 
     @Test
     public void testPrimitive1() {
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             unaryFunction(
                 arg ->
                     negate(arg)));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals(-42, function.invoke(42));
         assertEquals(123, function.invoke(-123));
     }
 
     @Test
     public void testPrimitive2() {
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             binaryFunction(
                 (arg1, arg2) ->
                     add(arg1, arg2)));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals(7, function.invoke(3, 4));
         assertEquals(0, function.invoke(-42, 42));
     }
 
     @Test
     public void testSetVar() {
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             unaryFunction(
                 arg ->
                     set(arg, const_(42))));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals(42, function.invoke(3));
     }
 
     @Test
     public void testSetVarInProg() {
-        RunnableFunction function = FunctionTranslator.translate(
+        RuntimeFunction function = FunctionTranslator.translate(
             unaryFunction(
                 arg ->
                     prog(
                         set(arg, const_(42)),
                         arg)));
-        function.nexus.forceCompile();
+        function.forceCompile();
         assertEquals(42, function.invoke(3));
     }
 
     @Test
     public void testVar() {
-        RunnableFunction function = FunctionTranslator.translate(unaryFunction(arg -> arg));
+        RuntimeFunction function = FunctionTranslator.translate(unaryFunction(arg -> arg));
         assertEquals(42, function.invoke(42));
         assertEquals("hello", function.invoke("hello"));
     }
 
     @Test
     public void testFactorial() {
-        RunnableFunction factorial = FunctionTranslator.translate(InterpreterEvaluationTests.factorial());
-        factorial.nexus.forceCompile();
+        RuntimeFunction factorial = FunctionTranslator.translate(InterpreterEvaluationTests.factorial());
+        factorial.forceCompile();
         assertEquals(6, factorial.invoke(3));
         assertEquals(24, factorial.invoke(4));
         assertEquals(120, factorial.invoke(5));
@@ -125,8 +125,8 @@ public class BasicCompilerTests {
 
     @Test
     public void testFibonacci() { // and everybody's favorite
-        RunnableFunction fibonacci = FunctionTranslator.translate(InterpreterEvaluationTests.fibonacci());
-        fibonacci.nexus.forceCompile();
+        RuntimeFunction fibonacci = FunctionTranslator.translate(InterpreterEvaluationTests.fibonacci());
+        fibonacci.forceCompile();
         assertEquals(1, fibonacci.invoke(0));
         assertEquals(1, fibonacci.invoke(1));
         assertEquals(2, fibonacci.invoke(2));
@@ -139,8 +139,8 @@ public class BasicCompilerTests {
 //    @Test
     public void timeFib() {
         int n = 35;
-        RunnableFunction fibonacci = FunctionTranslator.translate(InterpreterEvaluationTests.fibonacci());
-        fibonacci.nexus.forceCompile();
+        RuntimeFunction fibonacci = FunctionTranslator.translate(InterpreterEvaluationTests.fibonacci());
+        fibonacci.forceCompile();
         Object[] args = {n};
         for (int i = 0; i < 20; i++) fibonacci.invoke(n);
         long start = System.nanoTime();
@@ -149,9 +149,9 @@ public class BasicCompilerTests {
         System.out.format("fibonacci(%s) = %s in %s ms", n, result, elapsed / 1_000_000L);
     }
 
-    private RunnableFunction compile(Expression methodBody) {
-        RunnableFunction function = FunctionTranslator.translate(nullaryFunction(() -> methodBody));
-        function.nexus.forceCompile();
+    private RuntimeFunction compile(Expression methodBody) {
+        RuntimeFunction function = FunctionTranslator.translate(nullaryFunction(() -> methodBody));
+        function.forceCompile();
         return function;
     }
 }

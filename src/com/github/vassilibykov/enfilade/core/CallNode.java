@@ -10,14 +10,14 @@ import org.jetbrains.annotations.NotNull;
  * for specific function arities.
  */
 public abstract class CallNode extends EvaluatorNode {
-    @NotNull private RunnableFunction function;
+    @NotNull private RuntimeFunction function;
     /*internal*/ final ValueProfile profile = new ValueProfile();
 
-    CallNode(@NotNull RunnableFunction function) {
+    CallNode(@NotNull RuntimeFunction function) {
         this.function = function;
     }
 
-    public RunnableFunction function() {
+    public RuntimeFunction function() {
         return function;
     }
 
@@ -34,7 +34,7 @@ public abstract class CallNode extends EvaluatorNode {
 
     public static class Call0 extends CallNode {
 
-        Call0(RunnableFunction function) {
+        Call0(RuntimeFunction function) {
             super(function);
         }
 
@@ -52,7 +52,7 @@ public abstract class CallNode extends EvaluatorNode {
     public static class Call1 extends CallNode {
         @NotNull private final EvaluatorNode arg;
 
-        Call1(RunnableFunction function, @NotNull EvaluatorNode arg) {
+        Call1(RuntimeFunction function, @NotNull EvaluatorNode arg) {
             super(function);
             this.arg = arg;
         }
@@ -76,7 +76,7 @@ public abstract class CallNode extends EvaluatorNode {
         @NotNull private final EvaluatorNode arg1;
         @NotNull private final EvaluatorNode arg2;
 
-        Call2(RunnableFunction function, @NotNull EvaluatorNode arg1, @NotNull EvaluatorNode arg2) {
+        Call2(RuntimeFunction function, @NotNull EvaluatorNode arg1, @NotNull EvaluatorNode arg2) {
             super(function);
             this.arg1 = arg1;
             this.arg2 = arg2;

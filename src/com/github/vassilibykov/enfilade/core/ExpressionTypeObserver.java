@@ -65,7 +65,7 @@ import java.util.stream.Stream;
 class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
-    static void analyze(RunnableFunction function) {
+    static void analyze(RuntimeFunction function) {
         ExpressionTypeObserver observer = new ExpressionTypeObserver(function);
         Stream.of(function.arguments()).forEach(
             each -> each.compilerAnnotation.setObservedType(each.profile.observedType()));
@@ -78,7 +78,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
 
     private final EvaluatorNode functionBody;
 
-    private ExpressionTypeObserver(RunnableFunction function) {
+    private ExpressionTypeObserver(RuntimeFunction function) {
         this.functionBody = function.body();
     }
 
