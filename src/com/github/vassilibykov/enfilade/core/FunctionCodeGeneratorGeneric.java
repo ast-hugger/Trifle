@@ -99,7 +99,7 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     public JvmType visitLet(LetNode let) {
         JvmType initType = let.initializer().accept(this);
         writer.adaptType(initType, REFERENCE);
-        writer.storeLocal(REFERENCE, let.variable().index());
+        writer.storeLocal(REFERENCE, let.variable().genericIndex());
         return let.body().accept(this);
     }
 
@@ -143,13 +143,13 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         writer
             .adaptType(varType, REFERENCE)
             .dup()
-            .storeLocal(REFERENCE, set.variable.index());
+            .storeLocal(REFERENCE, set.variable.genericIndex());
         return REFERENCE;
     }
 
     @Override
     public JvmType visitVarRef(VariableReferenceNode var) {
-        writer.loadLocal(REFERENCE, var.variable.index());
+        writer.loadLocal(REFERENCE, var.variable.genericIndex());
         return REFERENCE;
     }
 }

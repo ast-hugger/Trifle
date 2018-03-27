@@ -5,6 +5,7 @@ package com.github.vassilibykov.enfilade.core;
 import com.github.vassilibykov.enfilade.acode.Interpreter;
 import com.github.vassilibykov.enfilade.acode.Translator;
 import com.github.vassilibykov.enfilade.primitives.LessThan;
+import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
@@ -12,7 +13,9 @@ import java.lang.invoke.MethodType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
@@ -40,6 +43,72 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         }
     }
 
+    /**
+     * Sets {@link VariableDefinition#specializedIndex} fields in an evaluator
+     * node tree. Specialized indices have to be set so that variables of
+     * different types are not mapped onto the same local index.
+     *
+     * <p>There is no need to validate scope of variable uses because it's
+     * already been done by the generic indexer.
+     */
+    static class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
+
+        private class IndexPool {
+            private final List<Integer> availableIndices = new ArrayList<>();
+            private int currentIndex = 0;
+
+            public int allocate() {
+                if (currentIndex == availableIndices.size()) {
+                    availableIndices.add(nextGlobalIndex++);
+                }
+                return availableIndices.get(currentIndex++);
+            }
+
+            public void release() {
+                currentIndex--;
+            }
+        }
+
+        private int nextGlobalIndex;
+        private Map<JvmType, IndexPool> poolsByType = new HashMap<>();
+
+        VariableIndexer(int startingIndex) {
+            this.nextGlobalIndex = startingIndex;
+            poolsByType.put(JvmType.REFERENCE, new IndexPool());
+            poolsByType.put(JvmType.INT, new IndexPool());
+            poolsByType.put(JvmType.BOOL, new IndexPool());
+        }
+
+        public int frameSize() {
+            return nextGlobalIndex;
+        }
+
+        @Override
+        public Void visitLet(LetNode let) {
+            let.initializer().accept(this);
+            JvmType varType = let.variable().specializationType();
+            IndexPool pool = poolsByType.get(varType);
+            let.variable().specializedIndex = pool.allocate();
+            let.body().accept(this);
+            pool.release();
+            return null;
+        }
+
+        @TestOnly
+        int allocate(JvmType type) {
+            return poolsByType.get(type).allocate();
+        }
+
+        @TestOnly
+        void release(JvmType type) {
+            poolsByType.get(type).release();
+        }
+    }
+
+    /*
+        Instance
+     */
+
     FunctionCodeGeneratorSpecialized(RuntimeFunction function, MethodVisitor writer) {
         this.function = function;
         this.functionReturnType = function.body().specializationType();
@@ -53,6 +122,8 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     void generate() {
         function.acode = Translator.translate(function.body());
         continuationTypes.push(functionReturnType);
+        VariableIndexer variableIndexer = new VariableIndexer(function.arity());
+        function.body().accept(variableIndexer);
         function.body().accept(this);
         continuationTypes.pop();
         writer.ret(functionReturnType);
@@ -166,7 +237,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         } else {
             withSquarePegRecovery(let, () -> generateExpecting(varType, let.initializer()));
         }
-        writer.storeLocal(varType, var.index());
+        writer.storeLocal(varType, var.genericIndex());
         liveLocals.add(var);
         generateForCurrentContinuation(let.body());
         liveLocals.remove(var);
@@ -224,14 +295,14 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         generateExpecting(varType, set.value());
         writer
             .dup()
-            .storeLocal(varType, var.index());
+            .storeLocal(varType, var.genericIndex());
         return null;
     }
 
     @Override
     public JvmType visitVarRef(VariableReferenceNode varRef) {
         JvmType varType = varRef.variable.specializationType();
-        writer.loadLocal(varType, varRef.variable.index());
+        writer.loadLocal(varType, varRef.variable.genericIndex());
         assertPassage(varType, currentContinuationType());
         return null;
     }
@@ -334,8 +405,8 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     private void storeInFrameReplica(VariableDefinition local) {
         JvmType localType = local.specializationType();
-        writer.storeArray(local.index, () -> {
-            writer.loadLocal(localType, local.index);
+        writer.storeArray(local.genericIndex, () -> {
+            writer.loadLocal(localType, local.genericIndex);
             writer.adaptType(localType, REFERENCE);
         });
     }

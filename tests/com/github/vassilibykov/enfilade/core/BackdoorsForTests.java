@@ -17,6 +17,6 @@ public class BackdoorsForTests {
 
     @TestOnly
     public static void setVariableIndex(VariableDefinition var, int index) {
-        var.index = index;
+        var.genericIndex = index;
     }
 }

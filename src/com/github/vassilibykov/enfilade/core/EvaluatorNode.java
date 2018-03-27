@@ -120,7 +120,6 @@ public abstract class EvaluatorNode {
 
     private ExpressionType inferredType = KNOWN_VOID;
     private ExpressionType observedType = UNKNOWN;
-    private boolean hasBeenEvaluated = false;
 
     public abstract <T> T accept(Visitor<T> visitor);
 
@@ -131,8 +130,8 @@ public abstract class EvaluatorNode {
      * specific, even if incorrect for the general case.
      */
     public synchronized JvmType specializationType() {
-        return observedType.typeCategory()
-            .orElseGet(() -> inferredType.typeCategory()
+        return observedType.jvmType()
+            .orElseGet(() -> inferredType.jvmType()
                 .orElse(JvmType.REFERENCE));
     }
 
@@ -144,20 +143,12 @@ public abstract class EvaluatorNode {
         return observedType;
     }
 
-    /*internal*/ boolean hasBeenEvaluated() {
-        return hasBeenEvaluated;
-    }
-
     /*internal*/ synchronized void setInferredType(@NotNull ExpressionType expressionType) {
         this.inferredType = expressionType;
     }
 
     /*internal*/ synchronized void setObservedType(@NotNull ExpressionType type) {
         observedType = type;
-    }
-
-    /*internal*/ void setHasBeenEvaluated(boolean hasBeenEvaluated) {
-        this.hasBeenEvaluated = hasBeenEvaluated;
     }
 
     /**

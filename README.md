@@ -16,11 +16,11 @@ A proof of concept currently able to:
   * Catch SPEs at the right places and recover using a-code. 
 
 The profiling interpreter and the generic and specialized form compilers work
-for the Fibonacci example. See [early benchmarks and code samples](doc/perf-observations.md).
+for the Fibonacci example. See [early benchmarks and code samples](doc/basic-benchmarks.md).
 
 ## TODO
 
-  * Separate expression AST and interpretable AST; should be able to improve profiling interpreter speed this way.
-  * Properly handle Return throughout (should be just a matter of programming)
   * Handle call sites with a specialized signature not matching the available specialization.
+  * Closures
+ 
 

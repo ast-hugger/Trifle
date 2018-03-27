@@ -35,12 +35,6 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitConst(ConstNode aConst) {
-            aConst.setHasBeenEvaluated(true);
-            return super.visitConst(aConst);
-        }
-
-        @Override
         public Object visitIf(IfNode anIf) {
             Object testValue = anIf.condition().accept(this);
             if ((Boolean) testValue) {
@@ -61,34 +55,16 @@ public class ProfilingInterpreter extends Interpreter {
         public Object visitLet(LetNode let) {
             Object value = let.initializer().accept(this);
             VariableDefinition variable = let.variable();
-            frame[variable.index()] = value;
+            frame[variable.genericIndex()] = value;
             variable.profile.recordValue(value);
             return let.body().accept(this);
-        }
-
-        @Override
-        public Object visitPrimitive1(Primitive1Node primitive) {
-            primitive.setHasBeenEvaluated(true);
-            return super.visitPrimitive1(primitive);
-        }
-
-        @Override
-        public Object visitPrimitive2(Primitive2Node primitive) {
-            primitive.setHasBeenEvaluated(true);
-            return super.visitPrimitive2(primitive);
-        }
-
-        @Override
-        public Object visitVarRef(VariableReferenceNode varRef) {
-            varRef.setHasBeenEvaluated(true);
-            return super.visitVarRef(varRef);
         }
 
         @Override
         public Object visitVarSet(SetVariableNode set) {
             Object value = set.value().accept(this);
             VariableDefinition variable = set.variable();
-            frame[variable.index()] = value;
+            frame[variable.genericIndex()] = value;
             variable.profile.recordValue(value);
             return value;
         }

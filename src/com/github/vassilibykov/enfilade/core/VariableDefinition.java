@@ -15,7 +15,8 @@ public class VariableDefinition {
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     @NotNull private final Variable definition;
-    /*internal*/ int index = -1;
+    /*internal*/ int genericIndex = -1;
+    /*internal*/ int specializedIndex = -1;
     /*internal*/ final ValueProfile profile = new ValueProfile();
     private ExpressionType inferredType = KNOWN_VOID;
     private ExpressionType observedType = UNKNOWN;
@@ -32,8 +33,23 @@ public class VariableDefinition {
         return definition.name();
     }
 
-    public int index() {
-        return index;
+    /**
+     * The index assigned to this variable which is safe to use in generic code,
+     * where two variables may reuse the same local slot if they are not live at
+     * the same time. In specialized code we must segregate variables by their
+     * type.
+     *
+     * @see FunctionTranslator.VariableIndexer
+     */
+    public int genericIndex() {
+        return genericIndex;
+    }
+
+    /**
+     * The index assigned to this variable by specialized code generator.
+     */
+    public int specializedIndex() {
+        return specializedIndex;
     }
 
     /**
@@ -43,8 +59,8 @@ public class VariableDefinition {
      * specific, even if incorrect for the general case.
      */
     public synchronized JvmType specializationType() {
-        return observedType.typeCategory()
-            .orElseGet(() -> inferredType.typeCategory()
+        return observedType.jvmType()
+            .orElseGet(() -> inferredType.jvmType()
                 .orElse(JvmType.REFERENCE));
     }
 

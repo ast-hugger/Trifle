@@ -14,9 +14,12 @@ import com.github.vassilibykov.enfilade.expression.SetVariable;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -26,24 +29,61 @@ import java.util.stream.Collectors;
 public class FunctionTranslator implements Visitor<EvaluatorNode> {
 
     public static RuntimeFunction translate(Function function) {
-        RuntimeFunction result = Environment.INSTANCE.lookupOrMake(function);
+        RuntimeFunction runtimeFunction = Environment.INSTANCE.lookupOrMake(function);
         FunctionTranslator translator = new FunctionTranslator(function);
         EvaluatorNode body = function.body().accept(translator);
-        result.setArgumentsAndBody(translator.translatedArguments(), body);
-        return result;
+        VariableIndexer indexer = new VariableIndexer(translator.translatedArguments());
+        body.accept(indexer);
+        runtimeFunction.finishInitialization(translator.translatedArguments(), body, indexer.maxIndex());
+        return runtimeFunction;
     }
 
-    static class TranslationContext {
-        private static TranslationContext simple(EvaluatorNode node) {
-            return new TranslationContext(node, false);
+    /**
+     * Assigns generic indices to all let-bound variables in a function body.
+     * Also validates the use of variables, checking that any variable reference
+     * is either to a function argument or to a let-bound variable currently in
+     * scope.
+     */
+    private static class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
+        private int currentIndex;
+        private int maxIndex;
+        private final Set<VariableDefinition> scope = new HashSet<>();
+
+        private VariableIndexer(VariableDefinition[] arguments) {
+            for (int i = 0; i < arguments.length; i++) {
+                arguments[i].genericIndex = i;
+            }
+            currentIndex = arguments.length;
+            maxIndex = currentIndex;
+            scope.addAll(Arrays.asList(arguments));
         }
 
-        private final EvaluatorNode result;
-        private final boolean hasControlEscape;
+        public int maxIndex() {
+            return maxIndex;
+        }
 
-        TranslationContext(EvaluatorNode result, boolean hasControlEscape) {
-            this.result = result;
-            this.hasControlEscape = hasControlEscape;
+        @Override
+        public Void visitLet(LetNode let) {
+            VariableDefinition var = let.variable();
+            if (var.genericIndex() >= 0) {
+                throw new AssertionError("variable reuse detected: " + var);
+            }
+            let.initializer().accept(this);
+            var.genericIndex = currentIndex++;
+            maxIndex = Math.max(maxIndex, currentIndex);
+            scope.add(var);
+            let.body().accept(this);
+            scope.remove(var);
+            currentIndex--;
+            return null;
+        }
+
+        @Override
+        public Void visitVarRef(VariableReferenceNode varRef) {
+            if (!scope.contains(varRef.variable)) {
+                throw new AssertionError("variable used outside of its scope: " + varRef);
+            }
+            return null;
         }
     }
 

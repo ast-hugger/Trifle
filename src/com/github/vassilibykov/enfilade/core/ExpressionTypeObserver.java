@@ -84,7 +84,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     @Override
     public ExpressionType visitCall0(CallNode.Call0 call) {
         if (call.profile.hasProfileData()) {
-            return setKnownType(call, call.profile.valueCategory());
+            return setKnownType(call, call.profile.jvmType());
         } else {
             return UNKNOWN;
         }
@@ -94,7 +94,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     public ExpressionType visitCall1(CallNode.Call1 call) {
         call.arg().accept(this);
         if (call.profile.hasProfileData()) {
-            return setKnownType(call, call.profile.valueCategory());
+            return setKnownType(call, call.profile.jvmType());
         } else {
             return UNKNOWN;
         }
@@ -105,7 +105,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
         call.arg1().accept(this);
         call.arg2().accept(this);
         if (call.profile.hasProfileData()) {
-            return setKnownType(call, call.profile.valueCategory());
+            return setKnownType(call, call.profile.jvmType());
         } else {
             return UNKNOWN;
         }
@@ -119,9 +119,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
      */
     @Override
     public ExpressionType visitConst(ConstNode aConst) {
-        return aConst.hasBeenEvaluated()
-            ? setKnownType(aConst, JvmType.ofObject(aConst.value()))
-            : UNKNOWN;
+        return setKnownType(aConst, JvmType.ofObject(aConst.value()));
     }
 
     @Override
@@ -129,7 +127,9 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
         anIf.condition().accept(this);
         ExpressionType trueType = anIf.trueBranch().accept(this);
         ExpressionType falseType = anIf.falseBranch().accept(this);
-        ExpressionType unified = trueType.opportunisticUnion(falseType);
+        ExpressionType effectiveTrueType = anIf.trueBranchCount.get() > 0 ? trueType : UNKNOWN;
+        ExpressionType effectiveFalseType = anIf.falseBranchCount.get() > 0 ? falseType : UNKNOWN;
+        ExpressionType unified = effectiveTrueType.opportunisticUnion(effectiveFalseType);
         anIf.unifyObservedTypeWith(unified);
         return unified;
     }
@@ -157,18 +157,14 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     @Override
     public ExpressionType visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
-        return primitive.hasBeenEvaluated()
-            ? setKnownType(primitive, primitive.valueCategory())
-            : UNKNOWN;
+        return setKnownType(primitive, primitive.valueCategory());
     }
 
     @Override
     public ExpressionType visitPrimitive2(Primitive2Node primitive) {
         primitive.argument1().accept(this);
         primitive.argument2().accept(this);
-        return primitive.hasBeenEvaluated()
-            ? setKnownType(primitive, primitive.valueCategory())
-            : UNKNOWN;
+        return setKnownType(primitive, primitive.valueCategory());
     }
 
     @Override
@@ -194,12 +190,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
 
     @Override
     public ExpressionType visitVarRef(VariableReferenceNode varRef) {
-        ExpressionType observed;
-        if (varRef.hasBeenEvaluated()) {
-            observed = varRef.variable.observedType();
-        } else {
-            observed = ExpressionType.unknown();
-        }
+        ExpressionType observed = varRef.variable.observedType();
         varRef.unifyObservedTypeWith(observed);
         return observed;
     }

@@ -4,6 +4,10 @@ package com.github.vassilibykov.enfilade.expression;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * The {@code let} form. Note that the initializer is allowed to be an arbitrary
+ * expression. In canonical ANF the initializer must be a complex expression.
+ */
 public class Let extends ComplexExpression {
     public static Let with(Variable variable, Expression initializer, Expression body) {
         return new Let(variable, initializer, body);

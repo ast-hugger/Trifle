@@ -14,7 +14,7 @@ import java.util.Optional;
  * level. Instead, the distinction is exposed through the uniform API of the
  * abstract methods of this class. The {@link #match} method together with the
  * {@link Matcher} interface mimic patching of functional languages.
- * Alternatively, the {@link #typeCategory()} method returns an empty optional
+ * Alternatively, the {@link #jvmType()} method returns an empty optional
  * for unknown types and an optional with a value for known types.
  */
 public abstract class ExpressionType {
@@ -47,7 +47,7 @@ public abstract class ExpressionType {
         }
 
         @Override
-        public Optional<JvmType> typeCategory() {
+        public Optional<JvmType> jvmType() {
             return Optional.empty();
         }
 
@@ -95,7 +95,7 @@ public abstract class ExpressionType {
         }
 
         @Override
-        public Optional<JvmType> typeCategory() {
+        public Optional<JvmType> jvmType() {
             return Optional.of(type);
         }
 
@@ -156,7 +156,7 @@ public abstract class ExpressionType {
      * Return this type's category as an optional, empty if this is an unknown
      * type.
      */
-    public abstract Optional<JvmType> typeCategory();
+    public abstract Optional<JvmType> jvmType();
 
     /**
      * Return the upper-bound union of this type and another: if one of the

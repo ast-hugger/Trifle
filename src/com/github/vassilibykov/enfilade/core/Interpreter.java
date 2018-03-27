@@ -57,7 +57,7 @@ public class Interpreter {
         public Object visitLet(LetNode let) {
             Object value = let.initializer().accept(this);
             VariableDefinition variable = let.variable();
-            frame[variable.index()] = value;
+            frame[variable.genericIndex()] = value;
             return let.body().accept(this);
         }
 
@@ -90,13 +90,13 @@ public class Interpreter {
         @Override
         public Object visitVarSet(SetVariableNode set) {
             Object value = set.value().accept(this);
-            frame[set.variable.index()] = value;
+            frame[set.variable.genericIndex()] = value;
             return value;
         }
 
         @Override
         public Object visitVarRef(VariableReferenceNode varRef) {
-            return frame[varRef.variable.index()];
+            return frame[varRef.variable.genericIndex()];
         }
     }
 

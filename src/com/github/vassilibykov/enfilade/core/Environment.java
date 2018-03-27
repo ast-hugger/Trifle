@@ -25,9 +25,7 @@ public class Environment {
     }
 
     public synchronized RuntimeFunction lookup(Function source) {
-        return functionsBySource.computeIfAbsent(source, k -> {
-            throw new CompilerError("function not found: " + source);
-        });
+        return functionsBySource.get(source);
     }
 
     public synchronized RuntimeFunction lookupOrMake(com.github.vassilibykov.enfilade.expression.Function source) {

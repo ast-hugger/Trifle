@@ -39,7 +39,6 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     private void printNodeProfile(EvaluatorNode node) {
-        if (node.hasBeenEvaluated()) output.append(" *");
         output.append(" [").append(node.inferredType().toString());
         output.append(" ").append(node.observedType().toString());
         output.append("] ").append(node.specializationType().toString());

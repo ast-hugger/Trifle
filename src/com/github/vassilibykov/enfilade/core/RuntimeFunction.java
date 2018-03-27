@@ -12,13 +12,11 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * A function which, unlike the pure {@link Function} definition in the
- * {@code expressions} package, can be executed.
+ * {@code expressions} package, can actually be executed. Instances are
+ * created by {@link FunctionTranslator}.
  */
 public class RuntimeFunction {
 
@@ -26,14 +24,15 @@ public class RuntimeFunction {
     private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
 
     private enum State {
+        INVALID,
         /**
-         * The nexus is currently collecting type information for its function.
+         * The function is currently running interpreted to collect type information.
          * The {@link #callSite} is pointing at one of the {@link #interpret}
          * methods.
          */
         PROFILING,
         /**
-         * The nexus has finished collecting type information. The function is
+         * The function has finished collecting type information and is
          * scheduled for compilation, however compilation has not yet completed.
          * The {@link #callSite} is bound to one of the {@code interpret()}
          * methods of (the non-profiling) {@code Interpreter.INSTANCE}, so type
@@ -47,59 +46,12 @@ public class RuntimeFunction {
         COMPILED
     }
 
-
-    /**
-     * Assigns indices to all let-bound variables in a function body. Also
-     * validates the use of variables, checking that any variable reference is
-     * either to a function argument or to a let-bound variable currently in
-     * scope.
-     */
-    private class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
-        private int index;
-        private final Set<VariableDefinition> scope = new HashSet<>();
-
-        private VariableIndexer() {
-            for (int i = 0; i < arguments.length; i++) {
-                arguments[i].index = i;
-            }
-            this.index = arguments.length;
-            scope.addAll(Arrays.asList(arguments));
-        }
-
-        public int index() {
-            return index;
-        }
-
-        @Override
-        public Void visitLet(LetNode let) {
-            VariableDefinition var = let.variable();
-            if (var.index() >= 0) {
-                throw new AssertionError("variable reuse detected: " + var);
-            }
-            var.index = index++;
-            let.initializer().accept(this);
-            scope.add(var);
-            let.body().accept(this);
-            scope.remove(var);
-            return null;
-        }
-
-        @Override
-        public Void visitVarRef(VariableReferenceNode varRef) {
-            if (!scope.contains(varRef.variable)) {
-                throw new AssertionError("variable used outside of its scope: " + varRef);
-            }
-            return null;
-        }
-    }
-
     /*
         Instance
      */
 
-    @NotNull private final Function origin;
+    @NotNull private final Function definition;
     private final int arity;
-    private State state;
     private final VolatileCallSite callSite;
     private final MethodHandle callSiteInvoker;
     private VariableDefinition[] arguments;
@@ -109,20 +61,26 @@ public class RuntimeFunction {
     @Nullable private MethodType specializationType;
     @Nullable private VolatileCallSite specializationCallSite;
     /*internal*/ Instruction[] acode;
+    private State state;
 
-    RuntimeFunction(@NotNull Function origin) {
-        this.origin = origin;
-        this.arity = origin.arguments().size();
-        this.state = State.PROFILING;
+    RuntimeFunction(@NotNull Function definition) {
+        this.definition = definition;
+        this.arity = definition.arguments().size();
+        this.state = State.INVALID;
         this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }
 
-    void setArgumentsAndBody(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body) {
+    void finishInitialization(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body, int localsCount) {
         this.arguments = arguments;
         this.profile = new FunctionProfile(arguments);
         this.body = body;
-        this.localsCount = computeLocalsCount();
+        this.localsCount = localsCount;
+        this.state = State.PROFILING;
+    }
+
+    public Function definition() {
+        return definition;
     }
 
     public VariableDefinition[] arguments() {
@@ -145,11 +103,6 @@ public class RuntimeFunction {
         return acode;
     }
 
-    private int computeLocalsCount() {
-        VariableIndexer indexer = new VariableIndexer();
-        body.accept(indexer);
-        return indexer.index();
-    }
     public Object invoke() {
         try {
             return callSiteInvoker.invokeExact();

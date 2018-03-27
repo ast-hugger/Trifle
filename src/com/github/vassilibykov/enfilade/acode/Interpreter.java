@@ -102,6 +102,6 @@ public class Interpreter implements Instruction.VoidVisitor {
 
     @Override
     public void visitStore(Store store) {
-        frame[store.variable.index()] = register;
+        frame[store.variable.genericIndex()] = register;
     }
 }

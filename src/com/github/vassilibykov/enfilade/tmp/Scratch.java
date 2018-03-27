@@ -1,8 +1,8 @@
 // Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-package com.github.vassilibykov.enfilade;
+// Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-import com.github.vassilibykov.enfilade.core.SquarePegException;
+package com.github.vassilibykov.enfilade.tmp;
 
 public class Scratch {
     public static void main(String[] args) {

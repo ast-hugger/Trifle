@@ -72,7 +72,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitIf(IfNode anIf) {
         ExpressionType testType = anIf.condition().accept(this);
-        if (testType.typeCategory()
+        if (testType.jvmType()
             .map(it -> !(it.equals(JvmType.BOOL) || it.equals(JvmType.REFERENCE)))
             .orElse(false))
         {

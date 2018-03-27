@@ -165,7 +165,7 @@ public class Compiler {
 
     @SuppressWarnings("unchecked")
     private Class<?> representativeType(ExpressionType observedType) {
-        return observedType.typeCategory()
+        return observedType.jvmType()
             .map(it -> (Class<Object>) it.representativeClass())
             .orElse(Object.class);
     }

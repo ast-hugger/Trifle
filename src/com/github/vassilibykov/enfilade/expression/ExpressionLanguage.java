@@ -4,8 +4,6 @@
 
 package com.github.vassilibykov.enfilade.expression;
 
-import com.github.vassilibykov.enfilade.core.VariableDefinition;
-
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;

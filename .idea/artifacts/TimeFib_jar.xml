@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TimeFib:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/TimeFib_jar</output-path>
+    <root id="archive" name="Enfilade.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/manifest/timefib/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="Enfilade" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/annotations-java8.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/asm-6.0.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

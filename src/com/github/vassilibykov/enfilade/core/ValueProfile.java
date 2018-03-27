@@ -46,7 +46,7 @@ class ValueProfile {
         return boolCases;
     }
 
-    public synchronized JvmType valueCategory() {
+    public synchronized JvmType jvmType() {
         return hasProfileData() && isPureInt() ? INT : REFERENCE;
     }
 
