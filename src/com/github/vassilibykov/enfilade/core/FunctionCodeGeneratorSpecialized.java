@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.acode.Interpreter;
-import com.github.vassilibykov.enfilade.acode.Translator;
 import com.github.vassilibykov.enfilade.primitives.LessThan;
 import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.Label;
@@ -120,7 +118,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     void generate() {
-        function.acode = Translator.translate(function.body());
+        function.acode = ACodeTranslator.translate(function.body());
         continuationTypes.push(functionReturnType);
         VariableIndexer variableIndexer = new VariableIndexer(function.arity());
         function.body().accept(variableIndexer);
@@ -237,7 +235,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         } else {
             withSquarePegRecovery(let, () -> generateExpecting(varType, let.initializer()));
         }
-        writer.storeLocal(varType, var.genericIndex());
+        writer.storeLocal(varType, var.specializedIndex());
         liveLocals.add(var);
         generateForCurrentContinuation(let.body());
         liveLocals.remove(var);
@@ -295,14 +293,14 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         generateExpecting(varType, set.value());
         writer
             .dup()
-            .storeLocal(varType, var.genericIndex());
+            .storeLocal(varType, var.specializedIndex());
         return null;
     }
 
     @Override
     public JvmType visitVarRef(VariableReferenceNode varRef) {
         JvmType varType = varRef.variable.specializationType();
-        writer.loadLocal(varType, varRef.variable.genericIndex());
+        writer.loadLocal(varType, varRef.variable.specializedIndex());
         assertPassage(varType, currentContinuationType());
         return null;
     }
@@ -405,8 +403,8 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     private void storeInFrameReplica(VariableDefinition local) {
         JvmType localType = local.specializationType();
-        writer.storeArray(local.genericIndex, () -> {
-            writer.loadLocal(localType, local.genericIndex);
+        writer.storeArray(local.specializedIndex(), () -> {
+            writer.loadLocal(localType, local.specializedIndex());
             writer.adaptType(localType, REFERENCE);
         });
     }
@@ -419,13 +417,13 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         writer
             .loadInt(Environment.INSTANCE.lookup(function))
             // stack: SPE, int initialPC, Object[] frame, int functionId
-            .invokeStatic(Interpreter.class, "forRecovery", Interpreter.class, int.class, Object[].class, int.class)
+            .invokeStatic(ACodeInterpreter.class, "forRecovery", ACodeInterpreter.class, int.class, Object[].class, int.class)
             // stack: SPE, Interpreter
             .swap()
             // stack: Interpreter, SPE
             .invokeVirtual(SquarePegException.class, "value", Object.class)
             // stack: Interpreter, Object
-            .invokeVirtual(Interpreter.class, "interpret", Object.class, Object.class);
+            .invokeVirtual(ACodeInterpreter.class, "interpret", Object.class, Object.class);
         functionReturnType.match(new JvmType.VoidMatcher() {
             @Override
             public void ifReference() {

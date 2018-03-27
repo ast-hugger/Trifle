@@ -11,23 +11,23 @@ import java.util.List;
  * A function call.
  */
 public class Call extends ComplexExpression {
-    public static Call with(Function target, AtomicExpression... arguments) {
+    public static Call with(Lambda target, AtomicExpression... arguments) {
         return new Call(target, List.of(arguments));
     }
 
-    public static Call with(Function target, List<AtomicExpression> arguments) {
+    public static Call with(Lambda target, List<AtomicExpression> arguments) {
         return new Call(target, arguments);
     }
 
-    @NotNull private final Function target;
+    @NotNull private final Lambda target;
     @NotNull private final List<AtomicExpression> arguments;
 
-    private Call(@NotNull Function target, @NotNull List<AtomicExpression> arguments) {
+    private Call(@NotNull Lambda target, @NotNull List<AtomicExpression> arguments) {
         this.target = target;
         this.arguments = Collections.unmodifiableList(arguments);
     }
 
-    public Function target() {
+    public Lambda target() {
         return target;
     }
 

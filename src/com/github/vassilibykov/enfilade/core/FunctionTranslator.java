@@ -5,7 +5,7 @@ package com.github.vassilibykov.enfilade.core;
 import com.github.vassilibykov.enfilade.expression.Block;
 import com.github.vassilibykov.enfilade.expression.Call;
 import com.github.vassilibykov.enfilade.expression.Const;
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Let;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
@@ -23,15 +23,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Translates a pure function definition ({@link Function})
+ * Translates a pure function definition ({@link Lambda})
  * into an equivalent executable {@link RuntimeFunction}.
  */
 public class FunctionTranslator implements Visitor<EvaluatorNode> {
 
-    public static RuntimeFunction translate(Function function) {
-        RuntimeFunction runtimeFunction = Environment.INSTANCE.lookupOrMake(function);
-        FunctionTranslator translator = new FunctionTranslator(function);
-        EvaluatorNode body = function.body().accept(translator);
+    public static RuntimeFunction translate(Lambda lambda) {
+        RuntimeFunction runtimeFunction = Environment.INSTANCE.lookupOrMake(lambda);
+        FunctionTranslator translator = new FunctionTranslator(lambda, runtimeFunction);
+        EvaluatorNode body = lambda.body().accept(translator);
         VariableIndexer indexer = new VariableIndexer(translator.translatedArguments());
         body.accept(indexer);
         runtimeFunction.finishInitialization(translator.translatedArguments(), body, indexer.maxIndex());
@@ -52,6 +52,7 @@ public class FunctionTranslator implements Visitor<EvaluatorNode> {
         private VariableIndexer(VariableDefinition[] arguments) {
             for (int i = 0; i < arguments.length; i++) {
                 arguments[i].genericIndex = i;
+                arguments[i].specializedIndex = i;
             }
             currentIndex = arguments.length;
             maxIndex = currentIndex;
@@ -91,23 +92,26 @@ public class FunctionTranslator implements Visitor<EvaluatorNode> {
         Instance
      */
 
-    private final Function function;
+    private final Lambda lambda;
+    private final RuntimeFunction runtimeFunction;
     private final Map<Variable, VariableDefinition> variableDefinitions = new HashMap<>();
 
-    private FunctionTranslator(Function function) {
-        this.function = function;
+    private FunctionTranslator(Lambda lambda, RuntimeFunction runtimeFunction) {
+        this.lambda = lambda;
+        this.runtimeFunction = runtimeFunction;
         translatedArguments();
     }
 
     private VariableDefinition[] translatedArguments() {
-        return function.arguments().stream()
-            .map(each -> variableDefinitions.computeIfAbsent(each, VariableDefinition::new))
+        return lambda.arguments().stream()
+            .map(each -> variableDefinitions.computeIfAbsent(each,
+                definition -> new VariableDefinition(definition, runtimeFunction)))
             .toArray(VariableDefinition[]::new);
     }
 
     private VariableDefinition defineVariable(Variable variable) {
         if (variableDefinitions.containsKey(variable)) throw new CompilerError("variable is already defined");
-        VariableDefinition definition = new VariableDefinition(variable);
+        VariableDefinition definition = new VariableDefinition(variable, runtimeFunction);
         variableDefinitions.put(variable, definition);
         return definition;
     }

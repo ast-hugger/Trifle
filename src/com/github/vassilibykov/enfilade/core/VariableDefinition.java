@@ -15,14 +15,16 @@ public class VariableDefinition {
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     @NotNull private final Variable definition;
+    @NotNull private final RuntimeFunction hostFunction;
     /*internal*/ int genericIndex = -1;
     /*internal*/ int specializedIndex = -1;
     /*internal*/ final ValueProfile profile = new ValueProfile();
     private ExpressionType inferredType = KNOWN_VOID;
     private ExpressionType observedType = UNKNOWN;
 
-    VariableDefinition(@NotNull Variable definition) {
+    VariableDefinition(@NotNull Variable definition, RuntimeFunction hostFunction) {
         this.definition = definition;
+        this.hostFunction = hostFunction;
     }
 
     public Variable definition() {

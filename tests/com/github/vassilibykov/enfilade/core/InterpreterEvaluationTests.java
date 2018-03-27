@@ -3,7 +3,7 @@
 package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Expression;
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import org.junit.Test;
 
@@ -25,7 +25,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testIf() {
-        Function function = unaryFunction(
+        Lambda function = unaryFunction(
             arg ->
                 if_(arg,
                     const_("true"),
@@ -38,7 +38,7 @@ public class InterpreterEvaluationTests {
     public void testLet() {
         Variable t = var("t");
         Variable u = var("u");
-        Function function = nullaryFunction(
+        Lambda function = nullaryFunction(
             () ->
                 let(t, const_(3),
                     let(u, const_(4),
@@ -48,7 +48,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testPrimitive1() {
-        Function function = unaryFunction(
+        Lambda function = unaryFunction(
             arg ->
                 negate(arg));
         assertEquals(-42, invoke(function, 42));
@@ -57,7 +57,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testPrimitive2() {
-        Function function = binaryFunction(
+        Lambda function = binaryFunction(
             (arg1, arg2) ->
                 add(arg1, arg2));
         assertEquals(7, invoke(function, 3, 4));
@@ -66,7 +66,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testSetVar() {
-        Function function = unaryFunction(
+        Lambda function = unaryFunction(
             arg ->
                 set(arg, const_(42)));
         assertEquals(42, invoke(function, 3));
@@ -74,7 +74,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testSetVarInProg() {
-        Function function = unaryFunction(
+        Lambda function = unaryFunction(
             arg ->
                 prog(
                     set(arg, const_(42)),
@@ -84,14 +84,14 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testVar() {
-        Function function = unaryFunction(arg -> arg);
+        Lambda function = unaryFunction(arg -> arg);
         assertEquals(42, invoke(function, 42));
         assertEquals("hello", invoke(function, "hello"));
     }
 
     @Test
     public void testFactorial() {
-        Function factorial = factorial();
+        Lambda factorial = factorial();
         assertEquals(6, invoke(factorial, 3));
         assertEquals(24, invoke(factorial, 4));
         assertEquals(120, invoke(factorial, 5));
@@ -99,7 +99,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testFibonacci() { // and everybody's favorite
-        Function fibonacci = fibonacci();
+        Lambda fibonacci = fibonacci();
         assertEquals(1, invoke(fibonacci, 0));
         assertEquals(1, invoke(fibonacci, 1));
         assertEquals(2, invoke(fibonacci, 2));
@@ -111,7 +111,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testEvilFibonacci() {
-        Function fibonacci = evilFibonacci();
+        Lambda fibonacci = evilFibonacci();
         invoke(fibonacci, 35); // enough to force compilation
         assertEquals(1, invoke(fibonacci, 0));
         assertEquals(8, invoke(fibonacci, 5));
@@ -120,7 +120,7 @@ public class InterpreterEvaluationTests {
 
     @Test
     public void testVeryEvilFibonacci() {
-        Function fibonacci = veryEvilFibonacci();
+        Lambda fibonacci = veryEvilFibonacci();
         invoke(fibonacci, 35); // enough to force compilation
         assertEquals(1, invoke(fibonacci, 0));
         assertEquals(8, invoke(fibonacci, 5));
@@ -132,37 +132,37 @@ public class InterpreterEvaluationTests {
      */
 
     private Object eval(Expression methodBody) {
-        Function function = Function.with(List.of(), methodBody);
+        Lambda function = Lambda.with(List.of(), methodBody);
         return invoke(function);
     }
 
-    private Object invoke(Function function) {
+    private Object invoke(Lambda function) {
         return FunctionTranslator.translate(function).invoke();
     }
 
-    private Object invoke(Function function, Object arg) {
+    private Object invoke(Lambda function, Object arg) {
         return FunctionTranslator.translate(function).invoke(arg);
     }
 
-    private Object invoke(Function function, Object arg1, Object arg2) {
+    private Object invoke(Lambda function, Object arg1, Object arg2) {
         return FunctionTranslator.translate(function).invoke(arg1, arg2);
     }
 
-    static Function factorial() {
+    static Lambda factorial() {
         Variable n = var("n");
         Variable t = var("t");
-        return Function.recursive(n, factorial ->
+        return Lambda.recursive(n, factorial ->
             if_(lessThan(n, const_(1)),
                 const_(1),
                 let(t, call(factorial, sub(n, const_(1))),
                     mul(t, n))));
     }
 
-    static Function fibonacci() {
+    static Lambda fibonacci() {
         Variable n = var("n");
         Variable t1 = var("t1");
         Variable t2 = var("t2");
-        return Function.recursive(n, fibonacci ->
+        return Lambda.recursive(n, fibonacci ->
             if_(lessThan(n, const_(2)),
                 const_(1),
                 let(t1, call(fibonacci, sub(n, const_(1))),
@@ -176,11 +176,11 @@ public class InterpreterEvaluationTests {
      * which injects a value into computation incompatible with the profiled
      * types, and therefore with the specialized version of code.
      */
-    static Function evilFibonacci() {
+    static Lambda evilFibonacci() {
         Variable n = var("n");
         Variable t1 = var("t1");
         Variable t2 = var("t2");
-        return Function.recursive(n, fibonacci ->
+        return Lambda.recursive(n, fibonacci ->
             if_(lessThan(n, const_(0)),
                 const_("error"),
                 if_(lessThan(n, const_(2)),
@@ -195,12 +195,12 @@ public class InterpreterEvaluationTests {
      * tail position, so the continuation which should but can't receive its
      * value lies within the function.
      */
-    static Function veryEvilFibonacci() {
+    static Lambda veryEvilFibonacci() {
         Variable n = var("n");
         Variable t0 = var("t0");
         Variable t1 = var("t1");
         Variable t2 = var("t2");
-        return Function.recursive(n, fibonacci ->
+        return Lambda.recursive(n, fibonacci ->
             let(t0, if_(lessThan(n, const_(0)),
                         const_("error"),
                         if_(lessThan(n, const_(2)),

@@ -1,10 +1,10 @@
 // Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-package com.github.vassilibykov.enfilade.acode;
+// Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-import com.github.vassilibykov.enfilade.core.FunctionTranslator;
-import com.github.vassilibykov.enfilade.core.RuntimeFunction;
-import com.github.vassilibykov.enfilade.expression.Function;
+package com.github.vassilibykov.enfilade.core;
+
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import org.junit.Test;
 
@@ -23,13 +23,13 @@ public class TranslatorTest {
 
     @Test
     public void testConstant() {
-        Function function = nullaryFunction(() -> const_(42));
+        Lambda function = nullaryFunction(() -> const_(42));
         assertEquals(42, interpretAsACode(function));
     }
 
     @Test
     public void testIf() {
-        Function function = unaryFunction(
+        Lambda function = unaryFunction(
             arg ->
                 if_(arg,
                     const_("true"),
@@ -42,7 +42,7 @@ public class TranslatorTest {
     public void testLetAndPrimitive() {
         Variable t = var("t");
         Variable u = var("u");
-        Function function = nullaryFunction(
+        Lambda function = nullaryFunction(
             () ->
                 let(t, const_(3),
                     let(u, const_(4),
@@ -52,7 +52,7 @@ public class TranslatorTest {
 
     @Test
     public void testSetVar() {
-        Function function = unaryFunction(
+        Lambda function = unaryFunction(
             arg ->
                 prog(
                     set(arg, const_(42)),
@@ -60,13 +60,13 @@ public class TranslatorTest {
         assertEquals(42, interpretAsACode(function, 3));
     }
 
-    private Object interpretAsACode(Function function, Object... args) {
+    private Object interpretAsACode(Lambda function, Object... args) {
         RuntimeFunction runtimeFunction =
             FunctionTranslator.translate(function);
-        Instruction[] code = Translator.translate(runtimeFunction.body());
+        ACodeInstruction[] code = ACodeTranslator.translate(runtimeFunction.body());
         Object[] locals = new Object[runtimeFunction.localsCount()];
         System.arraycopy(args, 0, locals, 0, args.length);
-        Interpreter interpreter = Interpreter.on(code, locals);
+        ACodeInterpreter interpreter = ACodeInterpreter.on(code, locals);
         return interpreter.interpret();
     }
 }

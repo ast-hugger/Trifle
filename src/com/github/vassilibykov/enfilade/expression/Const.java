@@ -3,7 +3,7 @@
 package com.github.vassilibykov.enfilade.expression;
 
 public class Const extends AtomicExpression {
-    public static Const with(Object value) {
+    public static Const value(Object value) {
         return new Const(value);
     }
 

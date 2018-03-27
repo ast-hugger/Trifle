@@ -1,23 +1,25 @@
 // Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-package com.github.vassilibykov.enfilade.acode;
+// Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-import com.github.vassilibykov.enfilade.core.FunctionTranslator;
-import com.github.vassilibykov.enfilade.core.RuntimeFunction;
-import com.github.vassilibykov.enfilade.core.VariableDefinition;
-import com.github.vassilibykov.enfilade.core.BackdoorsForTests;
+package com.github.vassilibykov.enfilade.core;
+
+import com.github.vassilibykov.enfilade.expression.Const;
+import com.github.vassilibykov.enfilade.expression.Lambda;
+import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.primitives.Add;
 import com.github.vassilibykov.enfilade.primitives.LessThan;
 import com.github.vassilibykov.enfilade.primitives.Negate;
 import org.junit.Test;
 
-import static com.github.vassilibykov.enfilade.acode.AssemblyLanguage.*;
-import static com.github.vassilibykov.enfilade.core.BackdoorsForTests.varDef;
+import java.util.List;
+
+import static com.github.vassilibykov.enfilade.core.AssemblyLanguage.*;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.binaryFunction;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static org.junit.Assert.assertEquals;
 
-public class InterpreterTest {
+public class RecoveryInterpreterTest {
 
     private Asm code;
 
@@ -33,7 +35,7 @@ public class InterpreterTest {
 
     @Test
     public void testLoadArg() {
-        VariableDefinition arg = varDef("arg");
+        VariableDefinition arg = new VariableDefinition(Variable.named("arg"), bogusRuntimeFunction());
         code = Asm
             .vars(arg)
             .code(
@@ -44,7 +46,7 @@ public class InterpreterTest {
 
     @Test
     public void testPrimitive1() {
-        VariableDefinition arg = varDef("arg");
+        VariableDefinition arg = new VariableDefinition(Variable.named("arg"), bogusRuntimeFunction());
         code = Asm
             .vars(arg)
             .code(
@@ -78,7 +80,7 @@ public class InterpreterTest {
 
     @Test
     public void testIf() {
-        VariableDefinition arg = varDef("arg");
+        VariableDefinition arg = new VariableDefinition(Variable.named("arg"), bogusRuntimeFunction());
         code = Asm
             .vars(arg)
             .code(
@@ -93,7 +95,7 @@ public class InterpreterTest {
 
     @Test
     public void testStore() {
-        VariableDefinition arg = varDef("arg");
+        VariableDefinition arg = new VariableDefinition(Variable.named("arg"), bogusRuntimeFunction());
         code = Asm
             .vars(arg)
             .code(
@@ -106,7 +108,7 @@ public class InterpreterTest {
 
     @Test
     public void testCall() {
-        VariableDefinition arg1 = varDef("arg1");
+        VariableDefinition arg1 = new VariableDefinition(Variable.named("arg1"), bogusRuntimeFunction());
         RuntimeFunction adder = FunctionTranslator.translate(
             binaryFunction((a, b) -> add(a, b)));
         // In general variables must not be reused, but reuse here is ok because we know
@@ -114,7 +116,7 @@ public class InterpreterTest {
         code = Asm
             .vars(arg1)
             .code(
-                call(BackdoorsForTests.call(adder, ref(arg1), ref(arg1))),
+                call(new CallNode.Call2(adder, ref(arg1), ref(arg1))),
                 ret());
         assertEquals(6, code.interpretWith(3));
     }
@@ -127,23 +129,27 @@ public class InterpreterTest {
         }
 
         private final Object[] frame;
-        private Instruction[] instructions;
+        private ACodeInstruction[] instructions;
 
         private Asm(VariableDefinition... vars) {
             for (int i = 0; i < vars.length; i++) {
-                BackdoorsForTests.setVariableIndex(vars[i], i);
+                vars[i].genericIndex = i;
             }
             frame = new Object[vars.length];
         }
 
-        Asm code(Instruction... instructions) {
+        Asm code(ACodeInstruction... instructions) {
             this.instructions = instructions;
             return this;
         }
 
         Object interpretWith(Object... args) {
             System.arraycopy(args, 0, frame, 0, args.length);
-            return new Interpreter(instructions, frame, 0).interpret();
+            return new ACodeInterpreter(instructions, frame, 0).interpret();
         }
+    }
+
+    private RuntimeFunction bogusRuntimeFunction() {
+        return new RuntimeFunction(Lambda.with(List.of(), Const.value(null)));
     }
 }

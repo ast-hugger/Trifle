@@ -6,7 +6,7 @@ import com.github.vassilibykov.enfilade.expression.Variable;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 
 import java.util.List;
 
@@ -24,8 +24,8 @@ public class InterpreterProfilingTests {
 
     @Test
     public void testInvocationsCount() {
-        Function callee = nullaryFunction(() -> const_(42));
-        Function caller = nullaryFunction(() ->
+        Lambda callee = nullaryFunction(() -> const_(42));
+        Lambda caller = nullaryFunction(() ->
             prog(
                 call(callee),
                 call(callee)));
@@ -41,9 +41,9 @@ public class InterpreterProfilingTests {
     @Test
     public void testMethodArgTypeProfile() {
         Variable arg = var("arg");
-        Function function = Function.with(List.of(arg), arg);
+        Lambda function = Lambda.with(List.of(arg), arg);
         Variable arg2 = var("arg2");
-        Function function2 = Function.with(List.of(arg2),
+        Lambda function2 = Lambda.with(List.of(arg2),
             prog(
                 call(function, arg2),
                 call(function, arg2)));
@@ -66,7 +66,7 @@ public class InterpreterProfilingTests {
         Variable arg = var("arg");
         Variable t = var("t");
         RuntimeFunction function = FunctionTranslator.translate(
-            Function.with(List.of(arg),
+            Lambda.with(List.of(arg),
                 let(t, arg, t)));
         for (int i = 0; i < 3; i++) {
             function.invoke("hello");

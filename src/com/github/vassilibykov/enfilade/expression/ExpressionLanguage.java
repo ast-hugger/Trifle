@@ -14,35 +14,35 @@ import java.util.function.Supplier;
  */
 public class ExpressionLanguage {
 
-    public static Function nullaryFunction(Supplier<Expression> bodyBuilder) {
-        return Function.with(List.of(), bodyBuilder.get());
+    public static Lambda nullaryFunction(Supplier<Expression> bodyBuilder) {
+        return Lambda.with(List.of(), bodyBuilder.get());
     }
 
-    public static Function unaryFunction(java.util.function.Function<Variable, Expression> bodyBuilder) {
+    public static Lambda unaryFunction(java.util.function.Function<Variable, Expression> bodyBuilder) {
         Variable arg = var("a1");
-        return Function.with(List.of(arg), bodyBuilder.apply(arg));
+        return Lambda.with(List.of(arg), bodyBuilder.apply(arg));
     }
 
-    public static Function binaryFunction(BiFunction<Variable, Variable, Expression> bodyBuilder) {
+    public static Lambda binaryFunction(BiFunction<Variable, Variable, Expression> bodyBuilder) {
         Variable arg1 = var("a1");
         Variable arg2 = var("a2");
-        return Function.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
+        return Lambda.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
     }
 
-    public static Call call(Function function) {
+    public static Call call(Lambda function) {
         return Call.with(function);
     }
 
-    public static Call call(Function function, AtomicExpression arg) {
+    public static Call call(Lambda function, AtomicExpression arg) {
         return Call.with(function, arg);
     }
 
-    public static Call call(Function function, AtomicExpression arg1, AtomicExpression arg2) {
+    public static Call call(Lambda function, AtomicExpression arg1, AtomicExpression arg2) {
         return Call.with(function, arg1, arg2);
     }
 
     public static Const const_(Object value) {
-        return Const.with(value);
+        return Const.value(value);
     }
 
     public static If if_(AtomicExpression condition, Expression trueBranch, Expression falseBranch) {

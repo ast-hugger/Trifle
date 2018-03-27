@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -18,17 +18,17 @@ public class Environment {
 
     private final List<RuntimeFunction> functionsById = new ArrayList<>();
     private final Map<RuntimeFunction, Integer> functionIds = new HashMap<>();
-    private final Map<com.github.vassilibykov.enfilade.expression.Function, RuntimeFunction> functionsBySource = new HashMap<>();
+    private final Map<Lambda, RuntimeFunction> functionsBySource = new HashMap<>();
 
-    public void compile(List<Function> functions) {
+    public void compile(List<Lambda> functions) {
         functions.forEach(FunctionTranslator::translate);
     }
 
-    public synchronized RuntimeFunction lookup(Function source) {
+    public synchronized RuntimeFunction lookup(Lambda source) {
         return functionsBySource.get(source);
     }
 
-    public synchronized RuntimeFunction lookupOrMake(com.github.vassilibykov.enfilade.expression.Function source) {
+    public synchronized RuntimeFunction lookupOrMake(Lambda source) {
         return functionsBySource.computeIfAbsent(source, k -> new RuntimeFunction(source));
     }
 

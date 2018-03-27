@@ -5,17 +5,17 @@ package com.github.vassilibykov.enfilade;
 import com.github.vassilibykov.enfilade.core.Environment;
 import com.github.vassilibykov.enfilade.core.FunctionTranslator;
 import com.github.vassilibykov.enfilade.core.RuntimeFunction;
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 
 import java.util.List;
 import java.util.Optional;
 
 public class Enfilade {
-    public static void add(List<Function> functions) {
+    public static void add(List<Lambda> functions) {
         functions.forEach(FunctionTranslator::translate);
     }
 
-    public static Optional<RuntimeFunction> find(Function sourceFunction) {
+    public static Optional<RuntimeFunction> find(Lambda sourceFunction) {
         return Optional.ofNullable(Environment.INSTANCE.lookup(sourceFunction));
     }
 }

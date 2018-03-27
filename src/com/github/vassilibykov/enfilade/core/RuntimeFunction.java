@@ -2,8 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.acode.Instruction;
-import com.github.vassilibykov.enfilade.expression.Function;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,9 +13,12 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
 
 /**
- * A function which, unlike the pure {@link Function} definition in the
- * {@code expressions} package, can actually be executed. Instances are
- * created by {@link FunctionTranslator}.
+ * A function which, unlike the pure {@link Lambda} definition in the {@code expressions}
+ * package, can actually be executed. Instances are created by {@link FunctionTranslator}.
+ *
+ * <p>A function holds together all its executable representations (though not necessarily
+ * all of them are available at any given time): a tree of {@link EvaluatorNode}s, a list
+ * of recovery interpreter instructions, method handles to generic and compiled methods.
  */
 public class RuntimeFunction {
 
@@ -50,7 +52,7 @@ public class RuntimeFunction {
         Instance
      */
 
-    @NotNull private final Function definition;
+    @NotNull private final Lambda definition;
     private final int arity;
     private final VolatileCallSite callSite;
     private final MethodHandle callSiteInvoker;
@@ -60,14 +62,16 @@ public class RuntimeFunction {
     private int localsCount = -1;
     @Nullable private MethodType specializationType;
     @Nullable private VolatileCallSite specializationCallSite;
-    /*internal*/ Instruction[] acode;
+    /*internal*/ ACodeInstruction[] acode;
     private State state;
 
-    RuntimeFunction(@NotNull Function definition) {
+    RuntimeFunction(@NotNull Lambda definition) {
         this.definition = definition;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
         this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }
 
@@ -76,10 +80,11 @@ public class RuntimeFunction {
         this.profile = new FunctionProfile(arguments);
         this.body = body;
         this.localsCount = localsCount;
+        this.acode = ACodeTranslator.translate(body);
         this.state = State.PROFILING;
     }
 
-    public Function definition() {
+    public Lambda definition() {
         return definition;
     }
 
@@ -99,7 +104,7 @@ public class RuntimeFunction {
         return localsCount;
     }
 
-    public Instruction[] acode() {
+    public ACodeInstruction[] acode() {
         return acode;
     }
 
@@ -161,6 +166,17 @@ public class RuntimeFunction {
         try {
             MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
             return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, this);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private MethodHandle acodeInterpreterInvoker() {
+        MethodType type = MethodType.genericMethodType(arity());
+        type = type.insertParameterTypes(0, RuntimeFunction.class);
+        try {
+            MethodHandle interpret = MethodHandles.lookup().findStatic(ACodeInterpreter.class, "interpret", type);
+            return MethodHandles.insertArguments(interpret, 0, this);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
