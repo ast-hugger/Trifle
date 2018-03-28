@@ -10,19 +10,19 @@ import java.util.Objects;
 
 public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
 
-    public static Object interpret(RuntimeFunction function) {
-        Object[] frame = new Object[function.localsCount()];
+    public static Object interpret(FunctionImplementation function) {
+        Object[] frame = new Object[function.frameSize()];
         return on(function.acode, frame).interpret();
     }
 
-    public static Object interpret(RuntimeFunction function, Object arg) {
-        Object[] frame = new Object[function.localsCount()];
+    public static Object interpret(FunctionImplementation function, Object arg) {
+        Object[] frame = new Object[function.frameSize()];
         frame[0] = arg;
         return on(function.acode, frame).interpret();
     }
 
-    public static Object interpret(RuntimeFunction function, Object arg1, Object arg2) {
-        Object[] frame = new Object[function.localsCount()];
+    public static Object interpret(FunctionImplementation function, Object arg1, Object arg2) {
+        Object[] frame = new Object[function.frameSize()];
         frame[0] = arg1;
         frame[1] = arg2;
         return on(function.acode, frame).interpret();
@@ -43,7 +43,7 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
      */
     @SuppressWarnings("unused") // called by generated code
     public static ACodeInterpreter forRecovery(int initialPC, Object[] frame, int functionId) {
-        RuntimeFunction function = Objects.requireNonNull(Environment.INSTANCE.lookup(functionId),
+        FunctionImplementation function = Objects.requireNonNull(Environment.INSTANCE.lookup(functionId),
             "there is no function with ID " + functionId);
         ACodeInstruction[] code = Objects.requireNonNull(function.acode(),
             "function has no acode associated with it");
@@ -54,8 +54,9 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
         Instance
      */
 
-    @NotNull private ACodeInstruction[] code;
-    @NotNull private Object[] frame;
+    @NotNull private final ACodeInstruction[] code;
+    @NotNull private final Object[] frame;
+    private final Object[][] outerFrames = null; // FIXME handle this properly
     private final Interpreter.Evaluator evaluator;
     private int pc;
     private Object register;
@@ -64,7 +65,7 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
         this.code = code;
         this.frame = frame;
         this.pc = initialPc;
-        this.evaluator = new Interpreter.Evaluator(frame);
+        this.evaluator = new Interpreter.Evaluator(frame, outerFrames);
     }
 
     public Object interpret() {

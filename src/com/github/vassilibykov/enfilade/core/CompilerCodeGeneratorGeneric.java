@@ -15,53 +15,61 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
  * The result returned by each visitor method is the type category of the
  * value of the the subexpression compiled by the method.
  */
-class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
+class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     protected final GhostWriter writer;
 
-    FunctionCodeGeneratorGeneric(MethodVisitor visitor) {
+    CompilerCodeGeneratorGeneric(MethodVisitor visitor) {
         this.writer = new GhostWriter(visitor);
     }
 
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        int id = Environment.INSTANCE.lookup(call.function());
-        MethodType callSiteType = MethodType.methodType(Object.class);
-        writer.invokeDynamic(
-            DirectCall.BOOTSTRAP,
-            "call#" + id,
-            callSiteType,
-            id);
-        return REFERENCE;
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+//        int id = Environment.INSTANCE.lookup(call.function());
+//        MethodType callSiteType = MethodType.methodType(Object.class);
+//        writer.invokeDynamic(
+//            DirectCall.BOOTSTRAP,
+//            "call#" + id,
+//            callSiteType,
+//            id);
+//        return REFERENCE;
     }
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        JvmType argType = call.arg().accept(this);
-        writer.adaptType(argType, REFERENCE);
-        int id = Environment.INSTANCE.lookup(call.function());
-        MethodType callSiteType = MethodType.methodType(Object.class, Object.class);
-        writer.invokeDynamic(
-            DirectCall.BOOTSTRAP,
-            "call#" + id,
-            callSiteType,
-            id);
-        return REFERENCE;
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+//        JvmType argType = call.arg().accept(this);
+//        writer.adaptType(argType, REFERENCE);
+//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        MethodType callSiteType = MethodType.methodType(Object.class, Object.class);
+//        writer.invokeDynamic(
+//            DirectCall.BOOTSTRAP,
+//            "call#" + id,
+//            callSiteType,
+//            id);
+//        return REFERENCE;
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        JvmType arg1Type = call.arg1().accept(this);
-        writer.adaptType(arg1Type, REFERENCE);
-        JvmType arg2Type = call.arg2().accept(this);
-        writer.adaptType(arg2Type, REFERENCE);
-        int id = Environment.INSTANCE.lookup(call.function());
-        MethodType callSiteType = MethodType.methodType(Object.class, Object.class, Object.class);
-        writer.invokeDynamic(
-            DirectCall.BOOTSTRAP,
-            "call#" + id,
-            callSiteType,
-            id);
-        return REFERENCE;
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+//        JvmType arg1Type = call.arg1().accept(this);
+//        writer.adaptType(arg1Type, REFERENCE);
+//        JvmType arg2Type = call.arg2().accept(this);
+//        writer.adaptType(arg2Type, REFERENCE);
+//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        MethodType callSiteType = MethodType.methodType(Object.class, Object.class, Object.class);
+//        writer.invokeDynamic(
+//            DirectCall.BOOTSTRAP,
+//            "call#" + id,
+//            callSiteType,
+//            id);
+//        return REFERENCE;
+    }
+
+    @Override
+    public JvmType visitClosure(ClosureNode closure) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -76,6 +84,11 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
+    }
+
+    @Override
+    public JvmType visitFreeVarReference(FreeVariableReferenceNode varRef) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -138,7 +151,12 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitVarSet(SetVariableNode set) {
+    public JvmType visitSetFreeVar(SetFreeVariableNode setFreeVariableNode) {
+        return null;
+    }
+
+    @Override
+    public JvmType visitSetVar(SetVariableNode set) {
         JvmType varType = set.value().accept(this);
         writer
             .adaptType(varType, REFERENCE)
@@ -148,7 +166,7 @@ class FunctionCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitVarRef(VariableReferenceNode var) {
+    public JvmType visitVarReference(VariableReferenceNode var) {
         writer.loadLocal(REFERENCE, var.variable.genericIndex());
         return REFERENCE;
     }

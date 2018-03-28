@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * An expression mutating a variable to have a new value. The new value, which
  * is also the value of this expression, must be an atomic expression.
  */
-public class SetVariableNode extends EvaluatorNode {
+class SetVariableNode extends EvaluatorNode {
     @NotNull /*internal*/ final VariableDefinition variable;
     @NotNull private final EvaluatorNode value;
 
@@ -27,7 +27,7 @@ public class SetVariableNode extends EvaluatorNode {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitVarSet(this);
+        return visitor.visitSetVar(this);
     }
 
     @Override

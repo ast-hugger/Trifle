@@ -46,9 +46,19 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
+    public Void visitClosure(ClosureNode closure) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
     public Void visitConst(ConstNode aConst) {
         emit(new ACodeInstruction.Load(aConst));
         return null;
+    }
+
+    @Override
+    public Void visitFreeVarReference(FreeVariableReferenceNode varRef) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -108,14 +118,19 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitVarSet(SetVariableNode set) {
+    public Void visitSetFreeVar(SetFreeVariableNode setFreeVariableNode) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
+    public Void visitSetVar(SetVariableNode set) {
         set.value().accept(this);
         emit(new ACodeInstruction.Store(set.variable()));
         return null;
     }
 
     @Override
-    public Void visitVarRef(VariableReferenceNode varRef) {
+    public Void visitVarReference(VariableReferenceNode varRef) {
         emit(new ACodeInstruction.Load(varRef));
         return null;
     }

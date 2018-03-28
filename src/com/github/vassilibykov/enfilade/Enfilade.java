@@ -3,8 +3,8 @@
 package com.github.vassilibykov.enfilade;
 
 import com.github.vassilibykov.enfilade.core.Environment;
+import com.github.vassilibykov.enfilade.core.FunctionImplementation;
 import com.github.vassilibykov.enfilade.core.FunctionTranslator;
-import com.github.vassilibykov.enfilade.core.RuntimeFunction;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 
 import java.util.List;
@@ -15,7 +15,7 @@ public class Enfilade {
         functions.forEach(FunctionTranslator::translate);
     }
 
-    public static Optional<RuntimeFunction> find(Lambda sourceFunction) {
+    public static Optional<FunctionImplementation> find(Lambda sourceFunction) {
         return Optional.ofNullable(Environment.INSTANCE.lookup(sourceFunction));
     }
 }

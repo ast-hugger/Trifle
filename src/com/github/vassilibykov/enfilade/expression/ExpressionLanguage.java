@@ -6,6 +6,7 @@ package com.github.vassilibykov.enfilade.expression;
 
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -14,30 +15,37 @@ import java.util.function.Supplier;
  */
 public class ExpressionLanguage {
 
-    public static Lambda nullaryFunction(Supplier<Expression> bodyBuilder) {
+    private static int argSerial = 0;
+
+    public static Lambda lambda(Supplier<Expression> bodyBuilder) {
         return Lambda.with(List.of(), bodyBuilder.get());
     }
 
-    public static Lambda unaryFunction(java.util.function.Function<Variable, Expression> bodyBuilder) {
-        Variable arg = var("a1");
+    public static Lambda lambda(Function<Variable, Expression> bodyBuilder) {
+        var arg = var("a" + argSerial++);
         return Lambda.with(List.of(arg), bodyBuilder.apply(arg));
     }
 
-    public static Lambda binaryFunction(BiFunction<Variable, Variable, Expression> bodyBuilder) {
-        Variable arg1 = var("a1");
-        Variable arg2 = var("a2");
+    public static Lambda lambda(BiFunction<Variable, Variable, Expression> bodyBuilder) {
+        var arg1 = var("a" + argSerial++);
+        var arg2 = var("a" + argSerial++);
         return Lambda.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
     }
 
-    public static Call call(Lambda function) {
+    public static Lambda recursive(Function<Variable, Function<Const, Expression>> bodyBuilderBuilder) {
+        var arg = var("a" + argSerial++);
+        return Lambda.recursive(List.of(arg), bodyBuilderBuilder.apply(arg));
+    }
+
+    public static Call call(AtomicExpression function) {
         return Call.with(function);
     }
 
-    public static Call call(Lambda function, AtomicExpression arg) {
+    public static Call call(AtomicExpression function, AtomicExpression arg) {
         return Call.with(function, arg);
     }
 
-    public static Call call(Lambda function, AtomicExpression arg1, AtomicExpression arg2) {
+    public static Call call(AtomicExpression function, AtomicExpression arg1, AtomicExpression arg2) {
         return Call.with(function, arg1, arg2);
     }
 
@@ -51,6 +59,10 @@ public class ExpressionLanguage {
 
     public static Let let(Variable variable, Expression initializer, Expression body) {
         return Let.with(variable, initializer, body);
+    }
+
+    public static LetRec letrec(Variable variable, Expression initializer, Expression body) {
+        return LetRec.with(variable, initializer, body);
     }
 
     public static Block prog(Expression... expressions) {
@@ -68,5 +80,4 @@ public class ExpressionLanguage {
     public static Variable var(String name) {
         return Variable.named(name);
     }
-
 }

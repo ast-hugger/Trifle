@@ -15,32 +15,50 @@ public class Interpreter {
 
     public static class Evaluator implements EvaluatorNode.Visitor<Object> {
         protected final Object[] frame;
+        protected Object[][] outerFrames;
 
-        public Evaluator(Object[] frame) {
+        public Evaluator(Object[] frame, Object[][] outerFrames) {
             this.frame = frame;
+            this.outerFrames = outerFrames;
         }
 
         @Override
         public Object visitCall0(CallNode.Call0 call) {
-            return call.function().invoke();
+            var function = call.function().accept(this);
+            return ((Closure) function).invoke();
         }
 
         @Override
         public Object visitCall1(CallNode.Call1 call) {
-            Object arg = call.arg().accept(this);
-            return call.function().invoke(arg);
+            var function = call.function().accept(this);
+            var arg = call.arg().accept(this);
+            return ((Closure) function).invoke(arg);
         }
 
         @Override
         public Object visitCall2(CallNode.Call2 call) {
-            Object arg1 = call.arg1().accept(this);
-            Object arg2 = call.arg2().accept(this);
-            return call.function().invoke(arg1, arg2);
+            var function = call.function().accept(this);
+            var arg1 = call.arg1().accept(this);
+            var arg2 = call.arg2().accept(this);
+            return ((Closure) function).invoke(arg1, arg2);
+        }
+
+        @Override
+        public Object visitClosure(ClosureNode closure) {
+            var frames = new Object[outerFrames.length + 1][];
+            frames[0] = frame;
+            System.arraycopy(outerFrames, 0, frames, 1, outerFrames.length);
+            return new Closure(closure.function(), frames);
         }
 
         @Override
         public Object visitConst(ConstNode aConst) {
             return aConst.value();
+        }
+
+        @Override
+        public Object visitFreeVarReference(FreeVariableReferenceNode varRef) {
+            return outerFrames[varRef.frameIndex()][varRef.variable.genericIndex()];
         }
 
         @Override
@@ -88,14 +106,21 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitVarSet(SetVariableNode set) {
-            Object value = set.value().accept(this);
-            frame[set.variable.genericIndex()] = value;
+        public Object visitSetFreeVar(SetFreeVariableNode set) {
+            var value = set.value().accept(this);
+            outerFrames[set.frameIndex()][set.variable.genericIndex] = value;
             return value;
         }
 
         @Override
-        public Object visitVarRef(VariableReferenceNode varRef) {
+        public Object visitSetVar(SetVariableNode set) {
+            var value = set.value().accept(this);
+            frame[set.variable.genericIndex] = value;
+            return value;
+        }
+
+        @Override
+        public Object visitVarReference(VariableReferenceNode varRef) {
             return frame[varRef.variable.genericIndex()];
         }
     }
@@ -104,43 +129,46 @@ public class Interpreter {
         Instance
      */
 
-    public Object interpret(RuntimeFunction function) {
-        Object[] frame = new Object[function.localsCount()];
+    public Object interpret(Closure closure) {
+        var implementation = closure.implementation;
+        var frame = new Object[implementation.frameSize()];
         try {
-            return function.body().accept(new Evaluator(frame));
+            return implementation.body().accept(new Evaluator(frame, closure.outerFrames));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    public Object interpret(RuntimeFunction function, Object arg) {
-        Object[] frame = new Object[function.localsCount()];
+    public Object interpret(Closure closure, Object arg) {
+        var implementation = closure.implementation;
+        var frame = new Object[implementation.frameSize()];
         frame[0] = arg;
         try {
-            return function.body().accept(new Evaluator(frame));
+            return implementation.body().accept(new Evaluator(frame, closure.outerFrames));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    public Object interpret(RuntimeFunction function, Object arg1, Object arg2) {
-        Object[] frame = new Object[function.localsCount()];
+    public Object interpret(Closure closure, Object arg1, Object arg2) {
+        var implementation = closure.implementation;
+        var frame = new Object[implementation.frameSize()];
         frame[0] = arg1;
         frame[1] = arg2;
         try {
-            return function.body().accept(new Evaluator(frame));
+            return implementation.body().accept(new Evaluator(frame, closure.outerFrames));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    public Object interpretWithArgs(RuntimeFunction function, Object[] actualArguments) {
-        Object[] frame = new Object[function.localsCount()];
-        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
-        try {
-            return function.body().accept(new Evaluator(frame));
-        } catch (ReturnException e) {
-            return e.value;
-        }
-    }
+//    public Object interpretWithArgs(Function  invocable, Object[] actualArguments) {
+//        var frame = new Object[invocable.localsCount()];
+//        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
+//        try {
+//            return invocable.body().accept(new Evaluator(frame, invocable.outerFrames()));
+//        } catch (ReturnException e) {
+//            return e.value;
+//        }
+//    }
 }

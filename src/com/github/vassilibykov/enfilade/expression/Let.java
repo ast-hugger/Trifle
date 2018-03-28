@@ -17,7 +17,7 @@ public class Let extends ComplexExpression {
     @NotNull private final Expression initializer;
     @NotNull private final Expression body;
 
-    private Let(@NotNull Variable variable, @NotNull Expression initializer, @NotNull Expression body) {
+    Let(@NotNull Variable variable, @NotNull Expression initializer, @NotNull Expression body) {
         this.variable = variable;
         this.initializer = initializer;
         this.body = body;

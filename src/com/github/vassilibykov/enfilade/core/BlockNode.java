@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * An executable representation of a {@link com.github.vassilibykov.enfilade.expression.Block}
  * expression.
  */
-public class BlockNode extends EvaluatorNode {
+class BlockNode extends EvaluatorNode {
     @NotNull private final EvaluatorNode[] expressions;
 
     BlockNode(@NotNull EvaluatorNode[] expressions) {

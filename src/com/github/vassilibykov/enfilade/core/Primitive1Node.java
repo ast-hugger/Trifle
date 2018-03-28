@@ -5,7 +5,9 @@ package com.github.vassilibykov.enfilade.core;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A call of a unary primitive.
+ * A call of a unary primitive. This is an abstract class with a variety of
+ * implementations in the {@link com.github.vassilibykov.enfilade.primitives} package.
+ * Note that we conflate the notions of a primitive and a call of a primitive.
  */
 public abstract class Primitive1Node extends EvaluatorNode {
     @NotNull
@@ -19,7 +21,7 @@ public abstract class Primitive1Node extends EvaluatorNode {
         return argument;
     }
 
-    public abstract JvmType valueCategory();
+    public abstract JvmType jvmType();
 
     public abstract Object apply(Object arg);
 

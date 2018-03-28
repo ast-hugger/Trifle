@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.core.FunctionCodeGeneratorSpecialized.VariableIndexer;
+import com.github.vassilibykov.enfilade.core.CompilerCodeGeneratorSpecialized.VariableIndexer;
 import org.junit.Test;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;

@@ -25,14 +25,17 @@ public abstract class EvaluatorNode {
         T visitCall0(CallNode.Call0 call);
         T visitCall1(CallNode.Call1 call);
         T visitCall2(CallNode.Call2 call);
+        T visitClosure(ClosureNode closure);
         T visitConst(ConstNode aConst);
+        T visitFreeVarReference(FreeVariableReferenceNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
         T visitPrimitive1(Primitive1Node primitive);
         T visitPrimitive2(Primitive2Node primitive);
         T visitRet(ReturnNode ret);
-        T visitVarSet(SetVariableNode set);
-        T visitVarRef(VariableReferenceNode varRef);
+        T visitSetFreeVar(SetFreeVariableNode setVar);
+        T visitSetVar(SetVariableNode setVar);
+        T visitVarReference(VariableReferenceNode varRef);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -66,6 +69,17 @@ public abstract class EvaluatorNode {
         }
 
         @Override
+        public T visitClosure(ClosureNode closure) {
+            closure.function().body().accept(this);
+            return null;
+        }
+
+        @Override
+        public T visitFreeVarReference(FreeVariableReferenceNode varRef) {
+            return null;
+        }
+
+        @Override
         public T visitIf(IfNode anIf) {
             anIf.condition().accept(this);
             anIf.trueBranch().accept(this);
@@ -82,11 +96,14 @@ public abstract class EvaluatorNode {
 
         @Override
         public T visitPrimitive1(Primitive1Node primitive) {
+            primitive.argument().accept(this);
             return null;
         }
 
         @Override
         public T visitPrimitive2(Primitive2Node primitive) {
+            primitive.argument1().accept(this);
+            primitive.argument2().accept(this);
             return null;
         }
 
@@ -96,13 +113,19 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitVarSet(SetVariableNode set) {
+        public T visitSetFreeVar(SetFreeVariableNode set) {
             set.value().accept(this);
             return null;
         }
 
         @Override
-        public T visitVarRef(VariableReferenceNode var) {
+        public T visitSetVar(SetVariableNode set) {
+            set.value().accept(this);
+            return null;
+        }
+
+        @Override
+        public T visitVarReference(VariableReferenceNode var) {
             return null;
         }
 

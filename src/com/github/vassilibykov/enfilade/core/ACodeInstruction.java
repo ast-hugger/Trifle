@@ -80,7 +80,7 @@ public abstract class ACodeInstruction {
 
         @Override
         public String toString() {
-            return "CALL #" + Environment.INSTANCE.lookup(callExpression.function());
+            return "CALL #" + callExpression.function();
         }
     }
 

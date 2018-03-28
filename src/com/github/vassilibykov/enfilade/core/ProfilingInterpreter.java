@@ -6,30 +6,33 @@ public class ProfilingInterpreter extends Interpreter {
     public static final ProfilingInterpreter INSTANCE = new ProfilingInterpreter();
 
     static class ProfilingEvaluator extends Evaluator {
-        ProfilingEvaluator(Object[] frame) {
-            super(frame);
+        ProfilingEvaluator(Object[] frame, Object[][] outerFrames) {
+            super(frame, outerFrames);
         }
 
         @Override
         public Object visitCall0(CallNode.Call0 call) {
-            Object result = call.function().invoke();
+            var function = (Closure) call.function().accept(this);
+            var result = function.invoke();
             call.profile.recordValue(result);
             return result;
         }
 
         @Override
         public Object visitCall1(CallNode.Call1 call) {
-            Object arg = call.arg().accept(this);
-            Object result = call.function().invoke(arg);
+            var function = (Closure) call.function().accept(this);
+            var arg = call.arg().accept(this);
+            var result = function.invoke(arg);
             call.profile.recordValue(result);
             return result;
         }
 
         @Override
         public Object visitCall2(CallNode.Call2 call) {
-            Object arg1 = call.arg1().accept(this);
-            Object arg2 = call.arg2().accept(this);
-            Object result = call.function().invoke(arg1, arg2);
+            var function = (Closure) call.function().accept(this);
+            var arg1 = call.arg1().accept(this);
+            var arg2 = call.arg2().accept(this);
+            var result = function.invoke(arg1, arg2);
             call.profile.recordValue(result);
             return result;
         }
@@ -61,11 +64,16 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitVarSet(SetVariableNode set) {
-            Object value = set.value().accept(this);
-            VariableDefinition variable = set.variable();
-            frame[variable.genericIndex()] = value;
-            variable.profile.recordValue(value);
+        public Object visitSetFreeVar(SetFreeVariableNode setNode) {
+            var value = super.visitSetFreeVar(setNode);
+            setNode.variable.profile.recordValue(value);
+            return value;
+        }
+
+        @Override
+        public Object visitSetVar(SetVariableNode setVar) {
+            var value = super.visitSetVar(setVar);
+            setVar.variable.profile.recordValue(value);
             return value;
         }
     }
@@ -75,12 +83,13 @@ public class ProfilingInterpreter extends Interpreter {
      */
 
     @Override
-    public Object interpret(RuntimeFunction function) {
-        Object[] frame = new Object[function.localsCount()];
-        function.profile.recordInvocation(frame);
+    public Object interpret(Closure closure) {
+        var implementation = closure.implementation;
+        var frame = new Object[implementation.frameSize()];
+        implementation.profile.recordInvocation(frame);
         try {
-            Object result = function.body().accept(new ProfilingEvaluator(frame));
-            function.profile.recordResult(result);
+            Object result = implementation.body().accept(new ProfilingEvaluator(frame, closure.outerFrames));
+            implementation.profile.recordResult(result);
             return result;
         } catch (ReturnException e) {
             return e.value;
@@ -88,13 +97,14 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(RuntimeFunction function, Object arg) {
-        Object[] frame = new Object[function.localsCount()];
+    public Object interpret(Closure closure, Object arg) {
+        var implementation = closure.implementation;
+        var frame = new Object[implementation.frameSize()];
         frame[0] = arg;
-        function.profile.recordInvocation(frame);
+        implementation.profile.recordInvocation(frame);
         try {
-            Object result = function.body().accept(new ProfilingEvaluator(frame));
-            function.profile.recordResult(result);
+            Object result = implementation.body().accept(new ProfilingEvaluator(frame, closure.outerFrames));
+            implementation.profile.recordResult(result);
             return result;
         } catch (ReturnException e) {
             return e.value;
@@ -102,29 +112,30 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(RuntimeFunction function, Object arg1, Object arg2) {
-        Object[] frame = new Object[function.localsCount()];
+    public Object interpret(Closure closure, Object arg1, Object arg2) {
+        var implementation = closure.implementation;
+        var frame = new Object[implementation.frameSize()];
         frame[0] = arg1;
         frame[1] = arg2;
-        function.profile.recordInvocation(frame);
+        implementation.profile.recordInvocation(frame);
         try {
-            Object result = function.body().accept(new ProfilingEvaluator(frame));
-            function.profile.recordResult(result);
+            Object result = implementation.body().accept(new ProfilingEvaluator(frame, closure.outerFrames));
+            implementation.profile.recordResult(result);
             return result;
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
-    @Override
-    public Object interpretWithArgs(RuntimeFunction function, Object[] actualArguments) {
-        Object[] frame = new Object[function.localsCount()];
-        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
-        function.profile.recordInvocation(frame);
-        try {
-            return function.body().accept(new ProfilingEvaluator(frame));
-        } catch (ReturnException e) {
-            return e.value;
-        }
-    }
+//    @Override
+//    public Object interpretWithArgs(Invocable function, Object[] actualArguments) {
+//        Object[] frame = new Object[function.frameSize()];
+//        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
+//        function.profile().recordInvocation(frame);
+//        try {
+//            return function.body().accept(new ProfilingEvaluator(frame));
+//        } catch (ReturnException e) {
+//            return e.value;
+//        }
+//    }
 }

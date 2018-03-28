@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * The conditional.
  */
-public class IfNode extends EvaluatorNode {
+class IfNode extends EvaluatorNode {
     @NotNull private final EvaluatorNode condition;
     @NotNull private final EvaluatorNode trueBranch;
     @NotNull private final EvaluatorNode falseBranch;

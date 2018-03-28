@@ -15,7 +15,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static com.github.vassilibykov.enfilade.core.AssemblyLanguage.*;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.binaryFunction;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static org.junit.Assert.assertEquals;
 
@@ -109,14 +109,14 @@ public class RecoveryInterpreterTest {
     @Test
     public void testCall() {
         VariableDefinition arg1 = new VariableDefinition(Variable.named("arg1"), bogusRuntimeFunction());
-        RuntimeFunction adder = FunctionTranslator.translate(
-            binaryFunction((a, b) -> add(a, b)));
+        Closure adder = FunctionTranslator.translate(
+            lambda((a, b) -> add(a, b)));
         // In general variables must not be reused, but reuse here is ok because we know
         // the are in same positions in the frame and the code is executed only once so it's not being compiled.
         code = Asm
             .vars(arg1)
             .code(
-                call(new CallNode.Call2(adder, ref(arg1), ref(arg1))),
+                call(new CallNode.Call2(const_(adder), ref(arg1), ref(arg1))),
                 ret());
         assertEquals(6, code.interpretWith(3));
     }
@@ -149,7 +149,7 @@ public class RecoveryInterpreterTest {
         }
     }
 
-    private RuntimeFunction bogusRuntimeFunction() {
-        return new RuntimeFunction(Lambda.with(List.of(), Const.value(null)));
+    private FunctionImplementation bogusRuntimeFunction() {
+        return new FunctionImplementation(Lambda.with(List.of(), Const.value(null)));
     }
 }

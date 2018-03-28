@@ -21,8 +21,8 @@ import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
-class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType> {
-    private final RuntimeFunction function;
+class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType> {
+    private final FunctionImplementation function;
     private final GhostWriter writer;
     private final Deque<JvmType> continuationTypes = new ArrayDeque<>();
     private final List<VariableDefinition> liveLocals = new ArrayList<>();
@@ -107,7 +107,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         Instance
      */
 
-    FunctionCodeGeneratorSpecialized(RuntimeFunction function, MethodVisitor writer) {
+    CompilerCodeGeneratorSpecialized(FunctionImplementation function, MethodVisitor writer) {
         this.function = function;
         this.functionReturnType = function.body().specializationType();
         this.writer = new GhostWriter(writer);
@@ -141,56 +141,64 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        int id = Environment.INSTANCE.lookup(call.function());
-        JvmType returnType = call.specializationType();
-        MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
-        writer.invokeDynamic(
-            DirectCall.BOOTSTRAP,
-            "call#" + id,
-            callSiteType,
-            id);
-        assertPassage(returnType, currentContinuationType());
-        return null;
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        JvmType returnType = call.specializationType();
+//        MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
+//        writer.invokeDynamic(
+//            DirectCall.BOOTSTRAP,
+//            "call#" + id,
+//            callSiteType,
+//            id);
+//        assertPassage(returnType, currentContinuationType());
+//        return null;
     }
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
         // FIXME this (and the 2-arg version) will fail if arguments are specialized so the call site
         // has a non-generic signature, but the specialization available in the nexus has a different signature.
-        // We'll need to revise the scheme of managing implementations and call sites in RuntimeFunction
+        // We'll need to revise the scheme of managing implementations and call sites in FunctionImplementation
         // to fix this.
-        call.arg().accept(this);
-        int id = Environment.INSTANCE.lookup(call.function());
-        JvmType returnType = call.specializationType();
-        MethodType callSiteType = MethodType.methodType(
-            returnType.representativeClass(),
-            call.arg().specializationType().representativeClass());
-        writer.invokeDynamic(
-            DirectCall.BOOTSTRAP,
-            "call#" + id,
-            callSiteType,
-            id);
-        assertPassage(returnType, currentContinuationType());
-        return null;
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+//        call.arg().accept(this);
+//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        JvmType returnType = call.specializationType();
+//        MethodType callSiteType = MethodType.methodType(
+//            returnType.representativeClass(),
+//            call.arg().specializationType().representativeClass());
+//        writer.invokeDynamic(
+//            DirectCall.BOOTSTRAP,
+//            "call#" + id,
+//            callSiteType,
+//            id);
+//        assertPassage(returnType, currentContinuationType());
+//        return null;
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        call.arg1().accept(this);
-        call.arg2().accept(this);
-        int id = Environment.INSTANCE.lookup(call.function());
-        JvmType returnType = call.specializationType();
-        MethodType callSiteType = MethodType.methodType(
-            returnType.representativeClass(),
-            call.arg1().specializationType().representativeClass(),
-            call.arg2().specializationType().representativeClass());
-        writer.invokeDynamic(
-            DirectCall.BOOTSTRAP,
-            "call#" + id,
-            callSiteType,
-            id);
-        assertPassage(returnType, currentContinuationType());
-        return null;
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+//        call.arg1().accept(this);
+//        call.arg2().accept(this);
+//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        JvmType returnType = call.specializationType();
+//        MethodType callSiteType = MethodType.methodType(
+//            returnType.representativeClass(),
+//            call.arg1().specializationType().representativeClass(),
+//            call.arg2().specializationType().representativeClass());
+//        writer.invokeDynamic(
+//            DirectCall.BOOTSTRAP,
+//            "call#" + id,
+//            callSiteType,
+//            id);
+//        assertPassage(returnType, currentContinuationType());
+//        return null;
+    }
+
+    @Override
+    public JvmType visitClosure(ClosureNode closure) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -206,6 +214,11 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
             throw new CompilerError("unexpected const value: " + value);
         }
         return null;
+    }
+
+    @Override
+    public JvmType visitFreeVarReference(FreeVariableReferenceNode varRef) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -246,7 +259,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
         primitive.generate(writer, primitive.argument().specializationType());
-        assertPassage(primitive.valueCategory(), currentContinuationType());
+        assertPassage(primitive.jvmType(), currentContinuationType());
         return null;
     }
 
@@ -258,7 +271,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
             writer,
             primitive.argument1().specializationType(),
             primitive.argument2().specializationType());
-        assertPassage(primitive.valueCategory(), currentContinuationType());
+        assertPassage(primitive.jvmType(), currentContinuationType());
         return null;
     }
 
@@ -287,7 +300,12 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitVarSet(SetVariableNode set) {
+    public JvmType visitSetFreeVar(SetFreeVariableNode setVar) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
+    public JvmType visitSetVar(SetVariableNode set) {
         VariableDefinition var = set.variable;
         JvmType varType = var.specializationType();
         generateExpecting(varType, set.value());
@@ -298,7 +316,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitVarRef(VariableReferenceNode varRef) {
+    public JvmType visitVarReference(VariableReferenceNode varRef) {
         JvmType varType = varRef.variable.specializationType();
         writer.loadLocal(varType, varRef.variable.specializedIndex());
         assertPassage(varType, currentContinuationType());
@@ -396,7 +414,7 @@ class FunctionCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
      * live local variables. The array is left on the stack.
      */
     private void generateFrameReplicator(SquarePegHandler handler) {
-        int size = function.localsCount();
+        int size = function.frameSize();
         writer.newObjectArray(size);
         handler.capturedLocals.forEach(this::storeInFrameReplica);
     }

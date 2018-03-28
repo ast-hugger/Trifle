@@ -3,6 +3,7 @@
 package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Expression;
+import com.github.vassilibykov.enfilade.expression.ExpressionLanguage;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import org.junit.Test;
 
@@ -22,20 +23,20 @@ public class BasicCompilerTests {
 
     @Test
     public void testArg() {
-        RuntimeFunction function = FunctionTranslator.translate(unaryFunction(arg -> arg));
-        function.forceCompile();
+        var function = FunctionTranslator.translate(lambda(arg -> arg));
+        function.implementation.forceCompile();
         assertEquals(42, function.invoke(42));
     }
 
     @Test
     public void testIf() {
-        RuntimeFunction function = FunctionTranslator.translate(
-            unaryFunction(
+        Closure function = FunctionTranslator.translate(
+            lambda(
                 arg ->
                     if_(arg,
                         const_("true"),
                         const_("false"))));
-        function.forceCompile();
+        function.implementation.forceCompile();
         assertEquals("true", function.invoke(true));
         assertEquals("false", function.invoke(false));
     }
@@ -43,9 +44,9 @@ public class BasicCompilerTests {
     @Test
     public void testLet() {
         Variable t = var("t");
-        RuntimeFunction function = FunctionTranslator.translate(
-            unaryFunction(arg -> let(t, arg, t)));
-        function.forceCompile();
+        Closure function = FunctionTranslator.translate(
+            lambda(arg -> let(t, arg, t)));
+        function.implementation.forceCompile();
         assertEquals(42, function.invoke(42));
         assertEquals("hello", function.invoke("hello"));
     }
@@ -54,70 +55,70 @@ public class BasicCompilerTests {
     public void testLet2() {
         Variable t = var("t");
         Variable u = var("u");
-        RuntimeFunction function = FunctionTranslator.translate(
-            unaryFunction(arg ->
+        Closure function = FunctionTranslator.translate(
+            lambda(arg ->
             let(t, add(arg, const_(1)),
                 let(u, add(arg, const_(2)),
                     mul(t, u)))));
-        function.forceCompile();
+        function.implementation.forceCompile();
         assertEquals(12, function.invoke(2));
     }
 
     @Test
     public void testPrimitive1() {
-        RuntimeFunction function = FunctionTranslator.translate(
-            unaryFunction(
+        Closure function = FunctionTranslator.translate(
+            lambda(
                 arg ->
                     negate(arg)));
-        function.forceCompile();
+        function.implementation.forceCompile();
         assertEquals(-42, function.invoke(42));
         assertEquals(123, function.invoke(-123));
     }
 
     @Test
     public void testPrimitive2() {
-        RuntimeFunction function = FunctionTranslator.translate(
-            binaryFunction(
+        Closure function = FunctionTranslator.translate(
+            ExpressionLanguage.lambda(
                 (arg1, arg2) ->
                     add(arg1, arg2)));
-        function.forceCompile();
+        function.implementation.forceCompile();
         assertEquals(7, function.invoke(3, 4));
         assertEquals(0, function.invoke(-42, 42));
     }
 
     @Test
     public void testSetVar() {
-        RuntimeFunction function = FunctionTranslator.translate(
-            unaryFunction(
+        Closure function = FunctionTranslator.translate(
+            lambda(
                 arg ->
                     set(arg, const_(42))));
-        function.forceCompile();
+        function.implementation.forceCompile();
         assertEquals(42, function.invoke(3));
     }
 
     @Test
     public void testSetVarInProg() {
-        RuntimeFunction function = FunctionTranslator.translate(
-            unaryFunction(
+        Closure function = FunctionTranslator.translate(
+            lambda(
                 arg ->
                     prog(
                         set(arg, const_(42)),
                         arg)));
-        function.forceCompile();
+        function.implementation.forceCompile();
         assertEquals(42, function.invoke(3));
     }
 
     @Test
     public void testVar() {
-        RuntimeFunction function = FunctionTranslator.translate(unaryFunction(arg -> arg));
+        Closure function = FunctionTranslator.translate(lambda(arg -> arg));
         assertEquals(42, function.invoke(42));
         assertEquals("hello", function.invoke("hello"));
     }
 
     @Test
     public void testFactorial() {
-        RuntimeFunction factorial = FunctionTranslator.translate(InterpreterEvaluationTests.factorial());
-        factorial.forceCompile();
+        Closure factorial = FunctionTranslator.translate(InterpreterTests.factorial());
+        factorial.implementation.forceCompile();
         assertEquals(6, factorial.invoke(3));
         assertEquals(24, factorial.invoke(4));
         assertEquals(120, factorial.invoke(5));
@@ -125,8 +126,8 @@ public class BasicCompilerTests {
 
     @Test
     public void testFibonacci() { // and everybody's favorite
-        RuntimeFunction fibonacci = FunctionTranslator.translate(InterpreterEvaluationTests.fibonacci());
-        fibonacci.forceCompile();
+        Closure fibonacci = FunctionTranslator.translate(InterpreterTests.fibonacci());
+        fibonacci.implementation.forceCompile();
         assertEquals(1, fibonacci.invoke(0));
         assertEquals(1, fibonacci.invoke(1));
         assertEquals(2, fibonacci.invoke(2));
@@ -139,8 +140,8 @@ public class BasicCompilerTests {
 //    @Test
     public void timeFib() {
         int n = 35;
-        RuntimeFunction fibonacci = FunctionTranslator.translate(InterpreterEvaluationTests.fibonacci());
-        fibonacci.forceCompile();
+        Closure fibonacci = FunctionTranslator.translate(InterpreterTests.fibonacci());
+        fibonacci.implementation.forceCompile();
         Object[] args = {n};
         for (int i = 0; i < 20; i++) fibonacci.invoke(n);
         long start = System.nanoTime();
@@ -149,9 +150,9 @@ public class BasicCompilerTests {
         System.out.format("fibonacci(%s) = %s in %s ms", n, result, elapsed / 1_000_000L);
     }
 
-    private RuntimeFunction compile(Expression methodBody) {
-        RuntimeFunction function = FunctionTranslator.translate(nullaryFunction(() -> methodBody));
-        function.forceCompile();
+    private Closure compile(Expression methodBody) {
+        var function = FunctionTranslator.translate(ExpressionLanguage.lambda(() -> methodBody));
+        function.implementation.forceCompile();
         return function;
     }
 }

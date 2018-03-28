@@ -11,26 +11,27 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
+import java.util.Collections;
+import java.util.Set;
 
 /**
- * A function which, unlike the pure {@link Lambda} definition in the {@code expressions}
- * package, can actually be executed. Instances are created by {@link FunctionTranslator}.
+ * An object holding together all executable representations of a source function
+ * (though not necessarily all of them are available at any given time): a tree of {@link
+ * EvaluatorNode}s, a list of recovery interpreter instructions, method handles to generic
+ * and compiled methods.
  *
- * <p>A function holds together all its executable representations (though not necessarily
- * all of them are available at any given time): a tree of {@link EvaluatorNode}s, a list
- * of recovery interpreter instructions, method handles to generic and compiled methods.
+ * <p>This is <em>not</em> a function value of the implemented language. For that, see
+ * {@link Closure}.
  */
-public class RuntimeFunction {
+public class FunctionImplementation {
 
     /** The number of times a function is profiled before it's queued for compilation. */
-    private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
+    private static final long PROFILING_TARGET = Long.MAX_VALUE;
 
     private enum State {
         INVALID,
         /**
-         * The function is currently running interpreted to collect type information.
-         * The {@link #callSite} is pointing at one of the {@link #interpret}
-         * methods.
+         * The function is currently running interpreted and collecting type information.
          */
         PROFILING,
         /**
@@ -53,11 +54,17 @@ public class RuntimeFunction {
      */
 
     @NotNull private final Lambda definition;
+    /** Apparent arguments from the function definition. Does not include closed over variables. */
+    private VariableDefinition[] arguments;
+    /** Variables from outer scopes used in this function or its closures (transitively). */
+    private Set<VariableDefinition> freeVariables = Set.of();
+    /*internal*/ FunctionProfile profile;
     private final int arity;
+    private int id = -1;
+    /*internal*/ int depth = -1;
+    /** Shared by all {@code invokedynamics} linked to this function. */
     private final VolatileCallSite callSite;
     private final MethodHandle callSiteInvoker;
-    private VariableDefinition[] arguments;
-    /*internal*/ FunctionProfile profile;
     private EvaluatorNode body;
     private int localsCount = -1;
     @Nullable private MethodType specializationType;
@@ -65,22 +72,27 @@ public class RuntimeFunction {
     /*internal*/ ACodeInstruction[] acode;
     private State state;
 
-    RuntimeFunction(@NotNull Lambda definition) {
+    FunctionImplementation(@NotNull Lambda definition) {
         this.definition = definition;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
-        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
-//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
+        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
 //        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }
 
-    void finishInitialization(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body, int localsCount) {
+    /** RESTRICTED. Intended for {@link FunctionTranslator}. */
+    void partiallyInitialize(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body) {
         this.arguments = arguments;
         this.profile = new FunctionProfile(arguments);
         this.body = body;
+    }
+
+    /** RESTRICTED. Intended for {@link FunctionAnalyzer}. */
+    void finishInitialization(int localsCount) {
         this.localsCount = localsCount;
-        this.acode = ACodeTranslator.translate(body);
+//        this.acode = ACodeTranslator.translate(body);
         this.state = State.PROFILING;
     }
 
@@ -88,8 +100,25 @@ public class RuntimeFunction {
         return definition;
     }
 
+    public int id() {
+        return id;
+    }
+
+    /** RESTRICTED. Intended for {@link Environment#lookup(FunctionImplementation)}. */
+    void setId(int id) {
+        this.id = id;
+    }
+
     public VariableDefinition[] arguments() {
         return arguments;
+    }
+
+    public Set<VariableDefinition> freeVariables() {
+        return freeVariables;
+    }
+
+    public void setFreeVariables(Set<VariableDefinition> freeVariables) {
+        this.freeVariables = Collections.unmodifiableSet(freeVariables);
     }
 
     public EvaluatorNode body() {
@@ -100,7 +129,7 @@ public class RuntimeFunction {
         return arity;
     }
 
-    public int localsCount() {
+    public int frameSize() {
         return localsCount;
     }
 
@@ -108,25 +137,25 @@ public class RuntimeFunction {
         return acode;
     }
 
-    public Object invoke() {
+    Object execute(Closure closure) {
         try {
-            return callSiteInvoker.invokeExact();
+            return callSiteInvoker.invokeExact(closure);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
     }
 
-    public Object invoke(Object arg) {
+    Object execute(Closure function, Object arg) {
         try {
-            return callSiteInvoker.invokeExact(arg);
+            return callSiteInvoker.invokeExact(function, arg);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
     }
 
-    public Object invoke(Object arg1, Object arg2) {
+    Object execute(Closure closure, Object arg1, Object arg2) {
         try {
-            return callSiteInvoker.invokeExact(arg1, arg2);
+            return callSiteInvoker.invokeExact(closure, arg1, arg2);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -151,29 +180,30 @@ public class RuntimeFunction {
     }
 
     private MethodHandle profilingInterpreterInvoker() {
-        MethodType type = MethodType.genericMethodType(arity());
+        var type = MethodType.genericMethodType(arity());
+        type = type.insertParameterTypes(0, Closure.class);
         try {
-            MethodHandle interpret = MethodHandles.lookup().findVirtual(RuntimeFunction.class, "interpret", type);
-            return interpret.bindTo(this);
+            var handle = MethodHandles.lookup().findVirtual(FunctionImplementation.class, "profile", type);
+            return handle.bindTo(this);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
     }
 
     private MethodHandle simpleInterpreterInvoker() {
-        MethodType type = MethodType.genericMethodType(arity());
-        type = type.insertParameterTypes(0, RuntimeFunction.class);
+        var type = MethodType.genericMethodType(arity());
+        type = type.insertParameterTypes(0, Closure.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
-            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, this);
+            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
     }
 
     private MethodHandle acodeInterpreterInvoker() {
-        MethodType type = MethodType.genericMethodType(arity());
-        type = type.insertParameterTypes(0, RuntimeFunction.class);
+        var type = MethodType.genericMethodType(arity());
+        type = type.insertParameterTypes(0, Closure.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findStatic(ACodeInterpreter.class, "interpret", type);
             return MethodHandles.insertArguments(interpret, 0, this);
@@ -182,24 +212,24 @@ public class RuntimeFunction {
         }
     }
 
-    public Object interpret() {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this);
+    public Object profile(Closure closure) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(closure);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
         return result;
     }
 
-    public Object interpret(Object arg) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg);
+    public Object profile(Closure closure, Object arg) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(closure, arg);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
         return result;
     }
 
-    public Object interpret(Object arg1, Object arg2) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg1, arg2);
+    public Object profile(Closure closure, Object arg1, Object arg2) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(closure, arg1, arg2);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
@@ -214,16 +244,22 @@ public class RuntimeFunction {
         state = State.COMPILED;
         this.specializationType = specializationType;
         if (specializedMethod == null) {
-            callSite.setTarget(genericMethod);
+            callSite.setTarget(dropFunctionArgument(genericMethod));
             // FIXME properly handle specializationCallSite if present
         } else {
-            callSite.setTarget(makeSpecializationGuard(genericMethod, specializedMethod, specializationType));
+            callSite.setTarget(
+                dropFunctionArgument(
+                    makeSpecializationGuard(genericMethod, specializedMethod, specializationType)));
             if (specializationCallSite == null) {
                 specializationCallSite = new VolatileCallSite(specializedMethod);
             } else {
                 specializationCallSite.setTarget(specializedMethod);
             }
         }
+    }
+
+    private MethodHandle dropFunctionArgument(MethodHandle original) {
+        return MethodHandles.dropArguments(original, 0, Closure.class);
     }
 
     /*
@@ -297,11 +333,11 @@ public class RuntimeFunction {
     static {
         try {
             CHECK = MethodHandles.lookup().findStatic(
-                RuntimeFunction.class,
+                FunctionImplementation.class,
                 "checkSpecializationApplicability",
                 MethodType.methodType(boolean.class, MethodType.class, Object[].class));
             EXTRACT_SQUARE_PEG = MethodHandles.lookup().findStatic(
-                RuntimeFunction.class,
+                FunctionImplementation.class,
                 "extractSquarePeg", MethodType.methodType(Object.class, SquarePegException.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);

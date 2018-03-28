@@ -14,11 +14,11 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p>A variable is associated with a storage location in the activation record
  * of its function. The storage location is identified by its index. Indices are
- * assigned by the {@link RuntimeFunction} object when it is constructed. At that time
+ * assigned by the {@link FunctionImplementation} object when it is constructed. At that time
  * it is detected if a variable does not appear as an argument or a let binding
  * exactly once, as required.
  */
-public class VariableReferenceNode extends EvaluatorNode {
+class VariableReferenceNode extends EvaluatorNode {
     @NotNull /*internal*/ final VariableDefinition variable;
 
     public VariableReferenceNode(@NotNull VariableDefinition variable) {
@@ -31,7 +31,7 @@ public class VariableReferenceNode extends EvaluatorNode {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitVarRef(this);
+        return visitor.visitVarReference(this);
     }
 
     public String toString() {

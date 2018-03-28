@@ -18,7 +18,7 @@ public class Add extends Primitive2Node {
     }
 
     @Override
-    public JvmType valueCategory() {
+    public JvmType jvmType() {
         return INT;
     }
 

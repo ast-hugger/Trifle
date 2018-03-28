@@ -4,7 +4,7 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.Nullable;
 
-public class ConstNode extends EvaluatorNode {
+class ConstNode extends EvaluatorNode {
     @Nullable private final Object value;
 
     public ConstNode(@Nullable Object value) {

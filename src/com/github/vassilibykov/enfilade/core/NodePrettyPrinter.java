@@ -83,6 +83,16 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
+    public Void visitClosure(ClosureNode closure) {
+        printLine(() -> {
+            output.append("closure");
+            printNodeProfile(closure);
+        });
+        indented(() -> closure.function().body().accept(this));
+        return null;
+    }
+
+    @Override
     public Void visitConst(ConstNode aConst) {
         printLine(() -> {
             output
@@ -91,6 +101,11 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
             printNodeProfile(aConst);
         });
         return null;
+    }
+
+    @Override
+    public Void visitFreeVarReference(FreeVariableReferenceNode varRef) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -153,12 +168,17 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitVarSet(SetVariableNode set) {
+    public Void visitSetFreeVar(SetFreeVariableNode setFreeVariableNode) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
-    public Void visitVarRef(VariableReferenceNode varRef) {
+    public Void visitSetVar(SetVariableNode set) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
+    public Void visitVarReference(VariableReferenceNode varRef) {
         printLine(() -> {
             output.append(varRef.toString());
             printNodeProfile(varRef);

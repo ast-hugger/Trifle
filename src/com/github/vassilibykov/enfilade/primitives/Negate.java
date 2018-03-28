@@ -19,7 +19,7 @@ public class Negate extends Primitive1Node {
     }
 
     @Override
-    public JvmType valueCategory() {
+    public JvmType jvmType() {
         return INT;
     }
 

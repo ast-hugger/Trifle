@@ -19,7 +19,7 @@ import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
- * Compiles a {@link RuntimeFunction} into a class with a single static method.
+ * Compiles a {@link FunctionImplementation} into a class with a single static method.
  */
 public class Compiler {
 
@@ -32,7 +32,7 @@ public class Compiler {
     /**
      * The access point: compile a function.
      */
-    public static Result compile(RuntimeFunction function) {
+    public static Result compile(FunctionImplementation function) {
         Compiler compiler = new Compiler(function);
         Result result = compiler.compile();
         dumpClassFile("generated", result.bytecode());
@@ -91,12 +91,12 @@ public class Compiler {
         Instance
      */
 
-    private final RuntimeFunction function;
+    private final FunctionImplementation function;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     @Nullable private MethodType specializationType = null;
 
-    private Compiler(RuntimeFunction function) {
+    private Compiler(FunctionImplementation function) {
         this.function = function;
         this.className = allocateClassName();
     }
@@ -131,7 +131,7 @@ public class Compiler {
             MethodType.genericMethodType(function.arity()).toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        FunctionCodeGeneratorGeneric generator = new FunctionCodeGeneratorGeneric(methodWriter);
+        CompilerCodeGeneratorGeneric generator = new CompilerCodeGeneratorGeneric(methodWriter);
         JvmType resultType = function.body().accept(generator);
         generator.writer.adaptType(resultType, JvmType.REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
@@ -148,7 +148,7 @@ public class Compiler {
             specializationType.toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        FunctionCodeGeneratorSpecialized generator = new FunctionCodeGeneratorSpecialized(function, methodWriter);
+        CompilerCodeGeneratorSpecialized generator = new CompilerCodeGeneratorSpecialized(function, methodWriter);
         generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();

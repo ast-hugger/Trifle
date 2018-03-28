@@ -4,6 +4,7 @@ package com.github.vassilibykov.enfilade.core;
 
 import java.util.stream.Stream;
 
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
@@ -23,7 +24,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
  * */
 class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> {
 
-    static void inferTypesIn(RuntimeFunction function) {
+    static void inferTypesIn(FunctionImplementation function) {
         Stream.of(function.arguments()).forEach(
             each -> each.setInferredType(ExpressionType.unknown()));
         ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
@@ -42,7 +43,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     private final EvaluatorNode functionBody;
     private boolean needsRevisiting = false;
 
-    private ExpressionTypeInferencer(RuntimeFunction function) {
+    private ExpressionTypeInferencer(FunctionImplementation function) {
         this.functionBody = function.body();
     }
 
@@ -65,8 +66,18 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
+    public ExpressionType visitClosure(ClosureNode closure) {
+        return andSetIn(closure, ExpressionType.known(REFERENCE));
+    }
+
+    @Override
     public ExpressionType visitConst(ConstNode aConst) {
         return andSetIn(aConst, ExpressionType.known(JvmType.ofObject(aConst.value())));
+    }
+
+    @Override
+    public ExpressionType visitFreeVarReference(FreeVariableReferenceNode varRef) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -93,14 +104,14 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitPrimitive1(Primitive1Node primitive) {
         primitive.argument().accept(this);
-        return andSetIn(primitive, ExpressionType.known(primitive.valueCategory()));
+        return andSetIn(primitive, ExpressionType.known(primitive.jvmType()));
     }
 
     @Override
     public ExpressionType visitPrimitive2(Primitive2Node primitive) {
         primitive.argument1().accept(this);
         primitive.argument2().accept(this);
-        return andSetIn(primitive, ExpressionType.known(primitive.valueCategory()));
+        return andSetIn(primitive, ExpressionType.known(primitive.jvmType()));
     }
 
     @Override
@@ -126,7 +137,12 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitVarSet(SetVariableNode set) {
+    public ExpressionType visitSetFreeVar(SetFreeVariableNode setVar) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
+    public ExpressionType visitSetVar(SetVariableNode set) {
         ExpressionType valueType = set.value().accept(this);
         if (set.variable().unifyInferredTypeWith(valueType)) {
             needsRevisiting = true;
@@ -135,7 +151,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitVarRef(VariableReferenceNode varRef) {
+    public ExpressionType visitVarReference(VariableReferenceNode varRef) {
         ExpressionType inferredType = varRef.variable.inferredType();
         if (varRef.unifyInferredTypeWith(inferredType)) {
             needsRevisiting = true;

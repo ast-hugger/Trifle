@@ -11,49 +11,55 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A registry translating between {@link RuntimeFunction} objects and integer IDs.
+ * Maintains mapping between {@link Lambda}s and {@link FunctionImplementation}s they have been
+ * translated to, as well as between function IDs and functions.
  */
 public class Environment {
     public static final Environment INSTANCE = new Environment();
 
-    private final List<RuntimeFunction> functionsById = new ArrayList<>();
-    private final Map<RuntimeFunction, Integer> functionIds = new HashMap<>();
-    private final Map<Lambda, RuntimeFunction> functionsBySource = new HashMap<>();
+    /*
+        Instance
+     */
+
+    private final List<FunctionImplementation> functionsById = new ArrayList<>();
+    private final Map<Lambda, FunctionImplementation> functionsByDefinition = new HashMap<>();
+
+    private Environment() {}
 
     public void compile(List<Lambda> functions) {
         functions.forEach(FunctionTranslator::translate);
     }
 
-    public synchronized RuntimeFunction lookup(Lambda source) {
-        return functionsBySource.get(source);
+    public synchronized FunctionImplementation lookup(Lambda source) {
+        return functionsByDefinition.get(source);
     }
 
-    public synchronized RuntimeFunction lookupOrMake(Lambda source) {
-        return functionsBySource.computeIfAbsent(source, k -> new RuntimeFunction(source));
+    public synchronized FunctionImplementation lookupOrMake(Lambda source) {
+        return functionsByDefinition.computeIfAbsent(source, k -> new FunctionImplementation(source));
     }
 
     /**
-     * Return the ID associated with the function. The function is added to the
-     * registry if it was not registered. The existing ID is returned if it was.
+     * Return the ID associated with the function, adding the function to the registry as
+     * needed.
      */
-    public synchronized int lookup(RuntimeFunction function) {
-        Integer id = functionIds.get(function);
-        if (id != null) {
+    public synchronized int lookup(FunctionImplementation function) {
+        Integer id = function.id();
+        if (id >= 0) {
             return id;
         } else {
             int newId = functionsById.size();
+            function.setId(newId);
             functionsById.add(function);
-            functionIds.put(function, newId);
             return newId;
         }
     }
 
     /**
-     * Return the function with the specified ID. Return null if the ID is not
-     * mapped to a function.
+     * Return the function with the specified ID. Return null if the ID is not mapped to any
+     * function.
      */
     @Nullable
-    public synchronized RuntimeFunction lookup(int id) {
+    public synchronized FunctionImplementation lookup(int id) {
         try {
             return functionsById.get(id);
         } catch (IndexOutOfBoundsException e) {

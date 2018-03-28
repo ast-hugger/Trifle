@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * An explicit return (a bypass in the normal chain of continuations).
  */
-public class ReturnNode extends EvaluatorNode {
+class ReturnNode extends EvaluatorNode {
     @NotNull private final EvaluatorNode value;
 
     ReturnNode(@NotNull EvaluatorNode value) {

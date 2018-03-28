@@ -21,7 +21,7 @@ public class LessThan extends Primitive2Node {
     }
 
     @Override
-    public JvmType valueCategory() {
+    public JvmType jvmType() {
         return JvmType.BOOL;
     }
 

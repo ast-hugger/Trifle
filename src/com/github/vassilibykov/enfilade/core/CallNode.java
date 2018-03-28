@@ -9,15 +9,15 @@ import org.jetbrains.annotations.NotNull;
  * expression. This is an abstract superclass, with concrete implementations
  * for specific function arities.
  */
-public abstract class CallNode extends EvaluatorNode {
-    @NotNull private RuntimeFunction function;
+abstract class CallNode extends EvaluatorNode {
+    @NotNull private EvaluatorNode function;
     /*internal*/ final ValueProfile profile = new ValueProfile();
 
-    CallNode(@NotNull RuntimeFunction function) {
+    CallNode(@NotNull EvaluatorNode function) {
         this.function = function;
     }
 
-    public RuntimeFunction function() {
+    public EvaluatorNode function() {
         return function;
     }
 
@@ -25,16 +25,16 @@ public abstract class CallNode extends EvaluatorNode {
 
     @Override
     public String toString() {
-        return "call #" + Environment.INSTANCE.lookup(function);
+        return "call " + function;
     }
 
     /*
         Concrete implementations
      */
 
-    public static class Call0 extends CallNode {
+    static class Call0 extends CallNode {
 
-        Call0(RuntimeFunction function) {
+        Call0(EvaluatorNode function) {
             super(function);
         }
 
@@ -49,10 +49,10 @@ public abstract class CallNode extends EvaluatorNode {
         }
     }
 
-    public static class Call1 extends CallNode {
+    static class Call1 extends CallNode {
         @NotNull private final EvaluatorNode arg;
 
-        Call1(RuntimeFunction function, @NotNull EvaluatorNode arg) {
+        Call1(EvaluatorNode function, @NotNull EvaluatorNode arg) {
             super(function);
             this.arg = arg;
         }
@@ -72,11 +72,11 @@ public abstract class CallNode extends EvaluatorNode {
         }
     }
 
-    public static class Call2 extends CallNode {
+    static class Call2 extends CallNode {
         @NotNull private final EvaluatorNode arg1;
         @NotNull private final EvaluatorNode arg2;
 
-        Call2(RuntimeFunction function, @NotNull EvaluatorNode arg1, @NotNull EvaluatorNode arg2) {
+        Call2(EvaluatorNode function, @NotNull EvaluatorNode arg1, @NotNull EvaluatorNode arg2) {
             super(function);
             this.arg1 = arg1;
             this.arg2 = arg2;

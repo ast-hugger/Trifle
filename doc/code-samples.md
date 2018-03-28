@@ -1,15 +1,17 @@
-## Benchmark function definition in Enfilade
+## Benchmark function thisLambda in Enfilade
         
-    static Function fibonacci() {
-        Variable n = var("n");
-        Variable t1 = var("t1");
-        Variable t2 = var("t2");
-        return Function.recursive(n, fibonacci ->
-            if_(lessThan(n, const_(2)),
-                const_(1),
-                let(t1, call(fibonacci, sub(n, const_(1))),
-                    let(t2, call(fibonacci, sub(n, const_(2))),
-                        add(t1, t2)))));
+    private static Lambda fibonacci() {
+        var fibonacci = var("fibonacci");
+        var t1 = var("t1");
+        var t2 = var("t2");
+        return lambda(arg ->
+            letrec(fibonacci, lambda(n ->
+                        if_(lessThan(n, const_(2)),
+                            const_(1),
+                            let(t1, call(fibonacci, sub(n, const_(1))),
+                                let(t2, call(fibonacci, sub(n, const_(2))),
+                                    add(t1, t2))))),
+                call(fibonacci, arg)));
     }
 
 ## Bytecode of the generic compiled method

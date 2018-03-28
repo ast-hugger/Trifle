@@ -10,25 +10,33 @@ import org.jetbrains.annotations.NotNull;
  * {@link VariableReferenceNode}, which is an atomic expression referencing a variable.
  * Note that a definition is not an expression.
  */
-public class VariableDefinition {
+class VariableDefinition {
     private static final ExpressionType KNOWN_VOID = ExpressionType.known(JvmType.VOID);
     private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     @NotNull private final Variable definition;
-    @NotNull private final RuntimeFunction hostFunction;
+    @NotNull private final FunctionImplementation hostFunction;
     /*internal*/ int genericIndex = -1;
     /*internal*/ int specializedIndex = -1;
     /*internal*/ final ValueProfile profile = new ValueProfile();
     private ExpressionType inferredType = KNOWN_VOID;
     private ExpressionType observedType = UNKNOWN;
 
-    VariableDefinition(@NotNull Variable definition, RuntimeFunction hostFunction) {
+    VariableDefinition(@NotNull Variable definition, FunctionImplementation hostFunction) {
         this.definition = definition;
         this.hostFunction = hostFunction;
     }
 
     public Variable definition() {
         return definition;
+    }
+
+    public boolean isDefinedIn(FunctionImplementation function) {
+        return function == hostFunction;
+    }
+
+    public FunctionImplementation hostFunction() {
+        return hostFunction;
     }
 
     public String name() {
@@ -40,8 +48,6 @@ public class VariableDefinition {
      * where two variables may reuse the same local slot if they are not live at
      * the same time. In specialized code we must segregate variables by their
      * type.
-     *
-     * @see FunctionTranslator.VariableIndexer
      */
     public int genericIndex() {
         return genericIndex;

@@ -22,5 +22,6 @@ for the Fibonacci example. See [early benchmarks and code samples](doc/basic-ben
 
   * Handle call sites with a specialized signature not matching the available specialization.
   * Closures
+  * Think of a story for the top level and a better way of defining recursive functions
  
 
