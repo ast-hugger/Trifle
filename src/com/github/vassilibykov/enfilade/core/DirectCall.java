@@ -12,7 +12,7 @@ import java.lang.invoke.MethodType;
 /**
  * An invokedynamic instruction for a call expression whose function is a direct
  * pointer to another function. The target is encoded as an integer ID in the
- * {@link Environment}, passed as an extra bootstrapper argument.
+ * {@link FunctionRegistry}, passed as an extra bootstrapper argument.
  */
 public class DirectCall {
 
@@ -25,7 +25,7 @@ public class DirectCall {
 
     @SuppressWarnings("unused") // called by generated code
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
-        FunctionImplementation target = Environment.INSTANCE.lookup(targetId);
+        FunctionImplementation target = FunctionRegistry.INSTANCE.lookup(targetId);
         if (target == null) {
             throw new AssertionError("target function ID not found: " + targetId);
         }

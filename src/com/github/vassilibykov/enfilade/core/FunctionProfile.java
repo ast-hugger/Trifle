@@ -2,22 +2,19 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import java.util.stream.Stream;
+import java.util.List;
 
 /**
  * Counts function invocations and records observed types of function
  * arguments and other locals.
  */
 public class FunctionProfile {
-
-    private final VariableDefinition[] methodArguments;
-    private final int methodArity;
+    private final List<VariableDefinition> methodArguments;
     private long invocationCount = 0;
     private final ValueProfile resultProfile = new ValueProfile();
 
-    FunctionProfile(VariableDefinition[] arguments) {
+    FunctionProfile(List<VariableDefinition> arguments) {
         this.methodArguments = arguments;
-        this.methodArity = arguments.length;
     }
 
     public synchronized long invocationCount() {
@@ -30,8 +27,8 @@ public class FunctionProfile {
 
     public synchronized void recordInvocation(Object[] frame) {
         invocationCount++;
-        for (int i = 0; i < methodArity; i++) {
-            methodArguments[i].profile.recordValue(frame[i]);
+        for (var each : methodArguments) {
+            each.profile.recordValue(frame[each.genericIndex]);
         }
     }
 
@@ -40,6 +37,7 @@ public class FunctionProfile {
     }
 
     public boolean canBeSpecialized() {
-        return Stream.of(methodArguments).anyMatch(some -> some.profile.jvmType() != JvmType.REFERENCE);
+        return methodArguments.stream()
+            .anyMatch(some -> some.profile.jvmType() != JvmType.REFERENCE);
     }
 }

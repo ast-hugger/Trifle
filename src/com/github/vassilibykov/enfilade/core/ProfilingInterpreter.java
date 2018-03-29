@@ -6,8 +6,8 @@ public class ProfilingInterpreter extends Interpreter {
     public static final ProfilingInterpreter INSTANCE = new ProfilingInterpreter();
 
     static class ProfilingEvaluator extends Evaluator {
-        ProfilingEvaluator(Object[] frame, Object[][] outerFrames) {
-            super(frame, outerFrames);
+        ProfilingEvaluator(Object[] frame) {
+            super(frame);
         }
 
         @Override
@@ -56,24 +56,24 @@ public class ProfilingInterpreter extends Interpreter {
 
         @Override
         public Object visitLet(LetNode let) {
-            Object value = let.initializer().accept(this);
             VariableDefinition variable = let.variable();
-            frame[variable.genericIndex()] = value;
+            Object value;
+            if (let.isLetrec()) {
+                variable.initValueIn(frame, null);
+                value = let.initializer().accept(this);
+                variable.setValueIn(frame, value);
+            } else {
+                value = let.initializer().accept(this);
+                variable.initValueIn(frame, value);
+            }
             variable.profile.recordValue(value);
             return let.body().accept(this);
         }
 
         @Override
-        public Object visitSetFreeVar(SetFreeVariableNode setNode) {
-            var value = super.visitSetFreeVar(setNode);
-            setNode.variable.profile.recordValue(value);
-            return value;
-        }
-
-        @Override
         public Object visitSetVar(SetVariableNode setVar) {
             var value = super.visitSetVar(setVar);
-            setVar.variable.profile.recordValue(value);
+            setVar.variable().profile().recordValue(value);
             return value;
         }
     }
@@ -86,9 +86,11 @@ public class ProfilingInterpreter extends Interpreter {
     public Object interpret(Closure closure) {
         var implementation = closure.implementation;
         var frame = new Object[implementation.frameSize()];
+        var copiedCount = closure.copiedValues.length;
+        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
         implementation.profile.recordInvocation(frame);
         try {
-            Object result = implementation.body().accept(new ProfilingEvaluator(frame, closure.outerFrames));
+            Object result = implementation.body().accept(new ProfilingEvaluator(frame));
             implementation.profile.recordResult(result);
             return result;
         } catch (ReturnException e) {
@@ -98,13 +100,14 @@ public class ProfilingInterpreter extends Interpreter {
 
     @Override
     public Object interpret(Closure closure, Object arg) {
-        var implementation = closure.implementation;
-        var frame = new Object[implementation.frameSize()];
-        frame[0] = arg;
-        implementation.profile.recordInvocation(frame);
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        System.arraycopy(closure.copiedValues, 0, frame, 0, closure.copiedValues.length);
+        implFunction.parameters().get(0).initValueIn(frame, arg);
+        implFunction.profile.recordInvocation(frame);
         try {
-            Object result = implementation.body().accept(new ProfilingEvaluator(frame, closure.outerFrames));
-            implementation.profile.recordResult(result);
+            Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
+            implFunction.profile.recordResult(result);
             return result;
         } catch (ReturnException e) {
             return e.value;
@@ -113,29 +116,18 @@ public class ProfilingInterpreter extends Interpreter {
 
     @Override
     public Object interpret(Closure closure, Object arg1, Object arg2) {
-        var implementation = closure.implementation;
-        var frame = new Object[implementation.frameSize()];
-        frame[0] = arg1;
-        frame[1] = arg2;
-        implementation.profile.recordInvocation(frame);
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        System.arraycopy(closure.copiedValues, 0, frame, 0, closure.copiedValues.length);
+        implFunction.parameters().get(0).initValueIn(frame, arg1);
+        implFunction.parameters().get(1).initValueIn(frame, arg2);
+        implFunction.profile.recordInvocation(frame);
         try {
-            Object result = implementation.body().accept(new ProfilingEvaluator(frame, closure.outerFrames));
-            implementation.profile.recordResult(result);
+            Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
+            implFunction.profile.recordResult(result);
             return result;
         } catch (ReturnException e) {
             return e.value;
         }
     }
-
-//    @Override
-//    public Object interpretWithArgs(Invocable function, Object[] actualArguments) {
-//        Object[] frame = new Object[function.frameSize()];
-//        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
-//        function.profile().recordInvocation(frame);
-//        try {
-//            return function.body().accept(new ProfilingEvaluator(frame));
-//        } catch (ReturnException e) {
-//            return e.value;
-//        }
-//    }
 }

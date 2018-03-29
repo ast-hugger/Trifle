@@ -4,9 +4,9 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,20 +28,23 @@ class FunctionAnalyzer {
     }
 
     void analyze() {
-        function.body().accept(new ScopeValidator());
-        function.body().accept(new ClosureConverter(function));
-        var variableIndexer = new VariableIndexer(function);
-        variableIndexer.apply();
+        new ScopeValidator().apply();
+        new ClosureConverter(function).apply();
+        new VariableIndexer(function).apply();
     }
 
     /**
      * Verifies that any variable reference is to a variable currently in scope.
      */
     private class ScopeValidator extends EvaluatorNode.VisitorSkeleton<Void> {
-        private final Set<VariableDefinition> scope = new HashSet<>();
+        private final Set<AbstractVariable> scope = new HashSet<>();
 
         private ScopeValidator() {
-            scope.addAll(Arrays.asList(function.arguments()));
+            scope.addAll(function.parameters());
+        }
+
+        void apply() {
+            function.body().accept(this);
         }
 
         /**
@@ -50,7 +53,7 @@ class FunctionAnalyzer {
          */
         @Override
         public Void visitClosure(ClosureNode closure) {
-            var closureArgs = List.of(closure.function().arguments());
+            var closureArgs = closure.function().parameters();
             for (var each : closureArgs) {
                 if (scope.contains(each)) throw new CompilerError("closure argument is already bound: " + each);
             }
@@ -61,13 +64,16 @@ class FunctionAnalyzer {
         }
 
         @Override
-        public Void visitFreeVarReference(FreeVariableReferenceNode varRef) {
-            return visitVarReference(varRef);
+        public Void visitGetVar(GetVariableNode varRef) {
+            if (!scope.contains(varRef.variable())) {
+                throw new CompilerError("referenced variable is not in scope: " + varRef.variable());
+            }
+            return null;
         }
 
         @Override
         public Void visitLet(LetNode let) {
-            VariableDefinition var = let.variable();
+            AbstractVariable var = let.variable();
             if (scope.contains(var)) throw new CompilerError("let variable is already bound: " + var);
             if (let.isLetrec()) {
                 scope.add(var);
@@ -82,59 +88,77 @@ class FunctionAnalyzer {
         }
 
         @Override
-        public Void visitSetFreeVar(SetFreeVariableNode set) {
-            return visitSetVar(set);
-        }
-
-        @Override
         public Void visitSetVar(SetVariableNode set) {
-            if (!scope.contains(set.variable)) {
-                throw new CompilerError("referenced variable is not in scope: " + set.variable);
-            }
-            return null;
-        }
-
-        @Override
-        public Void visitVarReference(VariableReferenceNode varRef) {
-            if (!scope.contains(varRef.variable)) {
-                throw new CompilerError("referenced variable is not in scope: " + varRef);
+            if (!scope.contains(set.variable())) {
+                throw new CompilerError("referenced variable is not in scope: " + set.variable());
             }
             return null;
         }
     }
 
     /**
-     * Analyzes closures nested in the top level function and plans their conversion
-     * into functions with no free variables.
+     * Analyzes closures nested in the top level function, introduces synthetic arguments
+     * to copy down values of free variable references, and rewrites free variable
+     * references to point at the copied down locally available values.
      */
     private class ClosureConverter extends EvaluatorNode.VisitorSkeleton<Void> {
         private final FunctionImplementation thisFunction;
-        private final Set<VariableDefinition> freeVariables = new HashSet<>();
+        /**
+         * At the end of a visit contains all free variables of this function
+         * and of functions nested in it (transitively).
+         */
+        private final Set<AbstractVariable> freeVariables = new HashSet<>();
+        private final Map<VariableDefinition, CopiedVariable> rewrittenVariables = new HashMap<>();
 
         ClosureConverter(FunctionImplementation thisFunction) {
             this.thisFunction = thisFunction;
         }
 
-        public Set<VariableDefinition> freeVariables() {
-            return freeVariables;
+        void apply() {
+            thisFunction.body().accept(this);
+            thisFunction.setSyntheticParameters(rewrittenVariables.values());
         }
 
         @Override
         public Void visitClosure(ClosureNode closure) {
             var nestedConverter = new ClosureConverter(closure.function());
-            closure.function().body().accept(nestedConverter);
-            closure.function().setFreeVariables(nestedConverter.freeVariables);
-            nestedConverter.freeVariables.stream()
-                .filter(some -> some.hostFunction() != thisFunction)
-                .forEach(freeVariables::add);
+            nestedConverter.apply();
+            // Now 'closure.function()' has its 'syntheticParameters' set; they should be processed as
+            // any other variable reference in this function.
+            for (var each : closure.function().syntheticParameters()) {
+                if (each.original().hostFunction() == thisFunction) {
+                    each.setSupplier(each.original());
+                } else {
+                    var copiedVariable = rewriteFreeVariable(each.original());
+                    each.setSupplier(copiedVariable);
+                }
+            }
             return null;
         }
 
         @Override
-        public Void visitVarReference(VariableReferenceNode var) {
-            var variable = var.variable;
-            if (variable.hostFunction() != thisFunction) freeVariables.add(variable);
+        public Void visitGetVar(GetVariableNode getVar) {
+            var variable = getVar.variable();
+            if (variable.hostFunction() != thisFunction) {
+                var copiedVariable = rewriteFreeVariable(variable);
+                getVar.replaceVariable(copiedVariable);
+            }
             return null;
+        }
+
+        @Override
+        public Void visitSetVar(SetVariableNode setVar) {
+            var variable = setVar.variable();
+            if (variable.hostFunction() != thisFunction) {
+                var copiedVariable = rewriteFreeVariable(variable);
+                setVar.replaceVariable(copiedVariable);
+            }
+            return null;
+        }
+
+        private CopiedVariable rewriteFreeVariable(AbstractVariable var) {
+            var definition = (VariableDefinition) var; // cast must succeed for any free variable
+            return rewrittenVariables.computeIfAbsent(definition, k -> new CopiedVariable(k, thisFunction));
         }
     }
 
@@ -150,21 +174,18 @@ class FunctionAnalyzer {
 
         private VariableIndexer(FunctionImplementation function) {
             thisFunction = function;
-            var arguments = function.arguments();
-            for (int i = 0; i < arguments.length; i++) {
+            var arguments = function.allParameters();
+            int i;
+            for (i = 0; i < arguments.length; i++) {
                 arguments[i].genericIndex = i;
                 arguments[i].specializedIndex = i;
             }
-            nextIndex = arguments.length;
+            nextIndex = i;
         }
 
         public void apply() {
             thisFunction.body().accept(this);
             thisFunction.finishInitialization(nextIndex);
-        }
-
-        public int frameSize() {
-            return nextIndex;
         }
 
         /**
@@ -173,7 +194,11 @@ class FunctionAnalyzer {
          */
         @Override
         public Void visitClosure(ClosureNode closure) {
-            new VariableIndexer(closure.function()).apply();
+            var nestedIndexer = new VariableIndexer(closure.function());
+            nestedIndexer.apply();
+            closure.indicesToCopy = closure.function().syntheticParameters().stream()
+                .mapToInt(each -> each.supplier().genericIndex)
+                .toArray();
             return null;
         }
 

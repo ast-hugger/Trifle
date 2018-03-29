@@ -1,0 +1,89 @@
+// Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
+
+package com.github.vassilibykov.enfilade.core;
+
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * A synthetic function parameter introduced to receive a copied down value of a free
+ * variable. The {@link #original} is the original free variable copied down to this
+ * one. The copied variable appears in {@link FunctionImplementation#allParameters}. By the
+ * time copied variables are created, the {@link AbstractVariable#isBoxed} status of real
+ * variables should already be computed.
+ *
+ * <p>For type profiling and inferencing, copied variables always delegate to their originals.
+ */
+class CopiedVariable extends AbstractVariable {
+    @NotNull private final VariableDefinition original;
+    private AbstractVariable supplier;
+
+    CopiedVariable(@NotNull VariableDefinition original, FunctionImplementation hostFunction) {
+        super(hostFunction);
+        this.original = original;
+        this.isBoxed = original.isBoxed();
+    }
+
+    /**
+     * The original free variable whose reference was rewritten to refer to this one.
+     */
+    public VariableDefinition original() {
+        return original;
+    }
+
+    /**
+     * The variable, either defined or copied in the next closure level up
+     * from this variable's host, which holds the value copied into this one.
+     */
+    public AbstractVariable supplier() {
+        return supplier;
+    }
+
+    public void setSupplier(AbstractVariable supplier) {
+        this.supplier = supplier;
+    }
+
+    @Override
+    ValueProfile profile() {
+        return original.profile;
+    }
+
+    @Override
+    public JvmType specializationType() {
+        return original.specializationType();
+    }
+
+    @Override
+    ExpressionType inferredType() {
+        return original.inferredType();
+    }
+
+    @Override
+    ExpressionType observedType() {
+        return original.observedType();
+    }
+
+    @Override
+    void setInferredType(@NotNull ExpressionType expressionType) {
+        original.setInferredType(expressionType);
+    }
+
+    @Override
+    void setObservedType(@NotNull ExpressionType type) {
+        original.setObservedType(type);
+    }
+
+    @Override
+    boolean unifyInferredTypeWith(ExpressionType type) {
+        return original.unifyInferredTypeWith(type);
+    }
+
+    @Override
+    boolean unifyObservedTypeWith(ExpressionType type) {
+        return original.unifyObservedTypeWith(type);
+    }
+
+    @Override
+    public String toString() {
+        return "copied " + original.toString();
+    }
+}

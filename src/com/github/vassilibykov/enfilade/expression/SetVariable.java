@@ -26,6 +26,11 @@ public class SetVariable extends ComplexExpression {
     }
 
     @Override
+    public String toString() {
+        return "set(" + variable + ", " + value + ")";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitSetVariable(this);
     }

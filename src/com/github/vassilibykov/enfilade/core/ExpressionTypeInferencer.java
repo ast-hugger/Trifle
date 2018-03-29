@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import java.util.stream.Stream;
-
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
@@ -25,7 +23,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> {
 
     static void inferTypesIn(FunctionImplementation function) {
-        Stream.of(function.arguments()).forEach(
+        function.parameters().forEach(
             each -> each.setInferredType(ExpressionType.unknown()));
         ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
         do {
@@ -73,11 +71,6 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitConst(ConstNode aConst) {
         return andSetIn(aConst, ExpressionType.known(JvmType.ofObject(aConst.value())));
-    }
-
-    @Override
-    public ExpressionType visitFreeVarReference(FreeVariableReferenceNode varRef) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -137,11 +130,6 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitSetFreeVar(SetFreeVariableNode setVar) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
     public ExpressionType visitSetVar(SetVariableNode set) {
         ExpressionType valueType = set.value().accept(this);
         if (set.variable().unifyInferredTypeWith(valueType)) {
@@ -151,8 +139,8 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitVarReference(VariableReferenceNode varRef) {
-        ExpressionType inferredType = varRef.variable.inferredType();
+    public ExpressionType visitGetVar(GetVariableNode varRef) {
+        ExpressionType inferredType = varRef.variable().inferredType();
         if (varRef.unifyInferredTypeWith(inferredType)) {
             needsRevisiting = true;
         }

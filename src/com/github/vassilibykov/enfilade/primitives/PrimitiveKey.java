@@ -14,17 +14,25 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 class PrimitiveKey implements PrimitiveCallTarget {
+    private final String name;
     private final Function<EvaluatorNode, Primitive1Node> arity1Factory;
     private final BiFunction<EvaluatorNode, EvaluatorNode, Primitive2Node> arity2Factory;
 
-    PrimitiveKey(@NotNull Function<EvaluatorNode, Primitive1Node> nodeMaker) {
+    PrimitiveKey(@NotNull String name, @NotNull Function<EvaluatorNode, Primitive1Node> nodeMaker) {
+        this.name = name;
         this.arity1Factory = nodeMaker;
         this.arity2Factory = null;
     }
 
-    PrimitiveKey(@NotNull BiFunction<EvaluatorNode, EvaluatorNode, Primitive2Node> nodeMaker) {
+    PrimitiveKey(@NotNull String name, @NotNull BiFunction<EvaluatorNode, EvaluatorNode, Primitive2Node> nodeMaker) {
+        this.name = name;
         this.arity1Factory = null;
         this.arity2Factory = nodeMaker;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override

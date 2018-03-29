@@ -14,6 +14,11 @@ public class LetRec extends Let {
     }
 
     @Override
+    public String toString() {
+        return "letrec(" + variable() + " " + body() + ")";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitLetRec(this);
     }

@@ -65,7 +65,7 @@ public class ExpressionLanguage {
         return LetRec.with(variable, initializer, body);
     }
 
-    public static Block prog(Expression... expressions) {
+    public static Block block(Expression... expressions) {
         return Block.with(List.of(expressions));
     }
 

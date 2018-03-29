@@ -18,6 +18,11 @@ public class Const extends AtomicExpression {
     }
 
     @Override
+    public String toString() {
+        return "const(" + value + ")";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitConst(this);
     }

@@ -11,15 +11,12 @@ import org.jetbrains.annotations.NotNull;
 public class Closure {
     @NotNull /*internal*/ final FunctionImplementation implementation;
     @NotNull /*internal*/ final Object[][] outerFrames;
+    @NotNull /*internal*/ final Object[] copiedValues;
 
-    Closure(@NotNull FunctionImplementation implementation, @NotNull Object[][] outerFrames) {
-        this.implementation = implementation;
-        this.outerFrames = outerFrames;
-    }
-
-    Closure(@NotNull FunctionImplementation implementation) {
+    Closure(@NotNull FunctionImplementation implementation, @NotNull Object[] copiedValues) {
         this.implementation = implementation;
         this.outerFrames = new Object[0][];
+        this.copiedValues = copiedValues;
     }
 
     public Object invoke() {

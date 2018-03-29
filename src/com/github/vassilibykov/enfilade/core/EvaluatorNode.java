@@ -27,15 +27,13 @@ public abstract class EvaluatorNode {
         T visitCall2(CallNode.Call2 call);
         T visitClosure(ClosureNode closure);
         T visitConst(ConstNode aConst);
-        T visitFreeVarReference(FreeVariableReferenceNode varRef);
+        T visitGetVar(GetVariableNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
         T visitPrimitive1(Primitive1Node primitive);
         T visitPrimitive2(Primitive2Node primitive);
         T visitRet(ReturnNode ret);
-        T visitSetFreeVar(SetFreeVariableNode setVar);
         T visitSetVar(SetVariableNode setVar);
-        T visitVarReference(VariableReferenceNode varRef);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -47,17 +45,20 @@ public abstract class EvaluatorNode {
 
         @Override
         public T visitCall0(CallNode.Call0 call) {
+            call.function().accept(this);
             return null;
         }
 
         @Override
         public T visitCall1(CallNode.Call1 call) {
+            call.function().accept(this);
             call.arg().accept(this);
             return null;
         }
 
         @Override
         public T visitCall2(CallNode.Call2 call) {
+            call.function().accept(this);
             call.arg1().accept(this);
             call.arg2().accept(this);
             return null;
@@ -75,7 +76,7 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitFreeVarReference(FreeVariableReferenceNode varRef) {
+        public T visitGetVar(GetVariableNode var) {
             return null;
         }
 
@@ -113,19 +114,8 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitSetFreeVar(SetFreeVariableNode set) {
-            set.value().accept(this);
-            return null;
-        }
-
-        @Override
         public T visitSetVar(SetVariableNode set) {
             set.value().accept(this);
-            return null;
-        }
-
-        @Override
-        public T visitVarReference(VariableReferenceNode var) {
             return null;
         }
 

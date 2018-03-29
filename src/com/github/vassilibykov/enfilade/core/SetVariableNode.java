@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  * is also the value of this expression, must be an atomic expression.
  */
 class SetVariableNode extends EvaluatorNode {
-    @NotNull /*internal*/ final VariableDefinition variable;
+    @NotNull private AbstractVariable variable;
     @NotNull private final EvaluatorNode value;
 
     SetVariableNode(@NotNull VariableDefinition variable, @NotNull EvaluatorNode value) {
@@ -17,8 +17,12 @@ class SetVariableNode extends EvaluatorNode {
         this.value = value;
     }
 
-    public VariableDefinition variable() {
+    public AbstractVariable variable() {
         return variable;
+    }
+
+    void replaceVariable(@NotNull AbstractVariable variable) {
+        this.variable = variable;
     }
 
     public EvaluatorNode value() {

@@ -32,6 +32,11 @@ public class If extends ComplexExpression {
     }
 
     @Override
+    public String toString() {
+        return "if(" + condition + ") ...";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitIf(this);
     }

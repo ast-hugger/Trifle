@@ -13,7 +13,7 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.con
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.let;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.prog;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.block;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.set;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.var;
@@ -55,7 +55,7 @@ public class TranslatorTest {
     public void testSetVar() {
         Lambda function = lambda(
             arg ->
-                prog(
+                block(
                     set(arg, const_(42)),
                     arg));
         assertEquals(42, interpretAsACode(function, 3));

@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import java.util.stream.Stream;
-
 /**
  * Analyzes a function body after it has been evaluated a number of times by the
  * {@link ProfilingInterpreter}. Populates evaluator nodes with observed types.
@@ -41,7 +39,7 @@ import java.util.stream.Stream;
  *
  * <p>The type of a {@code let} expression is the type of its body.
  *
- * <p>The type of a {@code prog} expression is the type of its last
+ * <p>The type of a {@code block} expression is the type of its last
  * subexpression, or a deterministic REFERENCE type if the expression is empty,
  * to account for the {@code null} value it evaluates to in that case.
  *
@@ -66,8 +64,8 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
 
     static void analyze(FunctionImplementation function) {
         var observer = new ExpressionTypeObserver(function);
-        Stream.of(function.arguments()).forEach(
-            each -> each.setObservedType(each.profile.observedType()));
+        function.parameters().forEach(
+            each -> each.setObservedType(each.profile().observedType()));
         function.body().accept(observer);
     }
 
@@ -125,11 +123,6 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     @Override
     public ExpressionType visitConst(ConstNode aConst) {
         return setType(aConst, aConst.inferredType());
-    }
-
-    @Override
-    public ExpressionType visitFreeVarReference(FreeVariableReferenceNode varRef) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -199,15 +192,10 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
     }
 
     @Override
-    public ExpressionType visitVarReference(VariableReferenceNode varRef) {
-        var observed = varRef.variable.observedType();
+    public ExpressionType visitGetVar(GetVariableNode varRef) {
+        var observed = varRef.variable().observedType();
         varRef.unifyObservedTypeWith(observed);
         return observed;
-    }
-
-    @Override
-    public ExpressionType visitSetFreeVar(SetFreeVariableNode setVar) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     /**

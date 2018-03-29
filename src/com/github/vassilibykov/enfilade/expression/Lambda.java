@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class Lambda extends AtomicExpression {
     public static Lambda with(List<Variable> arguments, Expression body) {
@@ -39,6 +40,15 @@ public class Lambda extends AtomicExpression {
 
     public Expression body() {
         return body;
+    }
+
+    @Override
+    public String toString() {
+        return "lambda(["
+            + arguments.stream().map(each -> each.toString()).collect(Collectors.joining(" ,"))
+            + "] "
+            + body
+            + ")";
     }
 
     @Override

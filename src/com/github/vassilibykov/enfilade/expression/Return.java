@@ -20,6 +20,11 @@ public class Return extends ComplexExpression {
     }
 
     @Override
+    public String toString() {
+        return "return(" + value + ")";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitReturn(this);
     }

@@ -43,7 +43,7 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
      */
     @SuppressWarnings("unused") // called by generated code
     public static ACodeInterpreter forRecovery(int initialPC, Object[] frame, int functionId) {
-        FunctionImplementation function = Objects.requireNonNull(Environment.INSTANCE.lookup(functionId),
+        FunctionImplementation function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId),
             "there is no function with ID " + functionId);
         ACodeInstruction[] code = Objects.requireNonNull(function.acode(),
             "function has no acode associated with it");
@@ -56,7 +56,6 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
 
     @NotNull private final ACodeInstruction[] code;
     @NotNull private final Object[] frame;
-    private final Object[][] outerFrames = null; // FIXME handle this properly
     private final Interpreter.Evaluator evaluator;
     private int pc;
     private Object register;
@@ -65,7 +64,7 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
         this.code = code;
         this.frame = frame;
         this.pc = initialPc;
-        this.evaluator = new Interpreter.Evaluator(frame, outerFrames);
+        this.evaluator = new Interpreter.Evaluator(frame);
     }
 
     public Object interpret() {

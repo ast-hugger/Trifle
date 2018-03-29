@@ -4,8 +4,6 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.objectweb.asm.MethodVisitor;
 
-import java.lang.invoke.MethodType;
-
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -25,7 +23,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        int id = Environment.INSTANCE.lookup(call.function());
+//        int id = FunctionRegistry.INSTANCE.lookup(call.function());
 //        MethodType callSiteType = MethodType.methodType(Object.class);
 //        writer.invokeDynamic(
 //            DirectCall.BOOTSTRAP,
@@ -40,7 +38,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
 //        JvmType argType = call.arg().accept(this);
 //        writer.adaptType(argType, REFERENCE);
-//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
 //        MethodType callSiteType = MethodType.methodType(Object.class, Object.class);
 //        writer.invokeDynamic(
 //            DirectCall.BOOTSTRAP,
@@ -57,7 +55,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
 //        writer.adaptType(arg1Type, REFERENCE);
 //        JvmType arg2Type = call.arg2().accept(this);
 //        writer.adaptType(arg2Type, REFERENCE);
-//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
 //        MethodType callSiteType = MethodType.methodType(Object.class, Object.class, Object.class);
 //        writer.invokeDynamic(
 //            DirectCall.BOOTSTRAP,
@@ -84,11 +82,6 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
-    }
-
-    @Override
-    public JvmType visitFreeVarReference(FreeVariableReferenceNode varRef) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -151,23 +144,18 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitSetFreeVar(SetFreeVariableNode setFreeVariableNode) {
-        return null;
-    }
-
-    @Override
     public JvmType visitSetVar(SetVariableNode set) {
         JvmType varType = set.value().accept(this);
         writer
             .adaptType(varType, REFERENCE)
             .dup()
-            .storeLocal(REFERENCE, set.variable.genericIndex());
+            .storeLocal(REFERENCE, set.variable().genericIndex());
         return REFERENCE;
     }
 
     @Override
-    public JvmType visitVarReference(VariableReferenceNode var) {
-        writer.loadLocal(REFERENCE, var.variable.genericIndex());
+    public JvmType visitGetVar(GetVariableNode var) {
+        writer.loadLocal(REFERENCE, var.variable().genericIndex());
         return REFERENCE;
     }
 }

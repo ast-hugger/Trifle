@@ -104,11 +104,6 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitFreeVarReference(FreeVariableReferenceNode varRef) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
     public Void visitIf(IfNode anIf) {
         printLine(() -> {
             output.append("if ");
@@ -168,17 +163,12 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitSetFreeVar(SetFreeVariableNode setFreeVariableNode) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
     public Void visitSetVar(SetVariableNode set) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
-    public Void visitVarReference(VariableReferenceNode varRef) {
+    public Void visitGetVar(GetVariableNode varRef) {
         printLine(() -> {
             output.append(varRef.toString());
             printNodeProfile(varRef);

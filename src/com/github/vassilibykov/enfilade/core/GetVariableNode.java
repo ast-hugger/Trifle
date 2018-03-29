@@ -18,20 +18,24 @@ import org.jetbrains.annotations.NotNull;
  * it is detected if a variable does not appear as an argument or a let binding
  * exactly once, as required.
  */
-class VariableReferenceNode extends EvaluatorNode {
-    @NotNull /*internal*/ final VariableDefinition variable;
+class GetVariableNode extends EvaluatorNode {
+    @NotNull private AbstractVariable variable;
 
-    public VariableReferenceNode(@NotNull VariableDefinition variable) {
+    public GetVariableNode(@NotNull VariableDefinition variable) {
         this.variable = variable;
     }
 
-    public VariableDefinition variable() {
+    public AbstractVariable variable() {
         return variable;
+    }
+
+    void replaceVariable(@NotNull AbstractVariable variable) {
+        this.variable = variable;
     }
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitVarReference(this);
+        return visitor.visitGetVar(this);
     }
 
     public String toString() {

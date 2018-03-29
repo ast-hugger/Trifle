@@ -1,4 +1,4 @@
-## Benchmark function thisLambda in Enfilade
+## Benchmark function definition in Enfilade
         
     private static Lambda fibonacci() {
         var fibonacci = var("fibonacci");
@@ -15,6 +15,8 @@
     }
 
 ## Bytecode of the generic compiled method
+
+For an earlier version of the benchmark with a direct reference to the recursive call target.
 
     public static final java.lang.Object generic(java.lang.Object);
     Code:

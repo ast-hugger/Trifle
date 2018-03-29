@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade;
 
-import com.github.vassilibykov.enfilade.core.Environment;
+import com.github.vassilibykov.enfilade.core.FunctionRegistry;
 import com.github.vassilibykov.enfilade.core.FunctionImplementation;
 import com.github.vassilibykov.enfilade.core.FunctionTranslator;
 import com.github.vassilibykov.enfilade.expression.Lambda;
@@ -16,6 +16,6 @@ public class Enfilade {
     }
 
     public static Optional<FunctionImplementation> find(Lambda sourceFunction) {
-        return Optional.ofNullable(Environment.INSTANCE.lookup(sourceFunction));
+        return Optional.ofNullable(FunctionRegistry.INSTANCE.lookup(sourceFunction));
     }
 }

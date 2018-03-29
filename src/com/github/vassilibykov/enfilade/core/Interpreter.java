@@ -15,11 +15,9 @@ public class Interpreter {
 
     public static class Evaluator implements EvaluatorNode.Visitor<Object> {
         protected final Object[] frame;
-        protected Object[][] outerFrames;
 
-        public Evaluator(Object[] frame, Object[][] outerFrames) {
+        public Evaluator(Object[] frame) {
             this.frame = frame;
-            this.outerFrames = outerFrames;
         }
 
         @Override
@@ -45,20 +43,16 @@ public class Interpreter {
 
         @Override
         public Object visitClosure(ClosureNode closure) {
-            var frames = new Object[outerFrames.length + 1][];
-            frames[0] = frame;
-            System.arraycopy(outerFrames, 0, frames, 1, outerFrames.length);
-            return new Closure(closure.function(), frames);
+            int[] indicesToCopy = closure.indicesToCopy;
+            var size = indicesToCopy.length;
+            var copies = new Object[size];
+            for (int i = 0; i < size; i++) copies[i] = frame[indicesToCopy[i]];
+            return new Closure(closure.function(), copies);
         }
 
         @Override
         public Object visitConst(ConstNode aConst) {
             return aConst.value();
-        }
-
-        @Override
-        public Object visitFreeVarReference(FreeVariableReferenceNode varRef) {
-            return outerFrames[varRef.frameIndex()][varRef.variable.genericIndex()];
         }
 
         @Override
@@ -73,9 +67,15 @@ public class Interpreter {
 
         @Override
         public Object visitLet(LetNode let) {
-            Object value = let.initializer().accept(this);
-            VariableDefinition variable = let.variable();
-            frame[variable.genericIndex()] = value;
+            var var = let.variable();
+            if (let.isLetrec()) {
+                var.initValueIn(frame, null);
+                var value = let.initializer().accept(this);
+                var.setValueIn(frame, value);
+            } else {
+                var value = let.initializer().accept(this);
+                var.initValueIn(frame, value);
+            }
             return let.body().accept(this);
         }
 
@@ -106,22 +106,15 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitSetFreeVar(SetFreeVariableNode set) {
-            var value = set.value().accept(this);
-            outerFrames[set.frameIndex()][set.variable.genericIndex] = value;
-            return value;
-        }
-
-        @Override
         public Object visitSetVar(SetVariableNode set) {
             var value = set.value().accept(this);
-            frame[set.variable.genericIndex] = value;
+            set.variable().setValueIn(frame, value);
             return value;
         }
 
         @Override
-        public Object visitVarReference(VariableReferenceNode varRef) {
-            return frame[varRef.variable.genericIndex()];
+        public Object visitGetVar(GetVariableNode varRef) {
+            return varRef.variable().getValueIn(frame);
         }
     }
 
@@ -130,45 +123,41 @@ public class Interpreter {
      */
 
     public Object interpret(Closure closure) {
-        var implementation = closure.implementation;
-        var frame = new Object[implementation.frameSize()];
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        var copiedCount = closure.copiedValues.length;
+        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
         try {
-            return implementation.body().accept(new Evaluator(frame, closure.outerFrames));
+            return implFunction.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
     public Object interpret(Closure closure, Object arg) {
-        var implementation = closure.implementation;
-        var frame = new Object[implementation.frameSize()];
-        frame[0] = arg;
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        var copiedCount = closure.copiedValues.length;
+        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
+        implFunction.parameters().get(0).initValueIn(frame, arg);
         try {
-            return implementation.body().accept(new Evaluator(frame, closure.outerFrames));
+            return implFunction.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
 
     public Object interpret(Closure closure, Object arg1, Object arg2) {
-        var implementation = closure.implementation;
-        var frame = new Object[implementation.frameSize()];
-        frame[0] = arg1;
-        frame[1] = arg2;
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        var copiedCount = closure.copiedValues.length;
+        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
+        implFunction.parameters().get(0).initValueIn(frame, arg1);
+        implFunction.parameters().get(1).initValueIn(frame, arg2);
         try {
-            return implementation.body().accept(new Evaluator(frame, closure.outerFrames));
+            return implFunction.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }
     }
-
-//    public Object interpretWithArgs(Function  invocable, Object[] actualArguments) {
-//        var frame = new Object[invocable.localsCount()];
-//        System.arraycopy(actualArguments, 0, frame, 0, actualArguments.length);
-//        try {
-//            return invocable.body().accept(new Evaluator(frame, invocable.outerFrames()));
-//        } catch (ReturnException e) {
-//            return e.value;
-//        }
-//    }
 }

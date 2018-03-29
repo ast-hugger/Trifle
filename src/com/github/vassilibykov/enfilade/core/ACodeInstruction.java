@@ -168,9 +168,9 @@ public abstract class ACodeInstruction {
      * Store the value of the register in the specified local variable.
      */
     public static class Store extends ACodeInstruction {
-        @NotNull /*internal*/ final VariableDefinition variable;
+        @NotNull /*internal*/ final AbstractVariable variable;
 
-        Store(@NotNull VariableDefinition variable) {
+        Store(@NotNull AbstractVariable variable) {
             this.variable = variable;
         }
 

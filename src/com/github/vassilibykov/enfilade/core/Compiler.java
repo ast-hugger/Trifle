@@ -11,7 +11,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.invoke.MethodType;
-import java.util.stream.Stream;
 
 import static org.objectweb.asm.Opcodes.ACC_FINAL;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
@@ -155,7 +154,7 @@ public class Compiler {
     }
 
     private MethodType computeSpecializationType() {
-        Class<?>[] argClasses = Stream.of(function.arguments())
+        Class<?>[] argClasses = function.parameters().stream()
             .map(var -> representativeType(var.observedType()))
             .toArray(Class[]::new);
         return MethodType.methodType(

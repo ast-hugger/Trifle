@@ -14,8 +14,8 @@ import java.util.Map;
  * Maintains mapping between {@link Lambda}s and {@link FunctionImplementation}s they have been
  * translated to, as well as between function IDs and functions.
  */
-public class Environment {
-    public static final Environment INSTANCE = new Environment();
+public class FunctionRegistry {
+    public static final FunctionRegistry INSTANCE = new FunctionRegistry();
 
     /*
         Instance
@@ -24,7 +24,7 @@ public class Environment {
     private final List<FunctionImplementation> functionsById = new ArrayList<>();
     private final Map<Lambda, FunctionImplementation> functionsByDefinition = new HashMap<>();
 
-    private Environment() {}
+    private FunctionRegistry() {}
 
     public void compile(List<Lambda> functions) {
         functions.forEach(FunctionTranslator::translate);

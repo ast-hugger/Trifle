@@ -28,7 +28,7 @@ public class InterpreterProfilingTests {
     public void testInvocationsCount() {
         Lambda callee = ExpressionLanguage.lambda(() -> const_(42));
         Lambda caller = ExpressionLanguage.lambda(() ->
-            prog(
+            block(
                 call(callee),
                 call(callee)));
         Closure runnableCallee = FunctionTranslator.translate(callee);
@@ -47,7 +47,7 @@ public class InterpreterProfilingTests {
         Lambda function = Lambda.with(List.of(arg), arg);
         Variable arg2 = var("arg2");
         Lambda function2 = Lambda.with(List.of(arg2),
-            prog(
+            block(
                 call(function, arg2),
                 call(function, arg2)));
         Closure runnable1 = FunctionTranslator.translate(function);
@@ -58,10 +58,10 @@ public class InterpreterProfilingTests {
         for (int i = 0; i < 4; i++) {
             runnable2.invoke(42);
         }
-        assertEquals(3, runnable2.implementation.arguments()[0].profile.referenceCases());
-        assertEquals(4, runnable2.implementation.arguments()[0].profile.intCases());
-        assertEquals(6, runnable1.implementation.arguments()[0].profile.referenceCases());
-        assertEquals(8, runnable1.implementation.arguments()[0].profile.intCases());
+        assertEquals(3, runnable2.implementation.parameters().get(0).profile.referenceCases());
+        assertEquals(4, runnable2.implementation.parameters().get(0).profile.intCases());
+        assertEquals(6, runnable1.implementation.parameters().get(0).profile.referenceCases());
+        assertEquals(8, runnable1.implementation.parameters().get(0).profile.intCases());
     }
 
     @Test

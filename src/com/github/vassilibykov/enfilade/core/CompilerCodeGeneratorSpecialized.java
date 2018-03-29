@@ -7,14 +7,12 @@ import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
-import java.lang.invoke.MethodType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
@@ -25,16 +23,16 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     private final FunctionImplementation function;
     private final GhostWriter writer;
     private final Deque<JvmType> continuationTypes = new ArrayDeque<>();
-    private final List<VariableDefinition> liveLocals = new ArrayList<>();
+    private final List<AbstractVariable> liveLocals = new ArrayList<>();
     private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
     private final JvmType functionReturnType;
 
     private static class SquarePegHandler {
         private final Label handlerStart;
-        private final List<VariableDefinition> capturedLocals;
+        private final List<AbstractVariable> capturedLocals;
         private final int acodeInitialPC;
 
-        private SquarePegHandler(Label handlerStart, List<VariableDefinition> capturedLocals, int acodeInitialPC) {
+        private SquarePegHandler(Label handlerStart, List<AbstractVariable> capturedLocals, int acodeInitialPC) {
             this.handlerStart = handlerStart;
             this.capturedLocals = capturedLocals;
             this.acodeInitialPC = acodeInitialPC;
@@ -142,7 +140,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
 //        JvmType returnType = call.specializationType();
 //        MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
 //        writer.invokeDynamic(
@@ -162,7 +160,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         // to fix this.
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
 //        call.arg().accept(this);
-//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
 //        JvmType returnType = call.specializationType();
 //        MethodType callSiteType = MethodType.methodType(
 //            returnType.representativeClass(),
@@ -181,7 +179,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
 //        call.arg1().accept(this);
 //        call.arg2().accept(this);
-//        int id = Environment.INSTANCE.lookup(call.function().implementation);
+//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
 //        JvmType returnType = call.specializationType();
 //        MethodType callSiteType = MethodType.methodType(
 //            returnType.representativeClass(),
@@ -214,11 +212,6 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
             throw new CompilerError("unexpected const value: " + value);
         }
         return null;
-    }
-
-    @Override
-    public JvmType visitFreeVarReference(FreeVariableReferenceNode varRef) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 
     @Override
@@ -300,13 +293,8 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitSetFreeVar(SetFreeVariableNode setVar) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
     public JvmType visitSetVar(SetVariableNode set) {
-        VariableDefinition var = set.variable;
+        var var = set.variable();
         JvmType varType = var.specializationType();
         generateExpecting(varType, set.value());
         writer
@@ -316,9 +304,9 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitVarReference(VariableReferenceNode varRef) {
-        JvmType varType = varRef.variable.specializationType();
-        writer.loadLocal(varType, varRef.variable.specializedIndex());
+    public JvmType visitGetVar(GetVariableNode varRef) {
+        JvmType varType = varRef.variable().specializationType();
+        writer.loadLocal(varType, varRef.variable().specializedIndex());
         assertPassage(varType, currentContinuationType());
         return null;
     }
@@ -419,7 +407,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         handler.capturedLocals.forEach(this::storeInFrameReplica);
     }
 
-    private void storeInFrameReplica(VariableDefinition local) {
+    private void storeInFrameReplica(AbstractVariable local) {
         JvmType localType = local.specializationType();
         writer.storeArray(local.specializedIndex(), () -> {
             writer.loadLocal(localType, local.specializedIndex());
@@ -430,10 +418,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     private void generateEpilogue(Label epilogueStart) {
         writer.asm().visitLabel(epilogueStart);
         // stack: SPE, int initialPC, Object[] frame
-        Stream.of(function.arguments()).forEach(this::storeInFrameReplica);
+        function.parameters().forEach(this::storeInFrameReplica);
         // stack: SPE, int initialPC, Object[] frame
         writer
-            .loadInt(Environment.INSTANCE.lookup(function))
+            .loadInt(FunctionRegistry.INSTANCE.lookup(function))
             // stack: SPE, int initialPC, Object[] frame, int functionId
             .invokeStatic(ACodeInterpreter.class, "forRecovery", ACodeInterpreter.class, int.class, Object[].class, int.class)
             // stack: SPE, Interpreter

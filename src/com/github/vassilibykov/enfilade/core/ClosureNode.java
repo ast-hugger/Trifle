@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 class ClosureNode extends EvaluatorNode {
     @NotNull private final Lambda definition;
     @NotNull private final FunctionImplementation function;
+    /*internal*/ int[] indicesToCopy;
 
     ClosureNode(@NotNull Lambda definition, @NotNull FunctionImplementation function) {
         this.definition = definition;

@@ -16,6 +16,7 @@ import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -23,15 +24,35 @@ import java.util.stream.Collectors;
  * Translates a pure function definition ({@link Lambda}) into an equivalent executable
  * {@link FunctionImplementation}. A translator is applied to a top-level lambda of function
  * definition. Any nested lambdas are processed by the same translator.
+ *
+ * <p>The following are translation stages performed by this class and by {@link FunctionAnalyzer}:
+ * <ol>
+ *     <li>For the top-level and all nested lambda expressions, a {@link FunctionImplementation}
+ *     instance is created. {@link LambdaTranslator} in this class creates a tree of
+ *     {@link EvaluatorNode}s equivalent to the original expressions. {@link VariableDefinition}s
+ *     have their {@link VariableDefinition#isReferencedNonlocally} and
+ *     {@link VariableDefinition#isMutable} properties set according to the structure of the source.</li>
+ *     <li>Scope structure is validated by {@link FunctionAnalyzer.ScopeValidator} to ensure
+ *     any variable references are in lexical scope of their variable definitions, and
+ *     that variable definitions are not multiply bound in the original expression.</li>
+ *     <li>Closure conversion is performed by {@link FunctionAnalyzer.ClosureConverter}, rewriting
+ *     any free variable reference in a closure with a reference to a local synthetic parameter added
+ *     to the closure. This step creates a number of {@link CopiedVariable} instances to represent
+ *     the synthetic parameters, and replaces with them any references to {@link VariableDefinition}s
+ *     from outer scopes.</li>
+ *     <li>Variable indices are allocated to all variables of all functions, and frame sizes of all
+ *     function are computed.</li>
+ * </ol>
+ *
  */
 public class FunctionTranslator {
 
     public static Closure translate(Lambda lambda) {
-        var implementation = Environment.INSTANCE.lookupOrMake(lambda);
+        var implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
         var translator = new FunctionTranslator(lambda, implementation);
         translator.translate();
         FunctionAnalyzer.analyze(implementation); // finishesInitialization
-        return new Closure(implementation);
+        return new Closure(implementation, new Object[0]);
     }
 
     /*
@@ -56,7 +77,7 @@ public class FunctionTranslator {
     private class LambdaTranslator implements Visitor<EvaluatorNode> {
         private final Lambda thisLambda;
         private final FunctionImplementation thisFunction;
-        private VariableDefinition[] arguments;
+        private List<VariableDefinition> arguments;
 
         private LambdaTranslator(Lambda thisLambda, int depth, FunctionImplementation thisFunction) {
             this.thisLambda = thisLambda;
@@ -67,8 +88,8 @@ public class FunctionTranslator {
         void translate() {
             arguments = thisLambda.arguments().stream()
                 .map(each -> variableDefinitions.computeIfAbsent(each,
-                    definition -> new VariableDefinition(definition, this.thisFunction)))
-                .toArray(VariableDefinition[]::new);
+                    definition -> new VariableDefinition(definition, thisFunction)))
+                .collect(Collectors.toList());
             var body = thisLambda.body().accept(this);
             thisFunction.partiallyInitialize(arguments, body);
         }
@@ -127,13 +148,10 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitLambda(Lambda lambda) {
-            var nestedFunction = nestedFunctions.get(lambda);
-            if (nestedFunction == null) {
-                nestedFunction = Environment.INSTANCE.lookupOrMake(lambda);
-                nestedFunctions.put(lambda, nestedFunction);
-                var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
-                nestedTranslator.translate();
-            }
+            var nestedFunction = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
+            nestedFunctions.put(lambda, nestedFunction);
+            var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
+            nestedTranslator.translate();
             return new ClosureNode(lambda, nestedFunction);
         }
 
@@ -148,6 +166,7 @@ public class FunctionTranslator {
         @Override
         public EvaluatorNode visitLetRec(LetRec letRec) {
             var var = defineVariable(letRec.variable());
+            var.markAsMutable(); // even if it's not explicitly mutated!
             var initializer = letRec.initializer().accept(this);
             return new LetNode(true, var, initializer,
                 letRec.body().accept(this));
@@ -169,23 +188,16 @@ public class FunctionTranslator {
         @Override
         public EvaluatorNode visitSetVariable(SetVariable setVar) {
             var variable = lookupVariable(setVar.variable());
-            if (variable.isDefinedIn(thisFunction)) {
-                return new SetVariableNode(variable, setVar.value().accept(this));
-            } else {
-                var diff = thisFunction.depth - variable.hostFunction().depth;
-                return new SetFreeVariableNode(variable, diff - 1, setVar.value().accept(this));
-            }
+            variable.markAsMutable();
+            if (variable.isFreeIn(thisFunction)) variable.markAsReferencedNonlocally();
+            return new SetVariableNode(variable, setVar.value().accept(this));
         }
 
         @Override
         public EvaluatorNode visitVariable(Variable expressionVariable) {
             var variable = lookupVariable(expressionVariable);
-            if (variable.isDefinedIn(thisFunction)) {
-                return new VariableReferenceNode(variable);
-            } else {
-                var diff = thisFunction.depth - variable.hostFunction().depth;
-                return new FreeVariableReferenceNode(variable, diff - 1);
-            }
+            if (variable.isFreeIn(thisFunction)) variable.markAsReferencedNonlocally();
+            return new GetVariableNode(variable);
         }
     }
 }

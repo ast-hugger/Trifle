@@ -36,6 +36,11 @@ public class Let extends ComplexExpression {
     }
 
     @Override
+    public String toString() {
+        return "let(" + variable() + " " + body() + ")";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitLet(this);
     }

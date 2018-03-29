@@ -26,6 +26,6 @@ class BlockNode extends EvaluatorNode {
 
     @Override
     public String toString() {
-        return "(prog [" + expressions.length + "])";
+        return "(block [" + expressions.length + "])";
     }
 }

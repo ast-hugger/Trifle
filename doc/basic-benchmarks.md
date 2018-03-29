@@ -7,10 +7,10 @@ benefit from warmup.
 
 * 6080: Javasacript - Firefox Quantum (58.0.2)
 * 2440: Python 2.7.12
+* 1890: Enfilade, profiling interpreter
 * 1450: Lua 5.2
-* 1440: Enfilade, profiling interpreter
+* 1220: Enfilade, plain interpreter
 * 1030: Ruby 2.3.1
-* 970: Enfilade, plain interpreter
 * 129: Smalltalk - Pharo, 64-bit Cog, March05 2018 build
 * 106: Javascript - node.js
 * 85: Enfilade, generic compiled form (wrapped ints)

@@ -11,8 +11,10 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
-import java.util.Collections;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * An object holding together all executable representations of a source function
@@ -54,10 +56,20 @@ public class FunctionImplementation {
      */
 
     @NotNull private final Lambda definition;
-    /** Apparent arguments from the function definition. Does not include closed over variables. */
-    private VariableDefinition[] arguments;
-    /** Variables from outer scopes used in this function or its closures (transitively). */
-    private Set<VariableDefinition> freeVariables = Set.of();
+    /**
+     * Apparent parameters from the function definition. Does not include synthetic
+     * parameters introduced by closure conversion to copy down free variables.
+     */
+    private List<VariableDefinition> parameters;
+    /**
+     * All copied variables created during closure conversion.
+     */
+    private List<CopiedVariable> syntheticParameters;
+    /**
+     * The actual parameter list, beginning with synthetic parameters for copied down
+     * values followed by apparent parameters.
+     */
+    private AbstractVariable[] allParameters;
     /*internal*/ FunctionProfile profile;
     private final int arity;
     private int id = -1;
@@ -76,20 +88,20 @@ public class FunctionImplementation {
         this.definition = definition;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
-//        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
-        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
+        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
 //        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }
 
     /** RESTRICTED. Intended for {@link FunctionTranslator}. */
-    void partiallyInitialize(@NotNull VariableDefinition[] arguments, @NotNull EvaluatorNode body) {
-        this.arguments = arguments;
-        this.profile = new FunctionProfile(arguments);
+    void partiallyInitialize(@NotNull List<VariableDefinition> parameters, @NotNull EvaluatorNode body) {
+        this.parameters = parameters;
+        this.profile = new FunctionProfile(parameters);
         this.body = body;
     }
 
-    /** RESTRICTED. Intended for {@link FunctionAnalyzer}. */
+    /** RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}. */
     void finishInitialization(int localsCount) {
         this.localsCount = localsCount;
 //        this.acode = ACodeTranslator.translate(body);
@@ -104,21 +116,32 @@ public class FunctionImplementation {
         return id;
     }
 
-    /** RESTRICTED. Intended for {@link Environment#lookup(FunctionImplementation)}. */
+    /** RESTRICTED. Intended for {@link FunctionRegistry#lookup(FunctionImplementation)}. */
     void setId(int id) {
         this.id = id;
     }
 
-    public VariableDefinition[] arguments() {
-        return arguments;
+    public List<VariableDefinition> parameters() {
+        return parameters;
     }
 
-    public Set<VariableDefinition> freeVariables() {
-        return freeVariables;
+    public List<CopiedVariable> syntheticParameters() {
+        return syntheticParameters;
     }
 
-    public void setFreeVariables(Set<VariableDefinition> freeVariables) {
-        this.freeVariables = Collections.unmodifiableSet(freeVariables);
+    public AbstractVariable[] allParameters() {
+        return allParameters;
+    }
+
+    /**
+     * RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}.
+     * Accept the synthetic variables into which free variable references have been
+     * rewritten in this function.
+     */
+    /*internal*/ void setSyntheticParameters(Collection<CopiedVariable> variables) {
+        this.syntheticParameters = new ArrayList<>(variables);
+        this.allParameters = Stream.concat(syntheticParameters.stream(), parameters.stream())
+            .toArray(AbstractVariable[]::new);
     }
 
     public EvaluatorNode body() {
@@ -342,5 +365,10 @@ public class FunctionImplementation {
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return definition.toString();
     }
 }

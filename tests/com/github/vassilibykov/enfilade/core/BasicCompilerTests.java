@@ -101,7 +101,7 @@ public class BasicCompilerTests {
         Closure function = FunctionTranslator.translate(
             lambda(
                 arg ->
-                    prog(
+                    block(
                         set(arg, const_(42)),
                         arg)));
         function.implementation.forceCompile();
@@ -117,7 +117,7 @@ public class BasicCompilerTests {
 
     @Test
     public void testFactorial() {
-        Closure factorial = FunctionTranslator.translate(InterpreterTests.factorial());
+        Closure factorial = FunctionTranslator.translate(LanguageFeaturesTest.factorial());
         factorial.implementation.forceCompile();
         assertEquals(6, factorial.invoke(3));
         assertEquals(24, factorial.invoke(4));
@@ -126,7 +126,7 @@ public class BasicCompilerTests {
 
     @Test
     public void testFibonacci() { // and everybody's favorite
-        Closure fibonacci = FunctionTranslator.translate(InterpreterTests.fibonacci());
+        Closure fibonacci = FunctionTranslator.translate(LanguageFeaturesTest.fibonacci());
         fibonacci.implementation.forceCompile();
         assertEquals(1, fibonacci.invoke(0));
         assertEquals(1, fibonacci.invoke(1));
@@ -140,7 +140,7 @@ public class BasicCompilerTests {
 //    @Test
     public void timeFib() {
         int n = 35;
-        Closure fibonacci = FunctionTranslator.translate(InterpreterTests.fibonacci());
+        Closure fibonacci = FunctionTranslator.translate(LanguageFeaturesTest.fibonacci());
         fibonacci.implementation.forceCompile();
         Object[] args = {n};
         for (int i = 0; i < 20; i++) fibonacci.invoke(n);

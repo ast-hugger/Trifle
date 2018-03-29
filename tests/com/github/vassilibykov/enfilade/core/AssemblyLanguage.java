@@ -35,11 +35,11 @@ public class AssemblyLanguage {
     }
 
     public static ACodeInstruction.Load load(VariableDefinition var) {
-        return new ACodeInstruction.Load(new VariableReferenceNode(var));
+        return new ACodeInstruction.Load(new GetVariableNode(var));
     }
 
-    public static VariableReferenceNode ref(VariableDefinition var) {
-        return new VariableReferenceNode(var);
+    public static GetVariableNode ref(VariableDefinition var) {
+        return new GetVariableNode(var);
     }
 
     public static ACodeInstruction.Load load(Primitive1Node primitive) {

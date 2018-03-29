@@ -57,11 +57,6 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitFreeVarReference(FreeVariableReferenceNode varRef) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
     public Void visitIf(IfNode anIf) {
         ACodeInstruction.Branch branch = new ACodeInstruction.Branch(anIf.condition(), Integer.MAX_VALUE);
         emit(branch);
@@ -118,11 +113,6 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitSetFreeVar(SetFreeVariableNode setFreeVariableNode) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
     public Void visitSetVar(SetVariableNode set) {
         set.value().accept(this);
         emit(new ACodeInstruction.Store(set.variable()));
@@ -130,7 +120,7 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitVarReference(VariableReferenceNode varRef) {
+    public Void visitGetVar(GetVariableNode varRef) {
         emit(new ACodeInstruction.Load(varRef));
         return null;
     }

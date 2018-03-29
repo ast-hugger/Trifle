@@ -36,6 +36,11 @@ public class Call extends ComplexExpression {
     }
 
     @Override
+    public String toString() {
+        return "call(" + target + ", [" + arguments.size() + " args])";
+    }
+
+    @Override
     public <T> T accept(Visitor<T> visitor) {
         return visitor.visitCall(this);
     }
