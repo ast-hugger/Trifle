@@ -154,6 +154,11 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
+    public JvmType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
     public JvmType visitGetVar(GetVariableNode var) {
         writer.loadLocal(REFERENCE, var.variable().genericIndex());
         return REFERENCE;

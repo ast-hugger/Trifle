@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 public class ExpressionLanguage {
 
     private static int argSerial = 0;
+    private static int tempSerial = 0;
 
     public static Lambda lambda(Supplier<Expression> bodyBuilder) {
         return Lambda.with(List.of(), bodyBuilder.get());
@@ -79,5 +80,10 @@ public class ExpressionLanguage {
 
     public static Variable var(String name) {
         return Variable.named(name);
+    }
+
+    public static Let bind(Expression initializer, Function<Variable, Expression> bodyBuilder) {
+        var var = var("t" + tempSerial++);
+        return Let.with(var, initializer, bodyBuilder.apply(var));
     }
 }

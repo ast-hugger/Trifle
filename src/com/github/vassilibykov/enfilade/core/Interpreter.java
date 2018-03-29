@@ -21,6 +21,15 @@ public class Interpreter {
         }
 
         @Override
+        public Object visitBlock(BlockNode block) {
+            EvaluatorNode[] expressions = block.expressions();
+            int bodySize = expressions.length - 1;
+            int i;
+            for (i = 0; i < bodySize; i++) expressions[i].accept(this);
+            return expressions[i].accept(this);
+        }
+
+        @Override
         public Object visitCall0(CallNode.Call0 call) {
             var function = call.function().accept(this);
             return ((Closure) function).invoke();
@@ -53,6 +62,11 @@ public class Interpreter {
         @Override
         public Object visitConst(ConstNode aConst) {
             return aConst.value();
+        }
+
+        @Override
+        public Object visitGetVar(GetVariableNode varRef) {
+            return varRef.variable().getValueIn(frame);
         }
 
         @Override
@@ -92,15 +106,6 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitBlock(BlockNode block) {
-            EvaluatorNode[] expressions = block.expressions();
-            int bodySize = expressions.length - 1;
-            int i;
-            for (i = 0; i < bodySize; i++) expressions[i].accept(this);
-            return expressions[i].accept(this);
-        }
-
-        @Override
         public Object visitRet(ReturnNode ret) {
             throw new ReturnException(ret.value().accept(this));
         }
@@ -113,8 +118,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitGetVar(GetVariableNode varRef) {
-            return varRef.variable().getValueIn(frame);
+        public Object visitTopLevelFunction(TopLevelFunctionNode topLevelFunction) {
+            return topLevelFunction.binding.closure();
         }
     }
 

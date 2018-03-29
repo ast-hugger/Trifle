@@ -125,6 +125,11 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
         return null;
     }
 
+    @Override
+    public Void visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
     private void emit(ACodeInstruction instruction) {
         code.add(instruction);
     }

@@ -34,6 +34,7 @@ public abstract class EvaluatorNode {
         T visitPrimitive2(Primitive2Node primitive);
         T visitRet(ReturnNode ret);
         T visitSetVar(SetVariableNode setVar);
+        T visitTopLevelFunction(TopLevelFunctionNode topLevelBinding);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -116,6 +117,11 @@ public abstract class EvaluatorNode {
         @Override
         public T visitSetVar(SetVariableNode set) {
             set.value().accept(this);
+            return null;
+        }
+
+        @Override
+        public T visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
             return null;
         }
 

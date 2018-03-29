@@ -213,6 +213,11 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
         return valueType;
     }
 
+    @Override
+    public ExpressionType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
     private ExpressionType setKnownType(EvaluatorNode expression, JvmType type) {
         var expressionType = ExpressionType.known(type);
         expression.unifyObservedTypeWith(expressionType);

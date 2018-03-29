@@ -86,6 +86,12 @@ abstract class AbstractVariable {
     /*internal*/ abstract boolean unifyObservedTypeWith(ExpressionType type);
 
     void initValueIn(Object[] frame, Object value) {
+        // It's tempting to get rid of the 'if' by adding 'boxed' subclasses of variables
+        // and polymorphically separating the boxed and unboxed logic that way. However,
+        // that complicates matters by requiring an extra rewrite of the evaluator tree
+        // and brings no performance benefits because call sites of this and
+        // the other two value access methods become polymorphic. In essence, the 'if'
+        // below is traded for the 'if' in the call site cache dispatch.
         if (isBoxed) {
             frame[genericIndex] = Box.with(value);
         } else {

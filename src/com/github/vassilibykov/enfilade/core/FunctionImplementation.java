@@ -88,8 +88,8 @@ public class FunctionImplementation {
         this.definition = definition;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
-        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
-//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
+        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
 //        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
     }

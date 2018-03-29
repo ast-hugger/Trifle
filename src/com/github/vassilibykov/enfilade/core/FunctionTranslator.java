@@ -12,6 +12,7 @@ import com.github.vassilibykov.enfilade.expression.LetRec;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
 import com.github.vassilibykov.enfilade.expression.Return;
 import com.github.vassilibykov.enfilade.expression.SetVariable;
+import com.github.vassilibykov.enfilade.expression.TopLevel;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
 
@@ -191,6 +192,11 @@ public class FunctionTranslator {
             variable.markAsMutable();
             if (variable.isFreeIn(thisFunction)) variable.markAsReferencedNonlocally();
             return new SetVariableNode(variable, setVar.value().accept(this));
+        }
+
+        @Override
+        public EvaluatorNode visitTopLevelBinding(TopLevel.Binding binding) {
+            return new TopLevelFunctionNode(binding);
         }
 
         @Override

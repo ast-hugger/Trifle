@@ -168,6 +168,11 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
+    public Void visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
     public Void visitGetVar(GetVariableNode varRef) {
         printLine(() -> {
             output.append(varRef.toString());

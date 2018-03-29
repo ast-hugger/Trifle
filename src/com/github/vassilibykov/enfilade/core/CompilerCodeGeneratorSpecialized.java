@@ -304,6 +304,11 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
+    public JvmType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
     public JvmType visitGetVar(GetVariableNode varRef) {
         JvmType varType = varRef.variable().specializationType();
         writer.loadLocal(varType, varRef.variable().specializedIndex());

@@ -1,18 +1,18 @@
 ## Benchmark function definition in Enfilade
         
-    private static Lambda fibonacci() {
-        var fibonacci = var("fibonacci");
-        var t1 = var("t1");
-        var t2 = var("t2");
-        return lambda(arg ->
-            letrec(fibonacci, lambda(n ->
-                        if_(lessThan(n, const_(2)),
-                            const_(1),
-                            let(t1, call(fibonacci, sub(n, const_(1))),
-                                let(t2, call(fibonacci, sub(n, const_(2))),
-                                    add(t1, t2))))),
-                call(fibonacci, arg)));
+    private static Closure fibonacci() {
+        return TopLevel.define(
+            fibonacci -> lambda(n ->
+                if_(lessThan(n, const_(2)),
+                    const_(1),
+                    bind(call(fibonacci, sub(n, const_(1))), t1 ->
+                        bind(call(fibonacci, sub(n, const_(2))), t2 ->
+                            add(t1, t2))))));
     }
+
+`bind` above is esentially a `let` with the variable and the initializer expression
+swapped. This form makes it possible to write `let` expressions without creating
+the variable to bind by hand.
 
 ## Bytecode of the generic compiled method
 

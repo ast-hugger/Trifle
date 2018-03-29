@@ -139,6 +139,11 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
+    public ExpressionType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
     public ExpressionType visitGetVar(GetVariableNode varRef) {
         ExpressionType inferredType = varRef.variable().inferredType();
         if (varRef.unifyInferredTypeWith(inferredType)) {

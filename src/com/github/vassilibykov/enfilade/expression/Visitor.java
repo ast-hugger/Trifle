@@ -13,5 +13,6 @@ public interface Visitor<T> {
     T visitPrimitiveCall(PrimitiveCall primitiveCall);
     T visitReturn(Return aReturn);
     T visitSetVariable(SetVariable setVariable);
+    T visitTopLevelBinding(TopLevel.Binding binding);
     T visitVariable(Variable variable);
 }
