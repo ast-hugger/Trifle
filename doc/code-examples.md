@@ -1,5 +1,7 @@
 ## Benchmark function definition in Enfilade
         
+The actual definition using DSLish helper combinators:
+        
     private static Closure fibonacci() {
         return TopLevel.define(
             fibonacci -> lambda(n ->
@@ -13,6 +15,23 @@
 `bind` above is esentially a `let` with the variable and the initializer expression
 swapped. This form makes it possible to write `let` expressions without creating
 the variable to bind by hand.
+
+Here is the above with helper combinators expanded into the underlying static factory
+method calls of expression node classes.
+
+    private static Closure altFib() {
+        var n = var("n");
+        var t1 = var("t1");
+        var t2 = var("t2");
+        return TopLevel.define(
+            fibonacci -> Lambda.with(List.of(n),
+                If.with(PrimitiveCall.with(new PrimitiveKey("lessThan", LessThan::new), n, Const.value(2)),
+                    Const.value(1),
+                    Let.with(t1, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(1))),
+                        Let.with(t2, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(2))),
+                            PrimitiveCall.with(new PrimitiveKey("add", Add::new), t1, t2))))));
+    }
+
 
 ## Bytecode of the generic compiled method
 
