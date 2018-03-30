@@ -5,8 +5,14 @@ package com.github.vassilibykov.enfilade.tmp;
 import com.github.vassilibykov.enfilade.core.Closure;
 import com.github.vassilibykov.enfilade.expression.TopLevel;
 
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.*;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.*;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
+import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
+import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
+import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
 
 public class TimeFib {
 
@@ -34,6 +40,19 @@ public class TimeFib {
                         bind(call(fibonacci, sub(n, const_(2))), t2 ->
                             add(t1, t2))))));
     }
+
+//    private static Closure altFib() {
+//        var n = var("n");
+//        var t1 = var("t1");
+//        var t2 = var("t2");
+//        return TopLevel.define(
+//            fibonacci -> Lambda.with(List.of(n),
+//                If.with(PrimitiveCall.with(new PrimitiveKey("lessThan", LessThan::new), n, Const.value(2)),
+//                    Const.value(1),
+//                    Let.with(t1, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(1))),
+//                        Let.with(t2, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(2))),
+//                            PrimitiveCall.with(new PrimitiveKey("add", Add::new), t1, t2))))));
+//    }
 
 //    private static Closure fibonacci() {
 //        var t1 = var("t1");

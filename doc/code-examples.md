@@ -1,5 +1,7 @@
 ## Benchmark function definition in Enfilade
         
+The actual definition using DSLish helper combinators:
+        
     private static Closure fibonacci() {
         return TopLevel.define(
             fibonacci -> lambda(n ->
@@ -13,6 +15,23 @@
 `bind` above is esentially a `let` with the variable and the initializer expression
 swapped. This form makes it possible to write `let` expressions without creating
 the variable to bind by hand.
+
+Here is the above with helper combinators expanded into the underlying static factory
+method calls of expression node classes.
+
+    private static Closure altFib() {
+        var n = var("n");
+        var t1 = var("t1");
+        var t2 = var("t2");
+        return TopLevel.define(
+            fibonacci -> Lambda.with(List.of(n),
+                If.with(PrimitiveCall.with(new PrimitiveKey("lessThan", LessThan::new), n, Const.value(2)),
+                    Const.value(1),
+                    Let.with(t1, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(1))),
+                        Let.with(t2, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(2))),
+                            PrimitiveCall.with(new PrimitiveKey("add", Add::new), t1, t2))))));
+    }
+
 
 ## Bytecode of the generic compiled method
 
@@ -45,6 +64,8 @@ the variable to bind by hand.
 
 ## Bytecode of the adaptively specialized compiled method
 
+Main (fast path) part:
+
     public static final int specialized(int);
     Code:
        0: iload_0
@@ -65,13 +86,17 @@ the variable to bind by hand.
       27: iload_1
       28: iload_2
       29: iadd
-      30: ireturn                      <--- end of normal (fast) case 
-    SPE handler for call @12:    
+      30: ireturn
+      
+SPE handler for call @12:    
+
       31: iconst_2
       32: iconst_3
       33: anewarray     #4                  // class java/lang/Object
       36: goto          51
-    SPE handler for call @21:
+
+SPE handler for call @21:
+
       39: iconst_4
       40: iconst_3
       41: anewarray     #4                  // class java/lang/Object
@@ -80,7 +105,9 @@ the variable to bind by hand.
       46: iload_1
       47: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       50: aastore
-    common epilogue finishing the construction of the frame replica and invoking a recovery interpreter:
+
+Common epilogue finishing the construction of the frame replica and invoking a recovery interpreter:
+
       51: dup
       52: iconst_0
       53: iload_0
@@ -91,6 +118,9 @@ the variable to bind by hand.
       62: swap
       63: invokevirtual #57                 // Method com/github/vassilibykov/enfilade/core/SquarePegException.value:()Ljava/lang/Object;
       66: invokevirtual #60                 // Method com/github/vassilibykov/enfilade/acode/Interpreter.interpret:(Ljava/lang/Object;)Ljava/lang/Object;
+  
+The value produced by the interpreter is on the stack. If it's an `Integer`, return it normally as an `int`.
+  
       69: dup
       70: instanceof    #14                 // class java/lang/Integer
       73: ifeq          86
