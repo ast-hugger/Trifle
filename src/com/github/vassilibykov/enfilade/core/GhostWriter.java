@@ -29,6 +29,9 @@ public class GhostWriter {
         return fqnName.replace('.', '/');
     }
 
+    public static final String OBJECT_DESC = "Ljava/lang/Object;";
+    public static final String BOX_ICN = internalClassName(Box.class);
+
     /*
         Instance
      */
@@ -92,6 +95,12 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter extractBoxedVariable() {
+        asmWriter.visitTypeInsn(CHECKCAST, BOX_ICN);
+        asmWriter.visitFieldInsn(GETFIELD, BOX_ICN, "value", OBJECT_DESC);
+        return this;
+    }
+
     public GhostWriter handleSquarePegException(Label begin, Label end, Label handler) {
         asmWriter.visitTryCatchBlock(begin, end, handler, SquarePegException.INTERNAL_CLASS_NAME);
         return this;
@@ -106,6 +115,12 @@ public class GhostWriter {
             });
             falseBranchGenerator.run();
         });
+        return this;
+    }
+
+    public GhostWriter initBoxedVariable(int index) {
+        invokeStatic(Box.class, "with", Box.class, Object.class);
+        asmWriter.visitVarInsn(ASTORE, index);
         return this;
     }
 
@@ -227,18 +242,20 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter storeLocal(JvmType category, int index) {
-        // FIXME: 3/23/18 change to pattern matching style
-        switch (category) {
-            case REFERENCE:
-                asmWriter.visitVarInsn(ASTORE, index);
-                break;
-            case INT:
-                asmWriter.visitVarInsn(ISTORE, index);
-                break;
-            default:
-                throw new IllegalArgumentException("unrecognized type category");
-        }
+    public GhostWriter storeLocal(JvmType type, int index) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() { asmWriter.visitVarInsn(ASTORE, index); }
+            public void ifInt() { asmWriter.visitVarInsn(ISTORE, index); }
+            public void ifBoolean() { asmWriter.visitVarInsn(ISTORE, index); }
+        });
+        return this;
+    }
+
+    public GhostWriter storeBoxedVariable(int index) {
+        asmWriter.visitVarInsn(ALOAD, index);
+        asmWriter.visitTypeInsn(CHECKCAST, BOX_ICN);
+        swap();
+        asmWriter.visitFieldInsn(PUTFIELD, BOX_ICN, "value", OBJECT_DESC);
         return this;
     }
 

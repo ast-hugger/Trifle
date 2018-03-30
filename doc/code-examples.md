@@ -16,9 +16,7 @@ the variable to bind by hand.
 
 ## Bytecode of the generic compiled method
 
-For an earlier version of the benchmark with a direct reference to the recursive call target.
-
-    public static final java.lang.Object generic(java.lang.Object);
+    public static final java.lang.Object generic0(java.lang.Object);
     Code:
        0: aload_0
        1: iconst_2
@@ -31,13 +29,13 @@ For an earlier version of the benchmark with a direct reference to the recursive
       16: iconst_1
       17: invokestatic  #24                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
       20: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
-      23: invokedynamic #35,  0             // InvokeDynamic #0:"call#0":(Ljava/lang/Object;)Ljava/lang/Object;
+      23: invokedynamic #35,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
       28: astore_1
       29: aload_0
       30: iconst_2
       31: invokestatic  #24                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
       34: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
-      37: invokedynamic #35,  0             // InvokeDynamic #0:"call#0":(Ljava/lang/Object;)Ljava/lang/Object;
+      37: invokedynamic #35,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
       42: astore_2
       43: aload_1
       44: aload_2

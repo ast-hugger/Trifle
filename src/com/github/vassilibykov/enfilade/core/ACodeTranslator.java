@@ -47,7 +47,8 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
 
     @Override
     public Void visitClosure(ClosureNode closure) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        emit(new ACodeInstruction.Load(closure));
+        return null;
     }
 
     @Override
@@ -95,13 +96,9 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
         EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
             emit(new ACodeInstruction.Load(new ConstNode(null)));
-            return null;
+        } else {
+            for (var each : expressions) each.accept(this);
         }
-        for (int i = 0; i < expressions.length - 1; i++) {
-            expressions[i].accept(this);
-            emit(new ACodeInstruction.Drop());
-        }
-        expressions[expressions.length - 1].accept(this);
         return null;
     }
 
@@ -126,8 +123,9 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    public Void visitConstantFunction(ConstantFunctionNode constFunction) {
+        emit(new ACodeInstruction.Load(new ConstNode(constFunction.closure())));
+        return null;
     }
 
     private void emit(ACodeInstruction instruction) {

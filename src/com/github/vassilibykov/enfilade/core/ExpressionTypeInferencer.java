@@ -139,7 +139,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+    public ExpressionType visitConstantFunction(ConstantFunctionNode topLevelBinding) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

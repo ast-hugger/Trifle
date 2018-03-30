@@ -2,7 +2,10 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.MethodVisitor;
+
+import java.lang.invoke.MethodType;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
@@ -20,54 +23,123 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         this.writer = new GhostWriter(visitor);
     }
 
+    JvmType generate(FunctionImplementation function) {
+        generatePrologue(function);
+        return function.body().accept(this);
+    }
+
+    private void generatePrologue(FunctionImplementation function) {
+        for (var each : function.parameters()) {
+            if (each.isBoxed()) {
+                int index = each.genericIndex();
+                writer
+                    .loadLocal(REFERENCE, index)
+                    .initBoxedVariable(index);
+            }
+        }
+    }
+
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        int id = FunctionRegistry.INSTANCE.lookup(call.function());
-//        MethodType callSiteType = MethodType.methodType(Object.class);
-//        writer.invokeDynamic(
-//            DirectCall.BOOTSTRAP,
-//            "call#" + id,
-//            callSiteType,
-//            id);
-//        return REFERENCE;
+        if (call.function() instanceof ConstantFunctionNode) {
+            return generateConstantFunctionCall0(call, (ConstantFunctionNode) call.function());
+        }
+        call.function().accept(this); // puts a value on the stack that must be a closure
+        var type = MethodType.genericMethodType(1);
+        writer.invokeDynamic(
+            ClosureInvokeDynamic.BOOTSTRAP,
+            "call0",
+            type);
+        return REFERENCE;
+    }
+
+    private JvmType generateConstantFunctionCall0(CallNode.Call0 call, ConstantFunctionNode function) {
+        // For a constant call, the closure is not pushed on the stack.
+        // Its ID is instead encoded in the invokedynamic instruction.
+        var type = MethodType.genericMethodType(0);
+        writer.invokeDynamic(
+            ConstantFunctionInvokeDynamic.BOOTSTRAP,
+            "call0",
+            type,
+            function.id());
+        return REFERENCE;
     }
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        JvmType argType = call.arg().accept(this);
-//        writer.adaptType(argType, REFERENCE);
-//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
-//        MethodType callSiteType = MethodType.methodType(Object.class, Object.class);
-//        writer.invokeDynamic(
-//            DirectCall.BOOTSTRAP,
-//            "call#" + id,
-//            callSiteType,
-//            id);
-//        return REFERENCE;
+        if (call.function() instanceof ConstantFunctionNode) {
+            return generateConstantFunctionCall1(call, (ConstantFunctionNode) call.function());
+        }
+        call.function().accept(this); // puts a value on the stack that must be a closure
+        var type = MethodType.genericMethodType(2);
+        var argType = call.arg().accept(this);
+        writer.adaptType(argType, REFERENCE);
+        writer.invokeDynamic(
+            ClosureInvokeDynamic.BOOTSTRAP,
+            "call1",
+            type);
+        return REFERENCE;
+    }
+
+    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
+        var type = MethodType.genericMethodType(1);
+        var argType = call.arg().accept(this);
+        writer.adaptType(argType, REFERENCE);
+        writer.invokeDynamic(
+            ConstantFunctionInvokeDynamic.BOOTSTRAP,
+            "call1",
+            type,
+            function.id());
+        return REFERENCE;
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        JvmType arg1Type = call.arg1().accept(this);
-//        writer.adaptType(arg1Type, REFERENCE);
-//        JvmType arg2Type = call.arg2().accept(this);
-//        writer.adaptType(arg2Type, REFERENCE);
-//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
-//        MethodType callSiteType = MethodType.methodType(Object.class, Object.class, Object.class);
-//        writer.invokeDynamic(
-//            DirectCall.BOOTSTRAP,
-//            "call#" + id,
-//            callSiteType,
-//            id);
-//        return REFERENCE;
+        if (call.function() instanceof ConstantFunctionNode) {
+            return generateConstantFunctionCall2(call, (ConstantFunctionNode) call.function());
+        }
+        call.function().accept(this); // puts a value on the stack that must be a closure
+        var type = MethodType.genericMethodType(3);
+        var arg1Type = call.arg1().accept(this);
+        writer.adaptType(arg1Type, REFERENCE);
+        var arg2Type = call.arg2().accept(this);
+        writer.adaptType(arg2Type, REFERENCE);
+        writer.invokeDynamic(
+            ClosureInvokeDynamic.BOOTSTRAP,
+            "call2",
+            type);
+        return REFERENCE;
+    }
+
+    private JvmType generateConstantFunctionCall2(CallNode.Call2 call, ConstantFunctionNode function) {
+        var type = MethodType.genericMethodType(1);
+        var arg1Type = call.arg1().accept(this);
+        writer.adaptType(arg1Type, REFERENCE);
+        var arg2Type = call.arg2().accept(this);
+        writer.adaptType(arg2Type, REFERENCE);
+        writer.invokeDynamic(
+            ConstantFunctionInvokeDynamic.BOOTSTRAP,
+            "call1",
+            type,
+            function.id());
+        return REFERENCE;
     }
 
     @Override
     public JvmType visitClosure(ClosureNode closure) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        var indicesToCopy = closure.indicesToCopy;
+        writer.newObjectArray(indicesToCopy.length);
+        for (int i = 0; i < indicesToCopy.length; i++) {
+            writer
+                .dup()
+                .loadInt(i)
+                .loadLocal(REFERENCE, indicesToCopy[i]);
+            writer.asm().visitInsn(Opcodes.AASTORE);
+        }
+        writer
+            .loadInt(FunctionRegistry.INSTANCE.lookup(closure.function()))
+            .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
+        return REFERENCE;
     }
 
     @Override
@@ -79,9 +151,20 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         } else if (value instanceof String) {
             writer.loadString((String) value);
             return REFERENCE;
+        } else if (value == null) {
+            writer.loadNull();
+            return REFERENCE;
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
+    }
+
+    @Override
+    public JvmType visitGetVar(GetVariableNode getVar) {
+        var variable = getVar.variable();
+        writer.loadLocal(REFERENCE, variable.genericIndex());
+        if (variable.isBoxed()) writer.extractBoxedVariable();
+        return REFERENCE;
     }
 
     @Override
@@ -103,9 +186,23 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitLet(LetNode let) {
-        JvmType initType = let.initializer().accept(this);
+        var variable = let.variable();
+        if (variable.isBoxed() && let.isLetrec()) {
+            writer
+                .loadNull()
+                .initBoxedVariable(variable.genericIndex);
+        }
+        var initType = let.initializer().accept(this);
         writer.adaptType(initType, REFERENCE);
-        writer.storeLocal(REFERENCE, let.variable().genericIndex());
+        if (variable.isBoxed()) {
+            if (let.isLetrec()) {
+                writer.storeBoxedVariable(variable.genericIndex());
+            } else {
+                writer.initBoxedVariable(variable.genericIndex());
+            }
+        } else {
+            writer.storeLocal(REFERENCE, variable.genericIndex());
+        }
         return let.body().accept(this);
     }
 
@@ -144,23 +241,27 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitSetVar(SetVariableNode set) {
-        JvmType varType = set.value().accept(this);
+    public JvmType visitSetVar(SetVariableNode setVar) {
+        var variable = setVar.variable();
+        var varType = setVar.value().accept(this);
         writer
             .adaptType(varType, REFERENCE)
-            .dup()
-            .storeLocal(REFERENCE, set.variable().genericIndex());
+            .dup();
+        if (variable.isBoxed()) {
+            writer.storeBoxedVariable(variable.genericIndex());
+        } else {
+            writer.storeLocal(REFERENCE, variable.genericIndex());
+        }
         return REFERENCE;
     }
 
     @Override
-    public JvmType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
-    public JvmType visitGetVar(GetVariableNode var) {
-        writer.loadLocal(REFERENCE, var.variable().genericIndex());
+    public JvmType visitConstantFunction(ConstantFunctionNode constFunction) {
+        var closure = constFunction.closure();
+        int id = ConstantFunctionNode.lookup(closure);
+        writer
+            .loadInt(id)
+            .invokeStatic(ConstantFunctionNode.class, "lookup", Closure.class, int.class);
         return REFERENCE;
     }
 }

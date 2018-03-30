@@ -52,6 +52,7 @@ public class FunctionTranslator {
         var implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
         var translator = new FunctionTranslator(lambda, implementation);
         translator.translate();
+        implementation.addClosureImplementations(translator.nestedFunctions.values());
         FunctionAnalyzer.analyze(implementation); // finishesInitialization
         return new Closure(implementation, new Object[0]);
     }
@@ -153,7 +154,7 @@ public class FunctionTranslator {
             nestedFunctions.put(lambda, nestedFunction);
             var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
             nestedTranslator.translate();
-            return new ClosureNode(lambda, nestedFunction);
+            return new ClosureNode(nestedFunction);
         }
 
         @Override
@@ -196,7 +197,7 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitTopLevelBinding(TopLevel.Binding binding) {
-            return new TopLevelFunctionNode(binding);
+            return new ConstantFunctionNode(binding);
         }
 
         @Override

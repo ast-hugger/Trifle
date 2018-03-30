@@ -86,8 +86,6 @@ public class ProfilingInterpreter extends Interpreter {
     public Object interpret(Closure closure) {
         var implementation = closure.implementation;
         var frame = new Object[implementation.frameSize()];
-        var copiedCount = closure.copiedValues.length;
-        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
         implementation.profile.recordInvocation(frame);
         try {
             Object result = implementation.body().accept(new ProfilingEvaluator(frame));
@@ -102,8 +100,7 @@ public class ProfilingInterpreter extends Interpreter {
     public Object interpret(Closure closure, Object arg) {
         var implFunction = closure.implementation;
         var frame = new Object[implFunction.frameSize()];
-        System.arraycopy(closure.copiedValues, 0, frame, 0, closure.copiedValues.length);
-        implFunction.parameters().get(0).initValueIn(frame, arg);
+        implFunction.allParameters()[0].setupArgumentIn(frame, arg);
         implFunction.profile.recordInvocation(frame);
         try {
             Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
@@ -118,9 +115,25 @@ public class ProfilingInterpreter extends Interpreter {
     public Object interpret(Closure closure, Object arg1, Object arg2) {
         var implFunction = closure.implementation;
         var frame = new Object[implFunction.frameSize()];
-        System.arraycopy(closure.copiedValues, 0, frame, 0, closure.copiedValues.length);
-        implFunction.parameters().get(0).initValueIn(frame, arg1);
-        implFunction.parameters().get(1).initValueIn(frame, arg2);
+        implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
+        implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
+        implFunction.profile.recordInvocation(frame);
+        try {
+            Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
+            implFunction.profile.recordResult(result);
+            return result;
+        } catch (ReturnException e) {
+            return e.value;
+        }
+    }
+
+    @Override
+    public Object interpret(Closure closure, Object arg1, Object arg2, Object arg3) {
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
+        implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
+        implFunction.allParameters()[2].setupArgumentIn(frame, arg3);
         implFunction.profile.recordInvocation(frame);
         try {
             Object result = implFunction.body().accept(new ProfilingEvaluator(frame));

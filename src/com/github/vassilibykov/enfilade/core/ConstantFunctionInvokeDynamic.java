@@ -6,29 +6,28 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.CallSite;
+import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 
 /**
- * An invokedynamic instruction for a call expression whose function is a direct
- * pointer to another function. The target is encoded as an integer ID in the
- * {@link FunctionRegistry}, passed as an extra bootstrapper argument.
+ * An invokedynamic instruction for a call expression whose function is a
+ * constant managed by {@link ConstantFunctionNode}. The call target is
+ * identified by the integer ID attached to the instruction as an extra
+ * parameter.
  */
-public class DirectCall {
+public final class ConstantFunctionInvokeDynamic {
 
     public static final Handle BOOTSTRAP = new Handle(
         Opcodes.H_INVOKESTATIC,
-        Compiler.internalClassName(DirectCall.class),
+        Compiler.internalClassName(ConstantFunctionInvokeDynamic.class),
         "bootstrap",
         MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class, Integer.class).toMethodDescriptorString(),
         false);
 
     @SuppressWarnings("unused") // called by generated code
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
-        FunctionImplementation target = FunctionRegistry.INSTANCE.lookup(targetId);
-        if (target == null) {
-            throw new AssertionError("target function ID not found: " + targetId);
-        }
-        return target.callSite(callSiteType);
+        var closure = ConstantFunctionNode.lookup(targetId);
+        return new ConstantCallSite(closure.invoker.bindTo(closure));
     }
 }

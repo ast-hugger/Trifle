@@ -8,9 +8,9 @@ import com.github.vassilibykov.enfilade.core.FunctionTranslator;
 import java.util.function.Function;
 
 /**
- * A trial implementation of a mechanism to allow inexpensive references
- * to top-level functions with recursion. For now, this allows defining
- * only one recursive top-level function.
+ * A trial implementation of a mechanism to allow inexpensive direct references to
+ * top-level functions with recursion. For now, this allows defining only one recursive
+ * top-level function.
  */
 public class TopLevel {
     public static Closure define(Function<Binding, Lambda> definition) {

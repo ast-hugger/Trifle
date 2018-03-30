@@ -7,7 +7,7 @@ public class Box {
         return new Box(value);
     }
 
-    /*internal*/ Object value;
+    public Object value;
 
     private Box(Object value) {
         this.value = value;

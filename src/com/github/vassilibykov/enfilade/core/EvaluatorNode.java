@@ -34,7 +34,7 @@ public abstract class EvaluatorNode {
         T visitPrimitive2(Primitive2Node primitive);
         T visitRet(ReturnNode ret);
         T visitSetVar(SetVariableNode setVar);
-        T visitTopLevelFunction(TopLevelFunctionNode topLevelBinding);
+        T visitConstantFunction(ConstantFunctionNode constFunction);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -121,7 +121,7 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+        public T visitConstantFunction(ConstantFunctionNode topLevelBinding) {
             return null;
         }
 

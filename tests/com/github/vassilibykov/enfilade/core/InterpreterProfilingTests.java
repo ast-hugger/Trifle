@@ -40,7 +40,7 @@ public class InterpreterProfilingTests {
         assertEquals(14, runnableCallee.implementation.profile.invocationCount());
     }
 
-    @Ignore("this kind of function reference doesn't work anymore")
+    @Ignore("ignored because this kind of function reference doesn't work anymore")
     @Test
     public void testMethodArgTypeProfile() {
         Variable arg = var("arg");

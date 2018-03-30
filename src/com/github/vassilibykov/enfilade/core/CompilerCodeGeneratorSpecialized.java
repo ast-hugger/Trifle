@@ -118,7 +118,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     void generate() {
         function.acode = ACodeTranslator.translate(function.body());
         continuationTypes.push(functionReturnType);
-        VariableIndexer variableIndexer = new VariableIndexer(function.arity());
+        VariableIndexer variableIndexer = new VariableIndexer(function.definitionArity());
         function.body().accept(variableIndexer);
         function.body().accept(this);
         continuationTypes.pop();
@@ -144,7 +144,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 //        JvmType returnType = call.specializationType();
 //        MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
 //        writer.invokeDynamic(
-//            DirectCall.BOOTSTRAP,
+//            ConstantFunctionInvokeDynamic.BOOTSTRAP,
 //            "call#" + id,
 //            callSiteType,
 //            id);
@@ -166,7 +166,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 //            returnType.representativeClass(),
 //            call.arg().specializationType().representativeClass());
 //        writer.invokeDynamic(
-//            DirectCall.BOOTSTRAP,
+//            ConstantFunctionInvokeDynamic.BOOTSTRAP,
 //            "call#" + id,
 //            callSiteType,
 //            id);
@@ -186,7 +186,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 //            call.arg1().specializationType().representativeClass(),
 //            call.arg2().specializationType().representativeClass());
 //        writer.invokeDynamic(
-//            DirectCall.BOOTSTRAP,
+//            ConstantFunctionInvokeDynamic.BOOTSTRAP,
 //            "call#" + id,
 //            callSiteType,
 //            id);
@@ -304,7 +304,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+    public JvmType visitConstantFunction(ConstantFunctionNode topLevelBinding) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

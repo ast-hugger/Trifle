@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 public class FunctionImplementation {
 
     /** The number of times a function is profiled before it's queued for compilation. */
-    private static final long PROFILING_TARGET = Long.MAX_VALUE;
+    private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
 
     private enum State {
         INVALID,
@@ -70,13 +70,18 @@ public class FunctionImplementation {
      * values followed by apparent parameters.
      */
     private AbstractVariable[] allParameters;
+    /**
+     * In a top-level function, contains function implementations of closures defined in
+     * it. Empty in non-toplevel functions even if they contain closures.
+     */
+    private final List<FunctionImplementation> closureImplementations = new ArrayList<>();
     /*internal*/ FunctionProfile profile;
     private final int arity;
     private int id = -1;
     /*internal*/ int depth = -1;
     /** Shared by all {@code invokedynamics} linked to this function. */
-    private final VolatileCallSite callSite;
-    private final MethodHandle callSiteInvoker;
+    private VolatileCallSite callSite; // type = (Closure, Object*) -> Object
+    /*internal*/ MethodHandle callSiteInvoker;
     private EvaluatorNode body;
     private int localsCount = -1;
     @Nullable private MethodType specializationType;
@@ -88,10 +93,6 @@ public class FunctionImplementation {
         this.definition = definition;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
-//        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
-        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
-//        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
-        this.callSiteInvoker = callSite.dynamicInvoker();
     }
 
     /** RESTRICTED. Intended for {@link FunctionTranslator}. */
@@ -101,8 +102,16 @@ public class FunctionImplementation {
         this.body = body;
     }
 
+    void addClosureImplementations(Collection<FunctionImplementation> functions) {
+        closureImplementations.addAll(functions);
+    }
+
     /** RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}. */
     void finishInitialization(int localsCount) {
+        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
+//        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
+        this.callSiteInvoker = callSite.dynamicInvoker();
         this.localsCount = localsCount;
 //        this.acode = ACodeTranslator.translate(body);
         this.state = State.PROFILING;
@@ -133,6 +142,10 @@ public class FunctionImplementation {
         return allParameters;
     }
 
+    public List<FunctionImplementation> closureImplementations() {
+        return closureImplementations;
+    }
+
     /**
      * RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}.
      * Accept the synthetic variables into which free variable references have been
@@ -148,8 +161,18 @@ public class FunctionImplementation {
         return body;
     }
 
-    public int arity() {
+    /**
+     * Return the arity of the underlying abstract definition (before closure conversion).
+     */
+    public int definitionArity() {
         return arity;
+    }
+
+    /**
+     * Return the arity of the closure-converted function.
+     */
+    public int implementationArity() {
+        return allParameters.length;
     }
 
     public int frameSize() {
@@ -203,7 +226,7 @@ public class FunctionImplementation {
     }
 
     private MethodHandle profilingInterpreterInvoker() {
-        var type = MethodType.genericMethodType(arity());
+        var type = MethodType.genericMethodType(implementationArity());
         type = type.insertParameterTypes(0, Closure.class);
         try {
             var handle = MethodHandles.lookup().findVirtual(FunctionImplementation.class, "profile", type);
@@ -214,7 +237,7 @@ public class FunctionImplementation {
     }
 
     private MethodHandle simpleInterpreterInvoker() {
-        var type = MethodType.genericMethodType(arity());
+        var type = MethodType.genericMethodType(implementationArity());
         type = type.insertParameterTypes(0, Closure.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
@@ -225,7 +248,7 @@ public class FunctionImplementation {
     }
 
     private MethodHandle acodeInterpreterInvoker() {
-        var type = MethodType.genericMethodType(arity());
+        var type = MethodType.genericMethodType(implementationArity());
         type = type.insertParameterTypes(0, Closure.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findStatic(ACodeInterpreter.class, "interpret", type);
@@ -259,26 +282,12 @@ public class FunctionImplementation {
         return result;
     }
 
-    /*internal*/ synchronized void updateCompiledForm(
-        MethodHandle genericMethod,
-        @Nullable MethodType specializationType,
-        @Nullable MethodHandle specializedMethod)
-    {
-        state = State.COMPILED;
-        this.specializationType = specializationType;
-        if (specializedMethod == null) {
-            callSite.setTarget(dropFunctionArgument(genericMethod));
-            // FIXME properly handle specializationCallSite if present
-        } else {
-            callSite.setTarget(
-                dropFunctionArgument(
-                    makeSpecializationGuard(genericMethod, specializedMethod, specializationType)));
-            if (specializationCallSite == null) {
-                specializationCallSite = new VolatileCallSite(specializedMethod);
-            } else {
-                specializationCallSite.setTarget(specializedMethod);
-            }
+    public Object profile(Closure closure, Object arg1, Object arg2, Object arg3) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(closure, arg1, arg2, arg3);
+        if (profile.invocationCount() > PROFILING_TARGET) {
+            scheduleCompilation();
         }
+        return result;
     }
 
     private MethodHandle dropFunctionArgument(MethodHandle original) {
@@ -300,20 +309,27 @@ public class FunctionImplementation {
 
     void forceCompile() {
         Compiler.Result result = Compiler.compile(this);
+        Class<?> implClass = GeneratedCode.defineClass(result);
+        for (var entry : result.generatedMethodNames().entrySet()) {
+            entry.getKey().setCompilationResult(implClass, entry.getValue());
+        }
+    }
+
+    private void setCompilationResult(Class<?> generatedClass, String genericMethodName) {
         try {
-            Class<?> implClass = GeneratedCode.defineClass(result);
             MethodHandle genericMethod = MethodHandles.lookup()
-                .findStatic(implClass, Compiler.GENERIC_METHOD_NAME, MethodType.genericMethodType(arity()));
-            MethodType specializedType = result.specializationType();
-            MethodHandle specializedMethod = null;
-            if (specializedType != null) {
-                specializedMethod = MethodHandles.lookup()
-                    .findStatic(implClass, Compiler.SPECIALIZED_METHOD_NAME, specializedType);
-            }
-            updateCompiledForm(genericMethod, specializedType, specializedMethod);
+                .findStatic(generatedClass, genericMethodName, MethodType.genericMethodType(implementationArity()));
+//            MethodType specializedType = result.specializationType();
+//            MethodHandle specializedMethod = null;
+//            if (specializedType != null) {
+//                specializedMethod = MethodHandles.lookup()
+//                    .findStatic(implClass, Compiler.SPECIALIZED_METHOD_NAME, specializedType);
+//            }
+            updateCompiledForm(genericMethod, null, null);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
+
     }
 
     private MethodHandle makeSpecializationGuard(MethodHandle generic, MethodHandle specialized, MethodType type) {
@@ -322,6 +338,28 @@ public class FunctionImplementation {
             checker.asCollector(Object[].class, type.parameterCount()),
             generify(specialized),
             generic);
+    }
+
+    /*internal*/ synchronized void updateCompiledForm(
+        MethodHandle genericMethod,
+        @Nullable MethodType specializationType,
+        @Nullable MethodHandle specializedMethod)
+    {
+        state = State.COMPILED;
+        this.specializationType = specializationType;
+        if (specializedMethod == null) {
+            callSite.setTarget(dropFunctionArgument(genericMethod));
+            // FIXME properly handle specializationCallSite if present
+        } else {
+            callSite.setTarget(
+                dropFunctionArgument(
+                    makeSpecializationGuard(genericMethod, specializedMethod, specializationType)));
+            if (specializationCallSite == null) {
+                specializationCallSite = new VolatileCallSite(specializedMethod);
+            } else {
+                specializationCallSite.setTarget(specializedMethod);
+            }
+        }
     }
 
     /**

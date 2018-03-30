@@ -168,7 +168,7 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitTopLevelFunction(TopLevelFunctionNode topLevelBinding) {
+    public Void visitConstantFunction(ConstantFunctionNode topLevelBinding) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

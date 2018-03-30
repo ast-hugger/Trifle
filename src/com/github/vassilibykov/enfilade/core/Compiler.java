@@ -11,6 +11,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.invoke.MethodType;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.objectweb.asm.Opcodes.ACC_FINAL;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
@@ -31,8 +33,8 @@ public class Compiler {
     /**
      * The access point: compile a function.
      */
-    public static Result compile(FunctionImplementation function) {
-        Compiler compiler = new Compiler(function);
+    public static Result compile(FunctionImplementation topLevelFunction) {
+        Compiler compiler = new Compiler(topLevelFunction);
         Result result = compiler.compile();
         dumpClassFile("generated", result.bytecode());
         return result;
@@ -51,11 +53,13 @@ public class Compiler {
         private final String className;
         private final byte[] bytecode;
         @Nullable private final MethodType specializationType; // set by generateSpecializedMethod()
+        private final Map<FunctionImplementation, String> generatedMethodNames;
 
-        private Result(String className, byte[] bytecode, @Nullable MethodType specializationType) {
+        private Result(String className, byte[] bytecode, @Nullable MethodType specializationType, Map<FunctionImplementation, String> generatedMethodNames) {
             this.className = className;
             this.bytecode = bytecode;
             this.specializationType = specializationType;
+            this.generatedMethodNames = generatedMethodNames;
         }
 
         public String className() {
@@ -69,6 +73,10 @@ public class Compiler {
         @Nullable
         public MethodType specializationType() {
             return specializationType;
+        }
+
+        public Map<FunctionImplementation, String> generatedMethodNames() {
+            return generatedMethodNames;
         }
     }
 
@@ -90,27 +98,34 @@ public class Compiler {
         Instance
      */
 
-    private final FunctionImplementation function;
+    private final FunctionImplementation topLevelFunction;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     @Nullable private MethodType specializationType = null;
+    private int genericMethodSerial = 0;
+    private final Map<FunctionImplementation, String> generatedMethodNames = new HashMap<>();
 
-    private Compiler(FunctionImplementation function) {
-        this.function = function;
+    private Compiler(FunctionImplementation topLevelFunction) {
+        this.topLevelFunction = topLevelFunction;
         this.className = allocateClassName();
     }
 
     public Result compile() {
-        ExpressionTypeInferencer.inferTypesIn(function);
-        ExpressionTypeObserver.analyze(function);
+        ExpressionTypeInferencer.inferTypesIn(topLevelFunction);
+        ExpressionTypeObserver.analyze(topLevelFunction);
 //        NodePrettyPrinter.print(function.body());
         setupClassWriter();
-        generateGenericMethod();
-        if (function.profile.canBeSpecialized()) {
-            generateSpecializedMethod();
+        var name = generateGenericMethod(topLevelFunction);
+        generatedMethodNames.put(topLevelFunction, name);
+        for (var each : topLevelFunction.closureImplementations()) {
+            var closureName = generateGenericMethod(each);
+            generatedMethodNames.put(each, closureName);
+        }
+        if (topLevelFunction.profile.canBeSpecialized()) {
+//            generateSpecializedMethod();
         }
         classWriter.visitEnd();
-        return new Result(className, classWriter.toByteArray(), specializationType);
+        return new Result(className, classWriter.toByteArray(), specializationType, generatedMethodNames);
     }
 
     private void setupClassWriter() {
@@ -123,19 +138,21 @@ public class Compiler {
             null);
     }
 
-    private void generateGenericMethod() {
+    private String generateGenericMethod(FunctionImplementation closureImpl) {
+        var methodName = GENERIC_METHOD_NAME + genericMethodSerial++;
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
-            GENERIC_METHOD_NAME,
-            MethodType.genericMethodType(function.arity()).toMethodDescriptorString(),
+            methodName,
+            MethodType.genericMethodType(closureImpl.implementationArity()).toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
         CompilerCodeGeneratorGeneric generator = new CompilerCodeGeneratorGeneric(methodWriter);
-        JvmType resultType = function.body().accept(generator);
+        JvmType resultType = generator.generate(closureImpl);
         generator.writer.adaptType(resultType, JvmType.REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
+        return methodName;
     }
 
     private void generateSpecializedMethod() {
@@ -147,18 +164,18 @@ public class Compiler {
             specializationType.toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        CompilerCodeGeneratorSpecialized generator = new CompilerCodeGeneratorSpecialized(function, methodWriter);
+        CompilerCodeGeneratorSpecialized generator = new CompilerCodeGeneratorSpecialized(topLevelFunction, methodWriter);
         generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
     }
 
     private MethodType computeSpecializationType() {
-        Class<?>[] argClasses = function.parameters().stream()
+        Class<?>[] argClasses = topLevelFunction.parameters().stream()
             .map(var -> representativeType(var.observedType()))
             .toArray(Class[]::new);
         return MethodType.methodType(
-            representativeType(function.body().observedType()),
+            representativeType(topLevelFunction.body().observedType()),
             argClasses);
     }
 

@@ -108,15 +108,27 @@ public class RecoveryInterpreterTest {
 
     @Test
     public void testCall() {
-        VariableDefinition arg1 = new VariableDefinition(Variable.named("arg1"), bogusRuntimeFunction());
-        Closure adder = FunctionTranslator.translate(
-            lambda((a, b) -> add(a, b)));
-        // In general variables must not be reused, but reuse here is ok because we know
-        // the are in same positions in the frame and the code is executed only once so it's not being compiled.
+        Closure adder = FunctionTranslator.translate(lambda((a, b) -> add(a, b)));
+        VariableDefinition arg = new VariableDefinition(Variable.named("arg"), bogusRuntimeFunction());
         code = Asm
-            .vars(arg1)
+            .vars(arg)
             .code(
-                call(new CallNode.Call2(const_(adder), ref(arg1), ref(arg1))),
+                call(new CallNode.Call2(const_(adder), ref(arg), ref(arg))),
+                ret());
+        assertEquals(6, code.interpretWith(3));
+    }
+
+    @Test
+    public void testLoadAndCallClosure() {
+        var adder = FunctionTranslator.translate(lambda((a, b) -> add(a, b)));
+        var arg = new VariableDefinition(Variable.named("arg"), bogusRuntimeFunction());
+        var temp = new VariableDefinition(Variable.named("temp"), bogusRuntimeFunction());
+        code = Asm
+            .vars(arg, temp)
+            .code(
+                load(adder),
+                store(temp),
+                call(new CallNode.Call2(new GetVariableNode(temp), ref(arg), ref(arg))),
                 ret());
         assertEquals(6, code.interpretWith(3));
     }

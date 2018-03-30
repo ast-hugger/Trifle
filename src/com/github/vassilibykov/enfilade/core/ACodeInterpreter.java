@@ -68,18 +68,14 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
     }
 
     public Object interpret() {
-        while (pc >= 0) {
-            code[pc++].accept(this);
-        }
+        while (pc >= 0) code[pc++].accept(this);
         return register;
     }
 
     @SuppressWarnings("unused") // called by generated code
     public Object interpret(Object registerValue) {
         register = registerValue;
-        while (pc >= 0) {
-            code[pc++].accept(this);
-        }
+        while (pc >= 0) code[pc++].accept(this);
         return register;
     }
 
@@ -93,10 +89,6 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
     @Override
     public void visitCall(ACodeInstruction.Call call) {
         register = call.callExpression.accept(evaluator);
-    }
-
-    @Override
-    public void visitDrop(ACodeInstruction.Drop drop) {
     }
 
     @Override

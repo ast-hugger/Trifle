@@ -10,16 +10,15 @@ import org.jetbrains.annotations.NotNull;
  * <p>A-code is a representation of A-normal forms in a shape resembling a
  * sequence of instructions. It can be executed by A-machine which consists
  * of a vector of local variable values, a current instruction pointer,
- * and a single register (or if you will, a stack of maximum depth 1).
+ * and a single register.
  *
- * <p>There are only seven instructions. Instruction arguments, when present,
+ * <p>There are only six instructions. Instruction arguments, when present,
  * are actual objects of the specified types.
  *
  * <ul>
  *     <li>load EvaluatorNode</li>
  *     <li>call CallNode</li>
  *     <li>store VariableDefinition</li>
- *     <li>drop</li>
  *     <li>branch EvaluatorNode int</li>
  *     <li>goto int</li>
  *     <li>return</li>
@@ -30,7 +29,6 @@ public abstract class ACodeInstruction {
     public interface VoidVisitor {
         void visitBranch(Branch branch);
         void visitCall(Call call);
-        void visitDrop(Drop drop);
         void visitGoto(Goto aGoto);
         void visitLoad(Load load);
         void visitReturn(Return aReturn);
@@ -81,26 +79,6 @@ public abstract class ACodeInstruction {
         @Override
         public String toString() {
             return "CALL #" + callExpression.function();
-        }
-    }
-
-    /**
-     * Discard the current value of the register. If the value register is
-     * implemented as a register and not a 1-value stack, this is essentially a
-     * no-op.
-     */
-    public static class Drop extends ACodeInstruction {
-        Drop() {
-        }
-
-        @Override
-        public void accept(VoidVisitor visitor) {
-            visitor.visitDrop(this);
-        }
-
-        @Override
-        public String toString() {
-            return "DROP";
         }
     }
 

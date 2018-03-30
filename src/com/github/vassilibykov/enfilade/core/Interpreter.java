@@ -118,8 +118,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitTopLevelFunction(TopLevelFunctionNode topLevelFunction) {
-            return topLevelFunction.binding.closure();
+        public Object visitConstantFunction(ConstantFunctionNode constFunction) {
+            return constFunction.closure();
         }
     }
 
@@ -130,8 +130,6 @@ public class Interpreter {
     public Object interpret(Closure closure) {
         var implFunction = closure.implementation;
         var frame = new Object[implFunction.frameSize()];
-        var copiedCount = closure.copiedValues.length;
-        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
         try {
             return implFunction.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
@@ -142,9 +140,7 @@ public class Interpreter {
     public Object interpret(Closure closure, Object arg) {
         var implFunction = closure.implementation;
         var frame = new Object[implFunction.frameSize()];
-        var copiedCount = closure.copiedValues.length;
-        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
-        implFunction.parameters().get(0).initValueIn(frame, arg);
+        implFunction.allParameters()[0].setupArgumentIn(frame, arg);
         try {
             return implFunction.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {
@@ -155,10 +151,23 @@ public class Interpreter {
     public Object interpret(Closure closure, Object arg1, Object arg2) {
         var implFunction = closure.implementation;
         var frame = new Object[implFunction.frameSize()];
-        var copiedCount = closure.copiedValues.length;
-        System.arraycopy(closure.copiedValues, 0, frame, 0, copiedCount);
-        implFunction.parameters().get(0).initValueIn(frame, arg1);
-        implFunction.parameters().get(1).initValueIn(frame, arg2);
+        var allParameters = implFunction.allParameters();
+        allParameters[0].setupArgumentIn(frame, arg1);
+        allParameters[1].setupArgumentIn(frame, arg2);
+        try {
+            return implFunction.body().accept(new Evaluator(frame));
+        } catch (ReturnException e) {
+            return e.value;
+        }
+    }
+
+    public Object interpret(Closure closure, Object arg1, Object arg2, Object arg3) {
+        var implFunction = closure.implementation;
+        var frame = new Object[implFunction.frameSize()];
+        var allParameters = implFunction.allParameters();
+        allParameters[0].setupArgumentIn(frame, arg1);
+        allParameters[1].setupArgumentIn(frame, arg2);
+        allParameters[2].setupArgumentIn(frame, arg3);
         try {
             return implFunction.body().accept(new Evaluator(frame));
         } catch (ReturnException e) {

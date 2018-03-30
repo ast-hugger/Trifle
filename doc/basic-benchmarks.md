@@ -1,6 +1,6 @@
 ## Times
 
-The times below are milliseconds to compute a [recursively defined fibonacci(35)](code-samples.md).
+The times below are milliseconds to compute a [recursively defined fibonacci(35)](code-examples.md).
 Enfilade and Java times are under JDK 10, are after enough warmup runs (20,
 though 10 might be enough) to get stable timings. Pharo/Cog doesn't seem to
 benefit from warmup.
@@ -13,7 +13,7 @@ benefit from warmup.
 * 860: Enfilade, plain interpreter
 * 129: Smalltalk - Pharo, 64-bit Cog, March05 2018 build
 * 106: Javascript - node.js
-* 85: Enfilade, generic compiled form (wrapped ints)
+* 82: Enfilade, generic compiled form (wrapped ints)
 * 66: gcc -O0
 * 48: gcc -O1
 * 40: Java

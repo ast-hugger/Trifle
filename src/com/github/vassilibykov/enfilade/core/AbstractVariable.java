@@ -110,4 +110,6 @@ abstract class AbstractVariable {
             frame[genericIndex] = value;
         }
     }
+
+    abstract void setupArgumentIn(Object[] frame, Object value);
 }

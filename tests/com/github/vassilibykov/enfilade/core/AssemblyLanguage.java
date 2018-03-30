@@ -14,10 +14,6 @@ public class AssemblyLanguage {
         return new ACodeInstruction.Call(callExpression);
     }
 
-    public static ACodeInstruction.Drop drop() {
-        return new ACodeInstruction.Drop();
-    }
-
     public static ACodeInstruction.Goto jump(int address) {
         return new ACodeInstruction.Goto(address);
     }
@@ -36,6 +32,10 @@ public class AssemblyLanguage {
 
     public static ACodeInstruction.Load load(VariableDefinition var) {
         return new ACodeInstruction.Load(new GetVariableNode(var));
+    }
+
+    public static ACodeInstruction.Load load(Closure closure) {
+        return new ACodeInstruction.Load(ClosureNode.withNoCopiedValues(closure.implementation));
     }
 
     public static GetVariableNode ref(VariableDefinition var) {

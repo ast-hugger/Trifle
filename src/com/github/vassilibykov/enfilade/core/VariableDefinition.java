@@ -109,6 +109,12 @@ class VariableDefinition extends AbstractVariable {
     }
 
     @Override
+    void setupArgumentIn(Object[] frame, Object value) {
+        // a declared parameter; must be boxed if needed
+        initValueIn(frame, value);
+    }
+
+    @Override
     public String toString() {
         return "var(" + name() + ")";
     }
