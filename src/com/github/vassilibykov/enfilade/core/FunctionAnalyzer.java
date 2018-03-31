@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Performs the post-translation analysis phase of {@link FunctionTranslator}.
@@ -196,8 +197,11 @@ class FunctionAnalyzer {
         public Void visitClosure(ClosureNode closure) {
             var nestedIndexer = new VariableIndexer(closure.function());
             nestedIndexer.apply();
-            closure.indicesToCopy = closure.function().syntheticParameters().stream()
-                .mapToInt(each -> each.supplier().genericIndex)
+            closure.copiedOuterVariables = closure.function().syntheticParameters().stream()
+                .map(each -> each.supplier())
+                .collect(Collectors.toList());
+            closure.copiedVariablesGenericIndices = closure.copiedOuterVariables.stream()
+                .mapToInt(each -> each.genericIndex())
                 .toArray();
             return null;
         }

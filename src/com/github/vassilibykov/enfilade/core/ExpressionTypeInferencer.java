@@ -2,6 +2,8 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import java.util.stream.Stream;
+
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 

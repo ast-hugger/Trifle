@@ -2,6 +2,8 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import java.util.stream.Stream;
+
 /**
  * Analyzes a function body after it has been evaluated a number of times by the
  * {@link ProfilingInterpreter}. Populates evaluator nodes with observed types.
@@ -64,7 +66,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
 
     static void analyze(FunctionImplementation function) {
         var observer = new ExpressionTypeObserver(function);
-        function.parameters().forEach(
+        Stream.of(function.allParameters()).forEach(
             each -> each.setObservedType(each.profile().observedType()));
         function.body().accept(observer);
     }

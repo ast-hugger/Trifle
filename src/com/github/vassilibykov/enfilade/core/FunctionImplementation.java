@@ -17,12 +17,12 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * An object holding together all executable representations of a source function
- * (though not necessarily all of them are available at any given time): a tree of {@link
- * EvaluatorNode}s, a list of recovery interpreter instructions, method handles to generic
- * and compiled methods.
+ * An object holding together all executable representations of a source function (though
+ * not necessarily all of them are available at any given time). The representations are:
+ * a tree of {@link EvaluatorNode}s, a list of recovery interpreter instructions, method
+ * handles to invoke generic and specialzied compiled representations.
  *
- * <p>This is <em>not</em> a function value of the implemented language. For that, see
+ * <p>This is <em>not</em> a function value in the implemented language. For that, see
  * {@link Closure}.
  */
 public class FunctionImplementation {
@@ -84,7 +84,6 @@ public class FunctionImplementation {
     /*internal*/ MethodHandle callSiteInvoker;
     private EvaluatorNode body;
     private int localsCount = -1;
-    @Nullable private MethodType specializationType;
     @Nullable private VolatileCallSite specializationCallSite;
     /*internal*/ ACodeInstruction[] acode;
     private State state;
@@ -183,30 +182,6 @@ public class FunctionImplementation {
         return acode;
     }
 
-    Object execute(Closure closure) {
-        try {
-            return callSiteInvoker.invokeExact(closure);
-        } catch (Throwable throwable) {
-            throw new InvocationException(throwable);
-        }
-    }
-
-    Object execute(Closure function, Object arg) {
-        try {
-            return callSiteInvoker.invokeExact(function, arg);
-        } catch (Throwable throwable) {
-            throw new InvocationException(throwable);
-        }
-    }
-
-    Object execute(Closure closure, Object arg1, Object arg2) {
-        try {
-            return callSiteInvoker.invokeExact(closure, arg1, arg2);
-        } catch (Throwable throwable) {
-            throw new InvocationException(throwable);
-        }
-    }
-
     /**
      * Return a call site invoking which executes the function in the best
      * currently possible mode. Invokedynamics calling this function all share
@@ -215,8 +190,7 @@ public class FunctionImplementation {
      * the bootstrap time unless special measures are taken by the bootstrapper.
      */
     public CallSite callSite(MethodType requestedType) {
-        // At the moment everything is generically typed so no adaptation is necessary.
-        if (requestedType.equals(specializationType)) {
+        if (specializationCallSite != null && requestedType.equals(specializationCallSite.type())) {
             return specializationCallSite;
         } else if (requestedType.equals(callSite.type())){
             return callSite;
@@ -308,28 +282,44 @@ public class FunctionImplementation {
     }
 
     void forceCompile() {
-        Compiler.Result result = Compiler.compile(this);
-        Class<?> implClass = GeneratedCode.defineClass(result);
-        for (var entry : result.generatedMethodNames().entrySet()) {
-            entry.getKey().setCompilationResult(implClass, entry.getValue());
+        var result = Compiler.compile(this);
+        applyCompilationResult(result);
+    }
+
+    private synchronized void applyCompilationResult(Compiler.BatchResult batchResult) {
+        var implClass = GeneratedCode.defineClass(batchResult);
+        for (var entry : batchResult.results().entrySet()) {
+            entry.getKey().updateCompiledForm(implClass, entry.getValue());
         }
     }
 
-    private void setCompilationResult(Class<?> generatedClass, String genericMethodName) {
+    private void updateCompiledForm(Class<?> generatedClass, Compiler.FunctionCompilationResult result) {
+        MethodHandle genericMethod;
+        MethodHandle specializedMethod = null;
         try {
-            MethodHandle genericMethod = MethodHandles.lookup()
-                .findStatic(generatedClass, genericMethodName, MethodType.genericMethodType(implementationArity()));
-//            MethodType specializedType = result.specializationType();
-//            MethodHandle specializedMethod = null;
-//            if (specializedType != null) {
-//                specializedMethod = MethodHandles.lookup()
-//                    .findStatic(implClass, Compiler.SPECIALIZED_METHOD_NAME, specializedType);
-//            }
-            updateCompiledForm(genericMethod, null, null);
+            genericMethod = MethodHandles.lookup()
+                .findStatic(generatedClass, result.genericMethodName(), MethodType.genericMethodType(implementationArity()));
+            if (result.specializedMethodName() != null) {
+                specializedMethod = MethodHandles.lookup()
+                    .findStatic(generatedClass, result.specializedMethodName(), result.specializedMethodType());
+            }
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
-
+        state = State.COMPILED;
+        if (specializedMethod == null) {
+            callSite.setTarget(dropFunctionArgument(genericMethod));
+            // FIXME properly handle specializationCallSite if present
+        } else {
+            callSite.setTarget(
+                dropFunctionArgument(
+                    makeSpecializationGuard(genericMethod, specializedMethod, result.specializedMethodType())));
+            if (specializationCallSite == null) {
+                specializationCallSite = new VolatileCallSite(specializedMethod);
+            } else {
+                specializationCallSite.setTarget(specializedMethod);
+            }
+        }
     }
 
     private MethodHandle makeSpecializationGuard(MethodHandle generic, MethodHandle specialized, MethodType type) {
@@ -338,28 +328,6 @@ public class FunctionImplementation {
             checker.asCollector(Object[].class, type.parameterCount()),
             generify(specialized),
             generic);
-    }
-
-    /*internal*/ synchronized void updateCompiledForm(
-        MethodHandle genericMethod,
-        @Nullable MethodType specializationType,
-        @Nullable MethodHandle specializedMethod)
-    {
-        state = State.COMPILED;
-        this.specializationType = specializationType;
-        if (specializedMethod == null) {
-            callSite.setTarget(dropFunctionArgument(genericMethod));
-            // FIXME properly handle specializationCallSite if present
-        } else {
-            callSite.setTarget(
-                dropFunctionArgument(
-                    makeSpecializationGuard(genericMethod, specializedMethod, specializationType)));
-            if (specializationCallSite == null) {
-                specializationCallSite = new VolatileCallSite(specializedMethod);
-            } else {
-                specializationCallSite.setTarget(specializedMethod);
-            }
-        }
     }
 
     /**
@@ -407,6 +375,6 @@ public class FunctionImplementation {
 
     @Override
     public String toString() {
-        return definition.toString();
+        return "[" + depth + "] " + definition.toString();
     }
 }

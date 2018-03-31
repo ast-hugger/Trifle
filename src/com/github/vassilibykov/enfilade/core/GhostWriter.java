@@ -29,8 +29,12 @@ public class GhostWriter {
         return fqnName.replace('.', '/');
     }
 
-    public static final String OBJECT_DESC = "Ljava/lang/Object;";
-    public static final String BOX_ICN = internalClassName(Box.class);
+    private static final String OBJECT_DESC = "Ljava/lang/Object;";
+    private static final String BOOL_DESC = "Z";
+    private static final String INT_DESC = "I";
+    private static final String BOXED_REFERENCE_ICN = internalClassName(BoxedReference.class);
+    private static final String BOXED_BOOL_ICN = internalClassName(BoxedBool.class);
+    private static final String BOXED_INT_ICN = internalClassName(BoxedInt.class);
 
     /*
         Instance
@@ -90,14 +94,23 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter loadDefaultValue(JvmType type) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() { loadNull(); }
+            public void ifInt() { loadInt(0); }
+            public void ifBoolean() { loadInt(0); }
+        });
+        return this;
+    }
+
     public GhostWriter dup() {
         asmWriter.visitInsn(DUP);
         return this;
     }
 
     public GhostWriter extractBoxedVariable() {
-        asmWriter.visitTypeInsn(CHECKCAST, BOX_ICN);
-        asmWriter.visitFieldInsn(GETFIELD, BOX_ICN, "value", OBJECT_DESC);
+        asmWriter.visitTypeInsn(CHECKCAST, BOXED_REFERENCE_ICN);
+        asmWriter.visitFieldInsn(GETFIELD, BOXED_REFERENCE_ICN, "value", OBJECT_DESC);
         return this;
     }
 
@@ -118,8 +131,33 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter initBoxedVariable(int index) {
-        invokeStatic(Box.class, "with", Box.class, Object.class);
+    /**
+     * Generate code to set the local slot at the specified index to contain a box of the
+     * requested type. The value in the box is the value on the stack.
+     */
+    public GhostWriter initBoxedVariable(JvmType type, int index) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() { initBoxedReference(index); }
+            public void ifBoolean() { initBoxedBool(index); }
+            public void ifInt() { initBoxedInt(index); }
+        });
+        return this;
+    }
+
+    public GhostWriter initBoxedReference(int index) {
+        invokeStatic(BoxedReference.class, "with", BoxedReference.class, Object.class);
+        asmWriter.visitVarInsn(ASTORE, index);
+        return this;
+    }
+
+    public GhostWriter initBoxedBool(int index) {
+        invokeStatic(BoxedBool.class, "with", BoxedBool.class, boolean.class);
+        asmWriter.visitVarInsn(ASTORE, index);
+        return this;
+    }
+
+    public GhostWriter initBoxedInt(int index) {
+        invokeStatic(BoxedInt.class, "with", BoxedInt.class, int.class);
         asmWriter.visitVarInsn(ASTORE, index);
         return this;
     }
@@ -183,18 +221,12 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter loadLocal(JvmType category, int index) {
-        // FIXME switch to pattern matching style
-        switch (category) {
-            case REFERENCE:
-                asmWriter.visitVarInsn(ALOAD, index);
-                break;
-            case INT:
-                asmWriter.visitVarInsn(ILOAD, index);
-                break;
-            default:
-                throw new IllegalArgumentException("unrecognized type category");
-        }
+    public GhostWriter loadLocal(JvmType type, int index) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() { asmWriter.visitVarInsn(ALOAD, index); }
+            public void ifInt() { asmWriter.visitVarInsn(ILOAD, index); }
+            public void ifBoolean() { asmWriter.visitVarInsn(ILOAD, index); }
+        });
         return this;
     }
 
@@ -251,11 +283,36 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter storeBoxedVariable(int index) {
+    public GhostWriter storeBoxedVariable(JvmType type, int index) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() { storeBoxedReference(index); }
+            public void ifBoolean() { storeBoxedBool(index); }
+            public void ifInt() { storeBoxedInt(index); }
+        });
+        return this;
+    }
+
+    public GhostWriter storeBoxedReference(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, BOX_ICN);
+        asmWriter.visitTypeInsn(CHECKCAST, BOXED_REFERENCE_ICN);
         swap();
-        asmWriter.visitFieldInsn(PUTFIELD, BOX_ICN, "value", OBJECT_DESC);
+        asmWriter.visitFieldInsn(PUTFIELD, BOXED_REFERENCE_ICN, "value", OBJECT_DESC);
+        return this;
+    }
+
+    public GhostWriter storeBoxedBool(int index) {
+        asmWriter.visitVarInsn(ALOAD, index);
+        asmWriter.visitTypeInsn(CHECKCAST, BOXED_BOOL_ICN);
+        swap();
+        asmWriter.visitFieldInsn(PUTFIELD, BOXED_BOOL_ICN, "value", BOOL_DESC);
+        return this;
+    }
+
+    public GhostWriter storeBoxedInt(int index) {
+        asmWriter.visitVarInsn(ALOAD, index);
+        asmWriter.visitTypeInsn(CHECKCAST, BOXED_INT_ICN);
+        swap();
+        asmWriter.visitFieldInsn(PUTFIELD, BOXED_INT_ICN, "value", INT_DESC);
         return this;
     }
 
@@ -279,6 +336,28 @@ public class GhostWriter {
     public GhostWriter unboxInteger() {
         checkCast(Integer.class);
         invokeVirtual(Integer.class, "intValue", int.class);
+        return this;
+    }
+
+    /**
+     * Generate code to unbox the value currently on the stack, which must be
+     * a box of the appropriate type.
+     */
+    public GhostWriter unboxValue(JvmType type) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() {
+                checkCast(BoxedReference.class);
+                asmWriter.visitFieldInsn(GETFIELD, BOXED_REFERENCE_ICN, "value", OBJECT_DESC);
+            }
+            public void ifInt() {
+                checkCast(BoxedInt.class);
+                asmWriter.visitFieldInsn(GETFIELD, BOXED_INT_ICN, "value", INT_DESC);
+            }
+            public void ifBoolean() {
+                checkCast(BoxedBool.class);
+                asmWriter.visitFieldInsn(GETFIELD, BOXED_BOOL_ICN, "value", BOOL_DESC);
+            }
+        });
         return this;
     }
 

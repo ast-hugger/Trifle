@@ -8,13 +8,14 @@ import com.github.vassilibykov.enfilade.expression.Lambda;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 
 /**
- * Tests of compiling into generic code.
+ * Tests of compiling into specialized code.
  */
-public class GenericCompilerTests extends LanguageFeaturesTest {
+public class SpecializedCompilerTests extends LanguageFeaturesTest {
 
     @Override
     protected Object eval(Expression expression) {
         var function = FunctionTranslator.translate(lambda(() -> expression));
+        function.invoke();
         function.implementation.forceCompile();
         return function.invoke();
     }
@@ -22,7 +23,9 @@ public class GenericCompilerTests extends LanguageFeaturesTest {
     @Override
     protected Object invoke(Lambda definition, Object... args) {
         var function = FunctionTranslator.translate(definition);
+        function.invoke(args);
         function.implementation.forceCompile();
         return function.invoke(args);
     }
+
 }

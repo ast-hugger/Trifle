@@ -64,12 +64,12 @@ class CopiedVariable extends AbstractVariable {
 
     @Override
     void setInferredType(@NotNull ExpressionType expressionType) {
-        original.setInferredType(expressionType);
+        // nothing to set; the original tracks the type
     }
 
     @Override
     void setObservedType(@NotNull ExpressionType type) {
-        original.setObservedType(type);
+        // nothing to set; the original tracks the type
     }
 
     @Override

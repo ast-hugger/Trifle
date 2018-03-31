@@ -2,14 +2,14 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-public class Box {
-    public static Box with(Object value) {
-        return new Box(value);
+class BoxedReference {
+    static BoxedReference with(Object value) {
+        return new BoxedReference(value);
     }
 
-    public Object value;
+    Object value;
 
-    private Box(Object value) {
+    private BoxedReference(Object value) {
         this.value = value;
     }
 }

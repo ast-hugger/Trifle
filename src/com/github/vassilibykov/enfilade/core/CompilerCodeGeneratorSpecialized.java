@@ -6,7 +6,9 @@ import com.github.vassilibykov.enfilade.primitives.LessThan;
 import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
+import java.lang.invoke.MethodType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -118,8 +120,9 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     void generate() {
         function.acode = ACodeTranslator.translate(function.body());
         continuationTypes.push(functionReturnType);
-        VariableIndexer variableIndexer = new VariableIndexer(function.definitionArity());
+        VariableIndexer variableIndexer = new VariableIndexer(function.implementationArity());
         function.body().accept(variableIndexer);
+        generatePrologue();
         function.body().accept(this);
         continuationTypes.pop();
         writer.ret(functionReturnType);
@@ -133,70 +136,117 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         }
     }
 
+    private void generatePrologue() {
+        // FIXME: 3/30/18 arguments which are boxed and specialized to primitive types must be relocated on wrapping.
+        // If such an argument is copied by a closure, indicesToCopy must reflect the relocated index.
+        // This means indicesToCopy must be separate for the specialized case.
+        // NO, looks like they shouldn't be. Need to verify and if that's so, the whole
+        // generic/specialized index separation is bogus and should be removed.
+        for (var each : function.parameters()) {
+            if (each.isBoxed()) {
+                var type = each.specializationType();
+                int index = each.specializedIndex();
+                writer
+                    .loadLocal(type, index)
+                    .initBoxedVariable(type, index);
+            }
+        }
+    }
+
     private JvmType currentContinuationType() {
         return continuationTypes.peek();
     }
 
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
-//        JvmType returnType = call.specializationType();
-//        MethodType callSiteType = MethodType.methodType(returnType.representativeClass());
-//        writer.invokeDynamic(
-//            ConstantFunctionInvokeDynamic.BOOTSTRAP,
-//            "call#" + id,
-//            callSiteType,
-//            id);
-//        assertPassage(returnType, currentContinuationType());
-//        return null;
+        generateExpecting(REFERENCE, call.function()); // FIXME: 3/30/18 should not be 'expecting'; a type error is an error
+        var returnType = call.specializationType();
+        var callSiteSignature = MethodType.methodType(returnType.representativeClass(), Object.class);
+        writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call0", callSiteSignature);
+        assertPassage(returnType, currentContinuationType());
+        return null;
     }
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        // FIXME this (and the 2-arg version) will fail if arguments are specialized so the call site
+        // FIXME 3/25/18 this (and the 2-arg version) will fail if arguments are specialized so the call site
         // has a non-generic signature, but the specialization available in the nexus has a different signature.
         // We'll need to revise the scheme of managing implementations and call sites in FunctionImplementation
         // to fix this.
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        call.arg().accept(this);
-//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
-//        JvmType returnType = call.specializationType();
-//        MethodType callSiteType = MethodType.methodType(
-//            returnType.representativeClass(),
-//            call.arg().specializationType().representativeClass());
-//        writer.invokeDynamic(
-//            ConstantFunctionInvokeDynamic.BOOTSTRAP,
-//            "call#" + id,
-//            callSiteType,
-//            id);
-//        assertPassage(returnType, currentContinuationType());
-//        return null;
+
+        if (call.function() instanceof ConstantFunctionNode) {
+            return generateConstantFunctionCall1(call, (ConstantFunctionNode) call.function());
+        }
+
+        generateExpecting(REFERENCE, call.function()); // FIXME: 3/30/18 should not be 'expecting'; a type error is an error
+        var arg = call.arg();
+        generateExpecting(arg.specializationType(), arg);
+        var returnType = call.specializationType();
+        var callSiteSignature = MethodType.methodType(
+            returnType.representativeClass(),
+            Object.class, // really a Closure, but we type it as Object to catch errors locally
+            arg.specializationType().representativeClass());
+        writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature);
+        assertPassage(returnType, currentContinuationType());
+        return null;
+    }
+
+    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
+        var arg = call.arg();
+        generateExpecting(arg.specializationType(), arg);
+        var returnType = call.specializationType();
+        var callSiteSignature = MethodType.methodType(
+            returnType.representativeClass(),
+            arg.specializationType().representativeClass());
+        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, function.id());
+        assertPassage(returnType, currentContinuationType());
+        return null;
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-//        call.arg1().accept(this);
-//        call.arg2().accept(this);
-//        int id = FunctionRegistry.INSTANCE.lookup(call.function().implementation);
-//        JvmType returnType = call.specializationType();
-//        MethodType callSiteType = MethodType.methodType(
-//            returnType.representativeClass(),
-//            call.arg1().specializationType().representativeClass(),
-//            call.arg2().specializationType().representativeClass());
-//        writer.invokeDynamic(
-//            ConstantFunctionInvokeDynamic.BOOTSTRAP,
-//            "call#" + id,
-//            callSiteType,
-//            id);
-//        assertPassage(returnType, currentContinuationType());
-//        return null;
+        generateExpecting(REFERENCE, call.function()); // FIXME: 3/30/18 should not be 'expecting'; a type error is an error
+        var arg1 = call.arg1();
+        var arg2 = call.arg2();
+        generateExpecting(arg1.specializationType(), arg1);
+        generateExpecting(arg2.specializationType(), arg2);
+        var returnType = call.specializationType();
+        var callSiteSignature = MethodType.methodType(
+            returnType.representativeClass(),
+            Object.class, // really a Closure, but we type it as Object to catch errors locally
+            arg1.specializationType().representativeClass(),
+            arg2.specializationType().representativeClass());
+        writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call2", callSiteSignature);
+        assertPassage(returnType, currentContinuationType());
+        return null;
     }
 
     @Override
     public JvmType visitClosure(ClosureNode closure) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        var copiedOuterVariables = closure.copiedOuterVariables;
+        writer.newObjectArray(copiedOuterVariables.size());
+        for (int i = 0; i < copiedOuterVariables.size(); i++) {
+            var variable = copiedOuterVariables.get(i);
+            writer
+                .dup()
+                .loadInt(i);
+            if (variable.isBoxed()) {
+                writer.loadLocal(REFERENCE, variable.specializedIndex());
+            } else {
+                writer
+                    .loadLocal(variable.specializationType(), variable.specializedIndex())
+                    .adaptType(variable.specializationType(), REFERENCE);
+            }
+            writer.asm().visitInsn(Opcodes.AASTORE);
+//                .loadLocal(variable.specializationType(), variable.specializedIndex());
+//            if (!variable.isBoxed()) {
+//                writer.adaptType(variable.specializationType(), REFERENCE);
+//            }
+        }
+        writer
+            .loadInt(FunctionRegistry.INSTANCE.lookup(closure.function()))
+            .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
+        return REFERENCE;
     }
 
     @Override
@@ -208,9 +258,30 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         } else if (value instanceof String) {
             writer.loadString((String) value);
             assertPassage(REFERENCE, currentContinuationType());
+        } else if (value == null) {
+            writer.loadNull();
+            assertPassage(REFERENCE, currentContinuationType());
+        } else if (value instanceof Boolean) {
+            writer.loadInt((Boolean) value ? 1 : 0);
+            assertPassage(BOOL, currentContinuationType());
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
+        return null;
+    }
+
+    @Override
+    public JvmType visitGetVar(GetVariableNode varRef) {
+        var variable = varRef.variable();
+        var varType = variable.specializationType();
+        if (variable.isBoxed()) {
+            writer
+                .loadLocal(REFERENCE, variable.specializedIndex())
+                .unboxValue(varType);
+        } else {
+            writer.loadLocal(varType, variable.specializedIndex());
+        }
+        assertPassage(varType, currentContinuationType());
         return null;
     }
 
@@ -234,36 +305,49 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitLet(LetNode let) {
-        VariableDefinition var = let.variable();
-        JvmType varType = var.specializationType();
+        VariableDefinition variable = let.variable();
+        JvmType varType = variable.specializationType();
+        if (variable.isBoxed() && let.isLetrec()) {
+            writer
+                .loadDefaultValue(varType)
+                .initBoxedVariable(varType, variable.specializedIndex());
+        }
         if (varType == REFERENCE) {
             generateExpecting(REFERENCE, let.initializer());
         } else {
             withSquarePegRecovery(let, () -> generateExpecting(varType, let.initializer()));
         }
-        writer.storeLocal(varType, var.specializedIndex());
-        liveLocals.add(var);
+        if (variable.isBoxed()) {
+            if (let.isLetrec()) {
+                writer.storeBoxedVariable(varType, variable.specializedIndex());
+            } else {
+                writer.initBoxedVariable(varType, variable.specializedIndex());
+            }
+        } else {
+            writer.storeLocal(varType, variable.specializedIndex());
+        }
+        liveLocals.add(variable);
         generateForCurrentContinuation(let.body());
-        liveLocals.remove(var);
+        liveLocals.remove(variable);
         return null;
     }
 
     @Override
     public JvmType visitPrimitive1(Primitive1Node primitive) {
-        primitive.argument().accept(this);
-        primitive.generate(writer, primitive.argument().specializationType());
+        var argType = primitive.argument().specializationType();
+        generateExpecting(argType, primitive.argument());
+        primitive.generate(writer, argType);
         assertPassage(primitive.jvmType(), currentContinuationType());
         return null;
     }
 
     @Override
     public JvmType visitPrimitive2(Primitive2Node primitive) {
-        primitive.argument1().accept(this);
-        primitive.argument2().accept(this);
-        primitive.generate(
-            writer,
-            primitive.argument1().specializationType(),
-            primitive.argument2().specializationType());
+        var arg1Type = primitive.argument1().specializationType();
+        var arg2Type = primitive.argument2().specializationType();
+        generateExpecting(arg1Type, primitive.argument1());
+        generateExpecting(arg2Type, primitive.argument2());
+        primitive.generate(writer, arg1Type, arg2Type);
         assertPassage(primitive.jvmType(), currentContinuationType());
         return null;
     }
@@ -297,23 +381,23 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         var var = set.variable();
         JvmType varType = var.specializationType();
         generateExpecting(varType, set.value());
+        writer.dup(); // to leave the value on the stack as the result
+        if (var.isBoxed()) {
+            writer.storeBoxedVariable(varType, var.specializedIndex());
+        } else {
+            writer.storeLocal(varType, var.specializedIndex());
+        }
+        return null;
+    }
+
+    @Override
+    public JvmType visitConstantFunction(ConstantFunctionNode constFunction) {
+        var closure = constFunction.closure();
+        int id = ConstantFunctionNode.lookup(closure);
         writer
-            .dup()
-            .storeLocal(varType, var.specializedIndex());
-        return null;
-    }
-
-    @Override
-    public JvmType visitConstantFunction(ConstantFunctionNode topLevelBinding) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
-    }
-
-    @Override
-    public JvmType visitGetVar(GetVariableNode varRef) {
-        JvmType varType = varRef.variable().specializationType();
-        writer.loadLocal(varType, varRef.variable().specializedIndex());
-        assertPassage(varType, currentContinuationType());
-        return null;
+            .loadInt(id)
+            .invokeStatic(ConstantFunctionNode.class, "lookup", Closure.class, int.class);
+        return REFERENCE;
     }
 
     private void generateExpecting(JvmType expectedType, EvaluatorNode expression) {

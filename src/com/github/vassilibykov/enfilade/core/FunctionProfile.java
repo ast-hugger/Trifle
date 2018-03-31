@@ -28,7 +28,7 @@ public class FunctionProfile {
     public synchronized void recordInvocation(Object[] frame) {
         invocationCount++;
         for (var each : methodArguments) {
-            each.profile.recordValue(frame[each.genericIndex]);
+            each.profile.recordValue(each.getValueIn(frame));
         }
     }
 

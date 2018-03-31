@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
@@ -13,7 +14,9 @@ import java.io.IOException;
 import java.lang.invoke.MethodType;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static org.objectweb.asm.Opcodes.ACC_FINAL;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 import static org.objectweb.asm.Opcodes.ACC_STATIC;
@@ -33,12 +36,13 @@ public class Compiler {
     /**
      * The access point: compile a function.
      */
-    public static Result compile(FunctionImplementation topLevelFunction) {
+    public static BatchResult compile(FunctionImplementation topLevelFunction) {
         Compiler compiler = new Compiler(topLevelFunction);
-        Result result = compiler.compile();
-        dumpClassFile("generated", result.bytecode());
-        return result;
+        BatchResult batchResult = compiler.compile();
+        dumpClassFile("generated", batchResult.bytecode());
+        return batchResult;
     }
+
     private static void dumpClassFile(String name, byte[] bytecode) {
         File classFile = new File(name + ".class");
         try {
@@ -49,34 +53,58 @@ public class Compiler {
             e.printStackTrace();
         }
     }
-    public static class Result {
+
+    static class BatchResult {
         private final String className;
         private final byte[] bytecode;
-        @Nullable private final MethodType specializationType; // set by generateSpecializedMethod()
-        private final Map<FunctionImplementation, String> generatedMethodNames;
+        private final Map<FunctionImplementation, FunctionCompilationResult> results;
 
-        private Result(String className, byte[] bytecode, @Nullable MethodType specializationType, Map<FunctionImplementation, String> generatedMethodNames) {
+        private BatchResult(String className,
+                            byte[] bytecode,
+                            Map<FunctionImplementation, FunctionCompilationResult> results)
+        {
             this.className = className;
             this.bytecode = bytecode;
-            this.specializationType = specializationType;
-            this.generatedMethodNames = generatedMethodNames;
+            this.results = results;
         }
 
-        public String className() {
+        String className() {
             return className;
         }
 
-        public byte[] bytecode() {
+        byte[] bytecode() {
             return bytecode;
         }
 
-        @Nullable
-        public MethodType specializationType() {
-            return specializationType;
+        Map<FunctionImplementation, FunctionCompilationResult> results() {
+            return results;
+        }
+    }
+
+    static class FunctionCompilationResult {
+        @NotNull private final String genericMethodName;
+        @Nullable private final String specializedMethodName;
+        @Nullable private final MethodType specializedMethodType;
+
+        FunctionCompilationResult(@NotNull String genericMethodName,
+                                  @Nullable String specializedMethodName,
+                                  @Nullable MethodType specializedMethodType)
+        {
+            this.genericMethodName = genericMethodName;
+            this.specializedMethodName = specializedMethodName;
+            this.specializedMethodType = specializedMethodType;
         }
 
-        public Map<FunctionImplementation, String> generatedMethodNames() {
-            return generatedMethodNames;
+        String genericMethodName() {
+            return genericMethodName;
+        }
+
+        String specializedMethodName() {
+            return specializedMethodName;
+        }
+
+        MethodType specializedMethodType() {
+            return specializedMethodType;
         }
     }
 
@@ -101,31 +129,42 @@ public class Compiler {
     private final FunctionImplementation topLevelFunction;
     private final String className;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    @Nullable private String specializedMethodName = null;
     @Nullable private MethodType specializationType = null;
-    private int genericMethodSerial = 0;
-    private final Map<FunctionImplementation, String> generatedMethodNames = new HashMap<>();
+    private int generatedMethodSerial = 0;
+    private final Map<FunctionImplementation, FunctionCompilationResult> individualResults = new HashMap<>();
 
     private Compiler(FunctionImplementation topLevelFunction) {
         this.topLevelFunction = topLevelFunction;
         this.className = allocateClassName();
     }
 
-    public Result compile() {
+    public BatchResult compile() {
         ExpressionTypeInferencer.inferTypesIn(topLevelFunction);
+        topLevelFunction.closureImplementations().forEach(ExpressionTypeInferencer::inferTypesIn);
         ExpressionTypeObserver.analyze(topLevelFunction);
+        topLevelFunction.closureImplementations().forEach(ExpressionTypeObserver::analyze);
 //        NodePrettyPrinter.print(function.body());
         setupClassWriter();
-        var name = generateGenericMethod(topLevelFunction);
-        generatedMethodNames.put(topLevelFunction, name);
-        for (var each : topLevelFunction.closureImplementations()) {
-            var closureName = generateGenericMethod(each);
-            generatedMethodNames.put(each, closureName);
-        }
-        if (topLevelFunction.profile.canBeSpecialized()) {
-//            generateSpecializedMethod();
+        generateMethodsFor(topLevelFunction);
+        for (FunctionImplementation each : topLevelFunction.closureImplementations()) {
+            generateMethodsFor(each);
         }
         classWriter.visitEnd();
-        return new Result(className, classWriter.toByteArray(), specializationType, generatedMethodNames);
+        return new BatchResult(className, classWriter.toByteArray(), individualResults);
+    }
+
+    private void generateMethodsFor(FunctionImplementation function) {
+        var methodName = generateGenericMethod(function);
+        specializedMethodName = null;
+        specializationType = null;
+        if (function.profile.canBeSpecialized()) {
+            generateSpecializedMethod(function); // sets 'specializedMethodName' and 'specializationType'
+        }
+        individualResults.put(
+            function,
+            new FunctionCompilationResult(methodName, specializedMethodName, specializationType));
+        generatedMethodSerial++;
     }
 
     private void setupClassWriter() {
@@ -139,7 +178,7 @@ public class Compiler {
     }
 
     private String generateGenericMethod(FunctionImplementation closureImpl) {
-        var methodName = GENERIC_METHOD_NAME + genericMethodSerial++;
+        var methodName = GENERIC_METHOD_NAME + generatedMethodSerial;
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
             methodName,
@@ -148,41 +187,46 @@ public class Compiler {
         methodWriter.visitCode();
         CompilerCodeGeneratorGeneric generator = new CompilerCodeGeneratorGeneric(methodWriter);
         JvmType resultType = generator.generate(closureImpl);
-        generator.writer.adaptType(resultType, JvmType.REFERENCE);
+        generator.writer.adaptType(resultType, REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
         return methodName;
     }
 
-    private void generateSpecializedMethod() {
-        specializationType = computeSpecializationType();
+    private void generateSpecializedMethod(FunctionImplementation closureImpl) {
+        specializedMethodName = SPECIALIZED_METHOD_NAME + generatedMethodSerial; // assuming it's been incremented by generic generator
+        specializationType = computeSpecializationType(closureImpl);
         System.out.println("generating a specialized method of type " + specializationType);
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
-            SPECIALIZED_METHOD_NAME,
+            specializedMethodName,
             specializationType.toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        CompilerCodeGeneratorSpecialized generator = new CompilerCodeGeneratorSpecialized(topLevelFunction, methodWriter);
+        CompilerCodeGeneratorSpecialized generator = new CompilerCodeGeneratorSpecialized(closureImpl, methodWriter);
         generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
     }
 
-    private MethodType computeSpecializationType() {
-        Class<?>[] argClasses = topLevelFunction.parameters().stream()
-            .map(var -> representativeType(var.observedType()))
+    @NotNull private MethodType computeSpecializationType(FunctionImplementation closureImpl) {
+        // Boxed synthetic parameters are passed in as boxes, so they are reference type no matter the var type.
+        Stream<JvmType> syntheticParamTypes = closureImpl.syntheticParameters().stream()
+            .map(each -> each.isBoxed() ? REFERENCE : each.observedType().jvmType().orElse(REFERENCE));
+        // Declared parameters follow their observed type.
+        Stream<JvmType> declaredParamTypes = closureImpl.parameters().stream()
+            .map(each -> each.observedType().jvmType().orElse(REFERENCE));
+        Class<?>[] argClasses = Stream.concat(syntheticParamTypes, declaredParamTypes)
+            .map(each -> each.representativeClass())
             .toArray(Class[]::new);
         return MethodType.methodType(
-            representativeType(topLevelFunction.body().observedType()),
+            representativeType(closureImpl.body().observedType()),
             argClasses);
     }
 
     @SuppressWarnings("unchecked")
     private Class<?> representativeType(ExpressionType observedType) {
-        return observedType.jvmType()
-            .map(it -> (Class<Object>) it.representativeClass())
-            .orElse(Object.class);
+        return observedType.jvmType().orElse(REFERENCE).representativeClass();
     }
 }

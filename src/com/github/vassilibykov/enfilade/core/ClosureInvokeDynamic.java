@@ -26,8 +26,10 @@ public final class ClosureInvokeDynamic {
 
     public static CallSite bootstrap(Lookup lookupAtCall, String name, MethodType callSiteType) {
         var callSite = new MutableCallSite(callSiteType);
-        if (callSiteType.parameterCount() != 2) throw new UnsupportedOperationException(); // FIXME: 3/29/18
-        callSite.setTarget(DISPATCH_1.bindTo(callSite));
+        if (callSiteType.parameterCount() != 2) {
+            throw new UnsupportedOperationException(); // FIXME: 3/29/18
+        }
+        callSite.setTarget(DISPATCH_1.bindTo(callSite).asType(callSiteType));
         return callSite;
     }
 
@@ -36,7 +38,8 @@ public final class ClosureInvokeDynamic {
         var target = closure.invoker.asType(thisSite.type()); // type: (Closure Object*) -> Object
         var guarded = MethodHandles.guardWithTest(CHECK_CLOSURE.bindTo(expectedClosure), target, thisSite.getTarget());
         thisSite.setTarget(guarded);
-        return target.invokeExact(expectedClosure, arg);
+        var adaptedInvoker = closure.invoker.asType(closure.invoker.type().changeParameterType(0, Object.class));
+        return adaptedInvoker.invokeExact(expectedClosure, arg);
     }
 
     public static boolean checkClosure(Object expected, Object actual) {

@@ -34,7 +34,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
                 int index = each.genericIndex();
                 writer
                     .loadLocal(REFERENCE, index)
-                    .initBoxedVariable(index);
+                    .initBoxedReference(index);
             }
         }
     }
@@ -45,7 +45,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
             return generateConstantFunctionCall0(call, (ConstantFunctionNode) call.function());
         }
         call.function().accept(this); // puts a value on the stack that must be a closure
-        var type = MethodType.genericMethodType(1);
+        var type = MethodType.genericMethodType(1); // Closure is the argument
         writer.invokeDynamic(
             ClosureInvokeDynamic.BOOTSTRAP,
             "call0",
@@ -127,7 +127,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitClosure(ClosureNode closure) {
-        var indicesToCopy = closure.indicesToCopy;
+        var indicesToCopy = closure.copiedVariablesGenericIndices;
         writer.newObjectArray(indicesToCopy.length);
         for (int i = 0; i < indicesToCopy.length; i++) {
             writer
@@ -154,6 +154,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         } else if (value == null) {
             writer.loadNull();
             return REFERENCE;
+        } else if (value instanceof Boolean) {
+            writer.loadInt((Boolean) value ? 1 : 0);
+            return BOOL;
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
@@ -190,15 +193,15 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         if (variable.isBoxed() && let.isLetrec()) {
             writer
                 .loadNull()
-                .initBoxedVariable(variable.genericIndex);
+                .initBoxedReference(variable.genericIndex);
         }
         var initType = let.initializer().accept(this);
         writer.adaptType(initType, REFERENCE);
         if (variable.isBoxed()) {
             if (let.isLetrec()) {
-                writer.storeBoxedVariable(variable.genericIndex());
+                writer.storeBoxedReference(variable.genericIndex());
             } else {
-                writer.initBoxedVariable(variable.genericIndex());
+                writer.initBoxedReference(variable.genericIndex());
             }
         } else {
             writer.storeLocal(REFERENCE, variable.genericIndex());
@@ -248,7 +251,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
             .adaptType(varType, REFERENCE)
             .dup();
         if (variable.isBoxed()) {
-            writer.storeBoxedVariable(variable.genericIndex());
+            writer.storeBoxedReference(variable.genericIndex());
         } else {
             writer.storeLocal(REFERENCE, variable.genericIndex());
         }

@@ -93,19 +93,19 @@ abstract class AbstractVariable {
         // the other two value access methods become polymorphic. In essence, the 'if'
         // below is traded for the 'if' in the call site cache dispatch.
         if (isBoxed) {
-            frame[genericIndex] = Box.with(value);
+            frame[genericIndex] = BoxedReference.with(value);
         } else {
             frame[genericIndex] = value;
         }
     }
 
     Object getValueIn(Object[] frame) {
-        return isBoxed ? ((Box) frame[genericIndex]).value : frame[genericIndex];
+        return isBoxed ? ((BoxedReference) frame[genericIndex]).value : frame[genericIndex];
     }
 
     void setValueIn(Object[] frame, Object value) {
         if (isBoxed) {
-            ((Box) frame[genericIndex]).value = value;
+            ((BoxedReference) frame[genericIndex]).value = value;
         } else {
             frame[genericIndex] = value;
         }

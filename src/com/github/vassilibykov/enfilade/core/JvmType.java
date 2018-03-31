@@ -36,7 +36,7 @@ public enum JvmType {
             // A void type category is only used in one specific case, as the type of
             // a continuation that will discard its value. We don't expect to see it in other
             // scenarios. This default method allows us to just ignore its potential existence.
-            throw new AssertionError("a VOID type category is not expected here");
+            throw new AssertionError("a VOID type is not expected here");
         }
     }
 
@@ -45,10 +45,10 @@ public enum JvmType {
         void ifInt();
         void ifBoolean();
         default void ifVoid() {
-            // A void type category is only used in one specific case, as the type of
+            // A void type is only used in one specific case, as the type of
             // a continuation that will discard its value. We don't expect to see it in other
             // scenarios. This default method allows us to just ignore its potential existence.
-            throw new AssertionError("a VOID type category is not expected here");
+            throw new AssertionError("a VOID type is not expected here");
         }
     }
 
