@@ -5,8 +5,8 @@ package com.github.vassilibykov.enfilade.core;
 import com.github.vassilibykov.enfilade.expression.Block;
 import com.github.vassilibykov.enfilade.expression.Call;
 import com.github.vassilibykov.enfilade.expression.Const;
-import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.If;
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Let;
 import com.github.vassilibykov.enfilade.expression.LetRec;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
@@ -16,6 +16,7 @@ import com.github.vassilibykov.enfilade.expression.TopLevel;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class FunctionTranslator {
         var implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
         var translator = new FunctionTranslator(lambda, implementation);
         translator.translate();
-        implementation.addClosureImplementations(translator.nestedFunctions.values());
+        implementation.addClosureImplementations(translator.nestedFunctions);
         FunctionAnalyzer.analyze(implementation); // finishesInitialization
         return new Closure(implementation, new Object[0]);
     }
@@ -64,7 +65,7 @@ public class FunctionTranslator {
     private final Lambda topLambda;
     private final FunctionImplementation functionImplementation;
     private final Map<Variable, VariableDefinition> variableDefinitions = new HashMap<>();
-    private final Map<Lambda, FunctionImplementation> nestedFunctions = new HashMap<>();
+    private final List<FunctionImplementation> nestedFunctions = new ArrayList<>();
 
     private FunctionTranslator(Lambda lambda, FunctionImplementation functionImplementation) {
         this.topLambda = lambda;
@@ -151,7 +152,7 @@ public class FunctionTranslator {
         @Override
         public EvaluatorNode visitLambda(Lambda lambda) {
             var nestedFunction = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
-            nestedFunctions.put(lambda, nestedFunction);
+            nestedFunctions.add(nestedFunction);
             var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
             nestedTranslator.translate();
             return new ClosureNode(nestedFunction);
