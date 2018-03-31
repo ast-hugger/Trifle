@@ -29,7 +29,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     private void generatePrologue(FunctionImplementation function) {
-        for (var each : function.parameters()) {
+        for (var each : function.declaredParameters()) {
             if (each.isBoxed()) {
                 int index = each.genericIndex();
                 writer

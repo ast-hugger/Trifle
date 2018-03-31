@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import java.util.stream.Stream;
-
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
@@ -25,7 +23,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> {
 
     static void inferTypesIn(FunctionImplementation function) {
-        function.parameters().forEach(
+        function.declaredParameters().forEach(
             each -> each.setInferredType(ExpressionType.unknown()));
         ExpressionTypeInferencer inferencer = new ExpressionTypeInferencer(function);
         do {

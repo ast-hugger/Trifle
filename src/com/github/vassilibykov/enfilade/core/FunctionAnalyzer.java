@@ -41,7 +41,7 @@ class FunctionAnalyzer {
         private final Set<AbstractVariable> scope = new HashSet<>();
 
         private ScopeValidator() {
-            scope.addAll(function.parameters());
+            scope.addAll(function.declaredParameters());
         }
 
         void apply() {
@@ -54,7 +54,7 @@ class FunctionAnalyzer {
          */
         @Override
         public Void visitClosure(ClosureNode closure) {
-            var closureArgs = closure.function().parameters();
+            var closureArgs = closure.function().declaredParameters();
             for (var each : closureArgs) {
                 if (scope.contains(each)) throw new CompilerError("closure argument is already bound: " + each);
             }

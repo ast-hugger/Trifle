@@ -14,7 +14,9 @@ import java.lang.invoke.MutableCallSite;
 
 /**
  * An invokedynamic instruction for the usual case of a call expression whose function is
- * a {@link Closure}.
+ * a {@link Closure}. For example, in abstract syntax, {@code call(c, a1, a2)}. The call
+ * site has the signature of {@code (Closure Object*) -> Object} in the generic case, of
+ * {@code (Closure <type>*) -> <type>} in a specialized case.
  */
 public final class ClosureInvokeDynamic {
     public static final Handle BOOTSTRAP = new Handle(

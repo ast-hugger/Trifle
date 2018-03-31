@@ -142,7 +142,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         // This means indicesToCopy must be separate for the specialized case.
         // NO, looks like they shouldn't be. Need to verify and if that's so, the whole
         // generic/specialized index separation is bogus and should be removed.
-        for (var each : function.parameters()) {
+        for (var each : function.declaredParameters()) {
             if (each.isBoxed()) {
                 var type = each.specializationType();
                 int index = each.specializedIndex();
@@ -507,7 +507,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     private void generateEpilogue(Label epilogueStart) {
         writer.asm().visitLabel(epilogueStart);
         // stack: SPE, int initialPC, Object[] frame
-        function.parameters().forEach(this::storeInFrameReplica);
+        function.declaredParameters().forEach(this::storeInFrameReplica);
         // stack: SPE, int initialPC, Object[] frame
         writer
             .loadInt(FunctionRegistry.INSTANCE.lookup(function))

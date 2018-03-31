@@ -58,10 +58,10 @@ public class InterpreterProfilingTests {
         for (int i = 0; i < 4; i++) {
             runnable2.invoke(42);
         }
-        assertEquals(3, runnable2.implementation.parameters().get(0).profile.referenceCases());
-        assertEquals(4, runnable2.implementation.parameters().get(0).profile.intCases());
-        assertEquals(6, runnable1.implementation.parameters().get(0).profile.referenceCases());
-        assertEquals(8, runnable1.implementation.parameters().get(0).profile.intCases());
+        assertEquals(3, runnable2.implementation.declaredParameters().get(0).profile.referenceCases());
+        assertEquals(4, runnable2.implementation.declaredParameters().get(0).profile.intCases());
+        assertEquals(6, runnable1.implementation.declaredParameters().get(0).profile.referenceCases());
+        assertEquals(8, runnable1.implementation.declaredParameters().get(0).profile.intCases());
     }
 
     @Test

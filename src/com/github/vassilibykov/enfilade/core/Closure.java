@@ -4,8 +4,10 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.Objects;
 
 /**
@@ -21,13 +23,28 @@ public class Closure {
     }
 
     @NotNull /*internal*/ final FunctionImplementation implementation;
+    private final boolean hasNoCopiedValues;
     /*internal*/ final MethodHandle invoker;
 
     Closure(@NotNull FunctionImplementation implementation, @NotNull Object[] copiedValues) {
         this.implementation = implementation;
+        this.hasNoCopiedValues = copiedValues.length == 0;
         // callSiteInvoker type: (Closure synthetic:Object* declared:Object*) -> Object
         // invoker type: (Closure declared:Object*) -> Object
         this.invoker = MethodHandles.insertArguments(implementation.callSiteInvoker, 1, copiedValues);
+    }
+
+    /**
+     * Return a call site of a signature without the leading closure argument.
+     * Used by constant function call sites.
+     */
+    /*internal*/ CallSite directCallSite(MethodType requiredType) {
+        if (hasNoCopiedValues) {
+            return implementation.callSite(requiredType);
+        } else {
+            // Constant top-level functions never have copied values.
+            throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        }
     }
 
     public Object invoke() {

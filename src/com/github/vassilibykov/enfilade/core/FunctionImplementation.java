@@ -60,7 +60,7 @@ public class FunctionImplementation {
      * Apparent parameters from the function definition. Does not include synthetic
      * parameters introduced by closure conversion to copy down free variables.
      */
-    private List<VariableDefinition> parameters;
+    private List<VariableDefinition> declaredParameters;
     /**
      * All copied variables created during closure conversion.
      */
@@ -72,18 +72,33 @@ public class FunctionImplementation {
     private AbstractVariable[] allParameters;
     /**
      * In a top-level function, contains function implementations of closures defined in
-     * it. Empty in non-toplevel functions even if they contain closures.
+     * it. Empty in non-toplevel functions even if they do contain closures. Functions
+     * are listed in tree traversal encounter order, so they are topologically sorted
+     * with respect to their nesting.
      */
     private final List<FunctionImplementation> closureImplementations = new ArrayList<>();
-    /*internal*/ FunctionProfile profile;
     private final int arity;
-    private int id = -1;
-    /*internal*/ int depth = -1;
-    /** Shared by all {@code invokedynamics} linked to this function. */
-    private VolatileCallSite callSite; // type = (Closure, Object*) -> Object
-    /*internal*/ MethodHandle callSiteInvoker;
     private EvaluatorNode body;
     private int localsCount = -1;
+    /*internal*/ FunctionProfile profile;
+    /**
+     * The unique ID of the function in the function registry.
+     */
+    private int id = -1;
+    /**
+     * Nesting depth of the function, with the top-level function having the depth of 0.
+     */
+    /*internal*/ int depth = -1;
+    /**
+     * A call site invoking which will execute the function using the currently
+     * appropriate execution mode (profiled vs compiled). The call site has a
+     * generic signature of {@code (Closure Object*) -> Object}.
+     */
+    private VolatileCallSite callSite;
+    /**
+     * The dynamic invoker of {@link #callSite}.
+     */
+    /*internal*/ MethodHandle callSiteInvoker;
     @Nullable private VolatileCallSite specializationCallSite;
     /*internal*/ ACodeInstruction[] acode;
     private State state;
@@ -96,7 +111,7 @@ public class FunctionImplementation {
 
     /** RESTRICTED. Intended for {@link FunctionTranslator}. */
     void partiallyInitialize(@NotNull List<VariableDefinition> parameters, @NotNull EvaluatorNode body) {
-        this.parameters = parameters;
+        this.declaredParameters = parameters;
         this.profile = new FunctionProfile(parameters);
         this.body = body;
     }
@@ -129,8 +144,8 @@ public class FunctionImplementation {
         this.id = id;
     }
 
-    public List<VariableDefinition> parameters() {
-        return parameters;
+    public List<VariableDefinition> declaredParameters() {
+        return declaredParameters;
     }
 
     public List<CopiedVariable> syntheticParameters() {
@@ -152,7 +167,7 @@ public class FunctionImplementation {
      */
     /*internal*/ void setSyntheticParameters(Collection<CopiedVariable> variables) {
         this.syntheticParameters = new ArrayList<>(variables);
-        this.allParameters = Stream.concat(syntheticParameters.stream(), parameters.stream())
+        this.allParameters = Stream.concat(syntheticParameters.stream(), declaredParameters.stream())
             .toArray(AbstractVariable[]::new);
     }
 

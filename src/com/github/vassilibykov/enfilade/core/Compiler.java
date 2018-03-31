@@ -215,7 +215,7 @@ public class Compiler {
         Stream<JvmType> syntheticParamTypes = closureImpl.syntheticParameters().stream()
             .map(each -> each.isBoxed() ? REFERENCE : each.observedType().jvmType().orElse(REFERENCE));
         // Declared parameters follow their observed type.
-        Stream<JvmType> declaredParamTypes = closureImpl.parameters().stream()
+        Stream<JvmType> declaredParamTypes = closureImpl.declaredParameters().stream()
             .map(each -> each.observedType().jvmType().orElse(REFERENCE));
         Class<?>[] argClasses = Stream.concat(syntheticParamTypes, declaredParamTypes)
             .map(each -> each.representativeClass())

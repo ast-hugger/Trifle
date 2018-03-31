@@ -20,7 +20,7 @@ public class TimeFib {
         var n = 35;
         var fibonacci = fibonacci();
         System.out.print("Warming up");
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             fibonacci.invoke(n);
             System.out.print(".");
         }
