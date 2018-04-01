@@ -11,6 +11,7 @@ benefit from warmup.
 * 1410: Enfilade, profiling interpreter
 * 1030: Ruby 2.3.1
 * 860: Enfilade, plain interpreter
+* 145: Lua JIT 2.0.4
 * 129: Smalltalk - Pharo, 64-bit Cog, March05 2018 build
 * 106: Javascript - node.js
 * 82: Enfilade, generic compiled form (wrapped ints)

@@ -47,7 +47,7 @@ class ValueProfile {
     }
 
     public synchronized JvmType jvmType() {
-        return hasProfileData() && isPureInt() ? INT : REFERENCE;
+        return observedType().jvmType().orElse(REFERENCE);
     }
 
     public synchronized boolean hasProfileData() {

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.CallSite;
+import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -17,13 +18,85 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * An object holding together all executable representations of a source function (though
- * not necessarily all of them are available at any given time). The representations are:
- * a tree of {@link EvaluatorNode}s, a list of recovery interpreter instructions, method
- * handles to invoke generic and specialzied compiled representations.
+ * An object holding together all executable representations of a function (though not
+ * necessarily all of them are available at any given time). The representations are: a
+ * tree of {@link EvaluatorNode}s, a list of recovery interpreter instructions, method
+ * handles to invoke generic and specialized compiled representations. This is
+ * <em>not</em> a function value in the implemented language. For that, see {@link
+ * Closure}.
  *
- * <p>This is <em>not</em> a function value in the implemented language. For that, see
- * {@link Closure}.
+ * <p>Each function implementation object corresponds to a lambda expression in the source
+ * language. Thus, a top-level function with two nested closures would map onto three
+ * {@link FunctionImplementation}s. A {@link Closure} instance created when a lambda
+ * expression is evaluated references the corresponding function implementation.
+ *
+ * <p>At the core of a function implementation's invocation mechanism is its {@link
+ * #callSite}, and an invoker of that call site stored in the {@link #callSiteInvoker}
+ * field. The target of that call site is a method handle invoking which will execute the
+ * function using the best currently available option. For a newly created function
+ * implementation that would be execution by a profiling interpreter. Later the target of
+ * the call site is changed to a faster non-profiling interpreter while the function is
+ * being compiled, and eventually to a method handle to the generic compiled form of the
+ * function.
+ *
+ * <p>In a top-level function with {@code n} declared parameters, the core call site has
+ * the type
+ *
+ * <pre>{@code
+ * (Closure Object{n}) -> Object
+ * }</pre>
+
+ * <p>A non-top-level function may have additional synthetic parameters prepended by the
+ * closure conversion process. The core call site of a function with {@code k} parameters
+ * introduced by the closure converter has the type
+ *
+ * <pre>{@code
+ * (Closure Object{k} Object{n}) -> Object
+ * }</pre>
+ *
+ * <p>When invoked by the standard {@code call} expression with a closure as the function
+ * argument, executed by the interpreter, invocation is kicked off by one of the {@link
+ * Closure#invoke} methods, receiving the call arguments ({@code n} Objects).
+ *
+ * <p>When the same expression is executed by generic compiled code, the call site in
+ * the caller has the signature
+ *
+ * <pre>{@code
+ * (Object Object{n}) -> Object
+ * }</pre>
+ *
+ * <p>Note that the leading closure argument is formally typed as {@code Object} rather
+ * than closure. Internally a closure maintains an {@link Closure#invoker} method handle
+ * which calls its function implementation's {@link #callSiteInvoker} after inserting
+ * copied values, if any, to be received by the synthetic parameters prepended by
+ * the closure converter.
+ *
+ * <p>In addition to the generic compiled form bound to the core {@link #callSite}, a
+ * function implementation may have a specialized compiled form. A specialized form is
+ * produced by the compiler if the profiling interpreter observed at least one of the
+ * function arguments to always be of a primitive type. In a specialized form is
+ * available, the {@link #specializedCallSite} field is not null. It contains a call
+ * site with a method handle of the specialized compiled form.
+ *
+ * <p>There are two mechanisms of how a specialized implementation can be invoked. One is
+ * from the "normal" generic invocation pipeline, which includes both the interpreted and
+ * the compiled generic cases. If a function has a specialization, the method handle of
+ * its core {@link #callSite} is a guard testing the current arguments for applicability
+ * to the specialized form. For example, if a unary function has an {@code (int)}
+ * specialization, the guard would test the invocation argument for being an {@code
+ * Integer}. Depending on the result of the test, either the specialized or the generic
+ * form is invoked.
+ *
+ * <p>The other mechanism is an invocation from specialized code. The specialized code
+ * compiler generates a call site with the signature matching the specialized types of
+ * arguments. A binary call with both arguments specialized as {@code int} and return
+ * typed observed to be {@code int} has its call site typed as {@code (Object int int) ->
+ * int} (the leading argument is the closure typed as Object). The same function might be
+ * called elsewhere from a call site typed as {@code (Object int Object) -> Object} if
+ * those were the types observed at that call site.
+ *
+ * <p>--TBD-- I need to better think through how {@link Closure} and {@link ClosureInvokeDynamic}
+ * efficiently can bind to specialized forms.
  */
 public class FunctionImplementation {
 
@@ -32,22 +105,8 @@ public class FunctionImplementation {
 
     private enum State {
         INVALID,
-        /**
-         * The function is currently running interpreted and collecting type information.
-         */
         PROFILING,
-        /**
-         * The function has finished collecting type information and is
-         * scheduled for compilation, however compilation has not yet completed.
-         * The {@link #callSite} is bound to one of the {@code interpret()}
-         * methods of (the non-profiling) {@code Interpreter.INSTANCE}, so type
-         * information is no longer being collected.
-         */
         COMPILING,
-        /**
-         * A compiled representation has been computed for this function.
-         * The {@link #callSite} is pointing at the compilation result.
-         */
         COMPILED
     }
 
@@ -99,7 +158,8 @@ public class FunctionImplementation {
      * The dynamic invoker of {@link #callSite}.
      */
     /*internal*/ MethodHandle callSiteInvoker;
-    @Nullable private VolatileCallSite specializationCallSite;
+//    @Nullable private VolatileCallSite specializationCallSite;
+    @Nullable private CallSite specializedCallSite;
     /*internal*/ ACodeInstruction[] acode;
     private State state;
 
@@ -205,8 +265,8 @@ public class FunctionImplementation {
      * the bootstrap time unless special measures are taken by the bootstrapper.
      */
     public CallSite callSite(MethodType requestedType) {
-        if (specializationCallSite != null && requestedType.equals(specializationCallSite.type())) {
-            return specializationCallSite;
+        if (specializedCallSite != null && requestedType.equals(specializedCallSite.type())) {
+            return specializedCallSite;
         } else if (requestedType.equals(callSite.type())){
             return callSite;
         } else {
@@ -324,16 +384,13 @@ public class FunctionImplementation {
         state = State.COMPILED;
         if (specializedMethod == null) {
             callSite.setTarget(dropFunctionArgument(genericMethod));
-            // FIXME properly handle specializationCallSite if present
+            specializedCallSite = null;
+            // this will not work if we allow de-specializing
         } else {
             callSite.setTarget(
                 dropFunctionArgument(
                     makeSpecializationGuard(genericMethod, specializedMethod, result.specializedMethodType())));
-            if (specializationCallSite == null) {
-                specializationCallSite = new VolatileCallSite(specializedMethod);
-            } else {
-                specializationCallSite.setTarget(specializedMethod);
-            }
+            specializedCallSite = new ConstantCallSite(specializedMethod);
         }
     }
 
