@@ -70,9 +70,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         if (call.function() instanceof ConstantFunctionNode) {
             return generateConstantFunctionCall1(call, (ConstantFunctionNode) call.function());
         }
-        call.function().accept(this); // puts a value on the stack that must be a closure
-        var type = MethodType.genericMethodType(2);
+        call.function().accept(this); // puts a value on the stack which must be a closure
         var argType = call.arg().accept(this);
+        var type = MethodType.genericMethodType(2);
         writer.adaptType(argType, REFERENCE);
         writer.invokeDynamic(
             ClosureInvokeDynamic.BOOTSTRAP,
@@ -99,8 +99,8 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
             return generateConstantFunctionCall2(call, (ConstantFunctionNode) call.function());
         }
         call.function().accept(this); // puts a value on the stack that must be a closure
-        var type = MethodType.genericMethodType(3);
         var arg1Type = call.arg1().accept(this);
+        var type = MethodType.genericMethodType(3);
         writer.adaptType(arg1Type, REFERENCE);
         var arg2Type = call.arg2().accept(this);
         writer.adaptType(arg2Type, REFERENCE);

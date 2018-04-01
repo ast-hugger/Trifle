@@ -10,13 +10,14 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.MutableCallSite;
 
 /**
- * An invokedynamic instruction for the usual case of a call expression whose function is
- * a {@link Closure}. For example, in abstract syntax, {@code call(c, a1, a2)}. The call
- * site has the signature of {@code (Closure Object*) -> Object} in the generic case, of
- * {@code (Closure <type>*) -> <type>} in a specialized case.
+ * An invokedynamic instruction for the usual case of a call expression whose
+ * function is a {@link Closure}. For example, in abstract syntax, {@code
+ * call(c, a1, a2)}. The call site of the above has the signature of {@code
+ * (Object Object Object) -> Object} in the generic case, of {@code (Object
+ * <type1> <type2>) -> <type3>} in a specialized case, where {@code <typeN>}
+ * is an arbitrary type, reference or primitive.
  */
 public final class ClosureInvokeDynamic {
     public static final Handle BOOTSTRAP = new Handle(
@@ -26,41 +27,67 @@ public final class ClosureInvokeDynamic {
         MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class).toMethodDescriptorString(),
         false);
 
+    /**
+     * Bootstrap a closure call instruction. The call site in the generic case
+     * has the type of {@code (Object Object{n}) -> Object}, where n is the
+     * number of call arguments. In the specialized case any of the {@code
+     * Object} type occurrences but the first may be replaced with a primitive
+     * type.
+     *
+     * @param lookupAtCall The lookup object with permissions of the caller.
+     * @param name The name associated with the call, unused.
+     * @param callSiteType The type of the call site as discussed above.
+     * @return The call site to use for the instruction.
+     */
     public static CallSite bootstrap(Lookup lookupAtCall, String name, MethodType callSiteType) {
-        var callSite = new MutableCallSite(callSiteType);
-        if (callSiteType.parameterCount() != 2) {
-            throw new UnsupportedOperationException(); // FIXME: 3/29/18
+        var callArity = callSiteType.parameterCount() - 1; // don't count the closure
+        return new InlineCachingCallSite(
+            callSiteType,
+            site -> DISPATCH.bindTo(site).asCollector(Object[].class, callArity).asType(callSiteType));
+    }
+
+    public static Object dispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args) throws Throwable {
+        var closure = (Closure) closureArg;
+        if (!thisSite.isMegamorphic()) {
+            var target = closure.invoker.asType(thisSite.type()); // type: (Closure Object*) -> Object
+            thisSite.addCacheEntry(IS_SAME_FUNCTION.bindTo(closure.implementation), target);
         }
-        callSite.setTarget(DISPATCH_1.bindTo(callSite).asType(callSiteType));
-        return callSite;
+        switch (args.length) {
+            case 0:
+                return closure.invoker.invokeExact(closure);
+            case 1:
+                return closure.invoker.invokeExact(closure, args[0]);
+            case 2:
+                return closure.invoker.invokeExact(closure, args[0], args[1]);
+            case 3:
+                return closure.invoker.invokeExact(closure, args[0], args[1], args[2]);
+            case 4:
+                return closure.invoker.invokeExact(closure, args[0], args[1], args[2], args[3]);
+            default:
+                var combined = new Object[args.length + 1];
+                combined[0] = closure;
+                System.arraycopy(args, 0, combined, 1, args.length);
+                return closure.invoker.invokeWithArguments(combined);
+        }
     }
 
-    public static Object dispatch(MutableCallSite thisSite, Object expectedClosure, Object arg) throws Throwable {
-        var closure = (Closure) expectedClosure;
-        var target = closure.invoker.asType(thisSite.type()); // type: (Closure Object*) -> Object
-        var guarded = MethodHandles.guardWithTest(CHECK_CLOSURE.bindTo(expectedClosure), target, thisSite.getTarget());
-        thisSite.setTarget(guarded);
-        var adaptedInvoker = closure.invoker.asType(closure.invoker.type().changeParameterType(0, Object.class));
-        return adaptedInvoker.invokeExact(expectedClosure, arg);
+    public static boolean isSameFunction(FunctionImplementation expected, Object closureArg) {
+        return closureArg instanceof Closure && ((Closure) closureArg).implementation == expected;
     }
 
-    public static boolean checkClosure(Object expected, Object actual) {
-        return expected == actual;
-    }
-
-    private static final MethodHandle CHECK_CLOSURE;
-    private static final MethodHandle DISPATCH_1;
+    private static final MethodHandle IS_SAME_FUNCTION;
+    private static final MethodHandle DISPATCH;
     static {
         try {
             var lookup = MethodHandles.lookup();
-            CHECK_CLOSURE = lookup.findStatic(
+            IS_SAME_FUNCTION = lookup.findStatic(
                 ClosureInvokeDynamic.class,
-                "checkClosure",
-                MethodType.methodType(boolean.class, Object.class, Object.class));
-            DISPATCH_1 = lookup.findStatic(
+                "isSameFunction",
+                MethodType.methodType(boolean.class, FunctionImplementation.class, Object.class));
+            DISPATCH = lookup.findStatic(
                 ClosureInvokeDynamic.class,
                 "dispatch",
-                MethodType.methodType(Object.class, MutableCallSite.class, Object.class, Object.class));
+                MethodType.methodType(Object.class, InlineCachingCallSite.class, Object.class, Object[].class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
