@@ -3,7 +3,6 @@
 package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.primitives.LessThan;
-import org.jetbrains.annotations.TestOnly;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -12,9 +11,7 @@ import java.lang.invoke.MethodType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
@@ -41,68 +38,6 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         }
     }
 
-    /**
-     * Sets {@link VariableDefinition#specializedIndex} fields in an evaluator
-     * node tree. Specialized indices have to be set so that variables of
-     * different types are not mapped onto the same local index.
-     *
-     * <p>There is no need to validate scope of variable uses because it's
-     * already been done by the generic indexer.
-     */
-    static class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
-
-        private class IndexPool {
-            private final List<Integer> availableIndices = new ArrayList<>();
-            private int currentIndex = 0;
-
-            public int allocate() {
-                if (currentIndex == availableIndices.size()) {
-                    availableIndices.add(nextGlobalIndex++);
-                }
-                return availableIndices.get(currentIndex++);
-            }
-
-            public void release() {
-                currentIndex--;
-            }
-        }
-
-        private int nextGlobalIndex;
-        private Map<JvmType, IndexPool> poolsByType = new HashMap<>();
-
-        VariableIndexer(int startingIndex) {
-            this.nextGlobalIndex = startingIndex;
-            poolsByType.put(JvmType.REFERENCE, new IndexPool());
-            poolsByType.put(JvmType.INT, new IndexPool());
-            poolsByType.put(JvmType.BOOL, new IndexPool());
-        }
-
-        public int frameSize() {
-            return nextGlobalIndex;
-        }
-
-        @Override
-        public Void visitLet(LetNode let) {
-            let.initializer().accept(this);
-            JvmType varType = let.variable().specializationType();
-            IndexPool pool = poolsByType.get(varType);
-            let.variable().specializedIndex = pool.allocate();
-            let.body().accept(this);
-            pool.release();
-            return null;
-        }
-
-        @TestOnly
-        int allocate(JvmType type) {
-            return poolsByType.get(type).allocate();
-        }
-
-        @TestOnly
-        void release(JvmType type) {
-            poolsByType.get(type).release();
-        }
-    }
-
     /*
         Instance
      */
@@ -120,8 +55,6 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     void generate() {
         function.acode = ACodeTranslator.translate(function.body());
         continuationTypes.push(functionReturnType);
-        VariableIndexer variableIndexer = new VariableIndexer(function.implementationArity());
-        function.body().accept(variableIndexer);
         generatePrologue();
         function.body().accept(this);
         continuationTypes.pop();
@@ -145,7 +78,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         for (var each : function.declaredParameters()) {
             if (each.isBoxed()) {
                 var type = each.specializationType();
-                int index = each.specializedIndex();
+                int index = each.index();
                 writer
                     .loadLocal(type, index)
                     .initBoxedVariable(type, index);
@@ -231,10 +164,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
                 .dup()
                 .loadInt(i);
             if (variable.isBoxed()) {
-                writer.loadLocal(REFERENCE, variable.specializedIndex());
+                writer.loadLocal(REFERENCE, variable.index());
             } else {
                 writer
-                    .loadLocal(variable.specializationType(), variable.specializedIndex())
+                    .loadLocal(variable.specializationType(), variable.index())
                     .adaptType(variable.specializationType(), REFERENCE);
             }
             writer.asm().visitInsn(Opcodes.AASTORE);
@@ -276,10 +209,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         var varType = variable.specializationType();
         if (variable.isBoxed()) {
             writer
-                .loadLocal(REFERENCE, variable.specializedIndex())
+                .loadLocal(REFERENCE, variable.index())
                 .unboxValue(varType);
         } else {
-            writer.loadLocal(varType, variable.specializedIndex());
+            writer.loadLocal(varType, variable.index());
         }
         assertPassage(varType, currentContinuationType());
         return null;
@@ -310,7 +243,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         if (variable.isBoxed() && let.isLetrec()) {
             writer
                 .loadDefaultValue(varType)
-                .initBoxedVariable(varType, variable.specializedIndex());
+                .initBoxedVariable(varType, variable.index());
         }
         if (varType == REFERENCE) {
             generateExpecting(REFERENCE, let.initializer());
@@ -319,12 +252,12 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         }
         if (variable.isBoxed()) {
             if (let.isLetrec()) {
-                writer.storeBoxedVariable(varType, variable.specializedIndex());
+                writer.storeBoxedVariable(varType, variable.index());
             } else {
-                writer.initBoxedVariable(varType, variable.specializedIndex());
+                writer.initBoxedVariable(varType, variable.index());
             }
         } else {
-            writer.storeLocal(varType, variable.specializedIndex());
+            writer.storeLocal(varType, variable.index());
         }
         liveLocals.add(variable);
         generateForCurrentContinuation(let.body());
@@ -383,9 +316,9 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         generateExpecting(varType, set.value());
         writer.dup(); // to leave the value on the stack as the result
         if (var.isBoxed()) {
-            writer.storeBoxedVariable(varType, var.specializedIndex());
+            writer.storeBoxedVariable(varType, var.index());
         } else {
-            writer.storeLocal(varType, var.specializedIndex());
+            writer.storeLocal(varType, var.index());
         }
         return null;
     }
@@ -498,8 +431,8 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     private void storeInFrameReplica(AbstractVariable local) {
         JvmType localType = local.specializationType();
-        writer.storeArray(local.specializedIndex(), () -> {
-            writer.loadLocal(localType, local.specializedIndex());
+        writer.storeArray(local.index(), () -> {
+            writer.loadLocal(localType, local.index());
             writer.adaptType(localType, REFERENCE);
         });
     }

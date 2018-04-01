@@ -31,7 +31,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     private void generatePrologue(FunctionImplementation function) {
         for (var each : function.declaredParameters()) {
             if (each.isBoxed()) {
-                int index = each.genericIndex();
+                int index = each.index();
                 writer
                     .loadLocal(REFERENCE, index)
                     .initBoxedReference(index);
@@ -165,7 +165,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitGetVar(GetVariableNode getVar) {
         var variable = getVar.variable();
-        writer.loadLocal(REFERENCE, variable.genericIndex());
+        writer.loadLocal(REFERENCE, variable.index());
         if (variable.isBoxed()) writer.extractBoxedVariable();
         return REFERENCE;
     }
@@ -193,18 +193,18 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         if (variable.isBoxed() && let.isLetrec()) {
             writer
                 .loadNull()
-                .initBoxedReference(variable.genericIndex);
+                .initBoxedReference(variable.index);
         }
         var initType = let.initializer().accept(this);
         writer.adaptType(initType, REFERENCE);
         if (variable.isBoxed()) {
             if (let.isLetrec()) {
-                writer.storeBoxedReference(variable.genericIndex());
+                writer.storeBoxedReference(variable.index());
             } else {
-                writer.initBoxedReference(variable.genericIndex());
+                writer.initBoxedReference(variable.index());
             }
         } else {
-            writer.storeLocal(REFERENCE, variable.genericIndex());
+            writer.storeLocal(REFERENCE, variable.index());
         }
         return let.body().accept(this);
     }
@@ -251,9 +251,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
             .adaptType(varType, REFERENCE)
             .dup();
         if (variable.isBoxed()) {
-            writer.storeBoxedReference(variable.genericIndex());
+            writer.storeBoxedReference(variable.index());
         } else {
-            writer.storeLocal(REFERENCE, variable.genericIndex());
+            writer.storeLocal(REFERENCE, variable.index());
         }
         return REFERENCE;
     }

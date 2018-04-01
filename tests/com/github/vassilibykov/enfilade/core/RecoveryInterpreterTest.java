@@ -145,7 +145,7 @@ public class RecoveryInterpreterTest {
 
         private Asm(VariableDefinition... vars) {
             for (int i = 0; i < vars.length; i++) {
-                vars[i].genericIndex = i;
+                vars[i].index = i;
             }
             frame = new Object[vars.length];
         }

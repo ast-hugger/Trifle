@@ -85,7 +85,7 @@ class CopiedVariable extends AbstractVariable {
     @Override
     void setupArgumentIn(Object[] frame, Object value) {
         // a synthetic parameter; any passed in value is already boxed and must be copied directly
-        frame[genericIndex] = value;
+        frame[index] = value;
     }
 
     @Override

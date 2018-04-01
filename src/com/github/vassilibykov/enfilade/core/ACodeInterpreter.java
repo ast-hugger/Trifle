@@ -108,6 +108,6 @@ public class ACodeInterpreter implements ACodeInstruction.VoidVisitor {
 
     @Override
     public void visitStore(ACodeInstruction.Store store) {
-        frame[store.variable.genericIndex()] = register;
+        frame[store.variable.index()] = register;
     }
 }

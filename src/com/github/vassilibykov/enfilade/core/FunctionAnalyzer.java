@@ -178,8 +178,7 @@ class FunctionAnalyzer {
             var arguments = function.allParameters();
             int i;
             for (i = 0; i < arguments.length; i++) {
-                arguments[i].genericIndex = i;
-                arguments[i].specializedIndex = i;
+                arguments[i].index = i;
             }
             nextIndex = i;
         }
@@ -201,7 +200,7 @@ class FunctionAnalyzer {
                 .map(each -> each.supplier())
                 .collect(Collectors.toList());
             closure.copiedVariablesGenericIndices = closure.copiedOuterVariables.stream()
-                .mapToInt(each -> each.genericIndex())
+                .mapToInt(each -> each.index())
                 .toArray();
             return null;
         }
@@ -209,11 +208,11 @@ class FunctionAnalyzer {
         @Override
         public Void visitLet(LetNode let) {
             if (let.isLetrec()) {
-                let.variable().genericIndex = nextIndex++;
+                let.variable().index = nextIndex++;
                 let.initializer().accept(this);
             } else {
                 let.initializer().accept(this);
-                let.variable().genericIndex = nextIndex++;
+                let.variable().index = nextIndex++;
             }
             let.body().accept(this);
             return null;

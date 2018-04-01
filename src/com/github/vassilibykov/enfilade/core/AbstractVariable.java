@@ -7,35 +7,24 @@ import org.jetbrains.annotations.NotNull;
 abstract class AbstractVariable {
     @NotNull protected final FunctionImplementation hostFunction;
     protected boolean isBoxed = false;
-    /*internal*/ int genericIndex = -1;
-    /*internal*/ int specializedIndex = -1;
+    /*internal*/ int index = -1;
 
     AbstractVariable(@NotNull FunctionImplementation hostFunction) {
         this.hostFunction = hostFunction;
     }
 
     /**
-     * The index assigned to this variable which is safe to use in generic code,
-     * where two variables may reuse the same local slot if they are not live at
-     * the same time. In specialized code we must segregate variables by their
-     * type.
+     * The index of this variable in the method frame.
      */
-    public int genericIndex() {
-        return genericIndex;
-    }
-
-    /**
-     * The index assigned to this variable by specialized code generator.
-     */
-    public int specializedIndex() {
-        return specializedIndex;
+    public int index() {
+        return index;
     }
 
     /**
      * The function in which the variable is defined, as an argument or as a let-bound
-     * variable. {@link #genericIndex()} and {@link #specializedIndex()} are meaningful
-     * only in the frame of this function. If the variable is copied, the host function
-     * is the function in which it is a copied argument.
+     * variable. {@link #index()} is only meaningful in the frame of this function.
+     * If the variable is copied, the host function is the function in which it is a
+     * copied argument.
      */
     public FunctionImplementation hostFunction() {
         return hostFunction;
@@ -93,21 +82,21 @@ abstract class AbstractVariable {
         // the other two value access methods become polymorphic. In essence, the 'if'
         // below is traded for the 'if' in the call site cache dispatch.
         if (isBoxed) {
-            frame[genericIndex] = BoxedReference.with(value);
+            frame[index] = BoxedReference.with(value);
         } else {
-            frame[genericIndex] = value;
+            frame[index] = value;
         }
     }
 
     Object getValueIn(Object[] frame) {
-        return isBoxed ? ((BoxedReference) frame[genericIndex]).value : frame[genericIndex];
+        return isBoxed ? ((BoxedReference) frame[index]).value : frame[index];
     }
 
     void setValueIn(Object[] frame, Object value) {
         if (isBoxed) {
-            ((BoxedReference) frame[genericIndex]).value = value;
+            ((BoxedReference) frame[index]).value = value;
         } else {
-            frame[genericIndex] = value;
+            frame[index] = value;
         }
     }
 
