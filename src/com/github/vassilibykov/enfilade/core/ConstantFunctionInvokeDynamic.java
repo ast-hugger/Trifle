@@ -6,6 +6,7 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.CallSite;
+import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 
@@ -31,7 +32,8 @@ public final class ConstantFunctionInvokeDynamic {
     @SuppressWarnings("unused") // called by generated code
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
         var closure = ConstantFunctionNode.lookup(targetId);
-        // FIXME: 3/31/18 the following .asType() introduces expensive boxing; should handle specialized cases without it
-        return closure.directCallSite(callSiteType);
+        var typeWithLeadingClosure = callSiteType.insertParameterTypes(0, Closure.class);
+        var invoker = closure.specializedInvoker(typeWithLeadingClosure);
+        return new ConstantCallSite(invoker.bindTo(closure));
     }
 }

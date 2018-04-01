@@ -49,25 +49,25 @@ public final class ClosureInvokeDynamic {
     public static Object dispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args) throws Throwable {
         var closure = (Closure) closureArg;
         if (!thisSite.isMegamorphic()) {
-            var target = closure.invoker.asType(thisSite.type()); // type: (Closure Object*) -> Object
+            var target = closure.specializedInvoker(thisSite.type());
             thisSite.addCacheEntry(IS_SAME_FUNCTION.bindTo(closure.implementation), target);
         }
         switch (args.length) {
             case 0:
-                return closure.invoker.invokeExact(closure);
+                return closure.genericInvoker().invokeExact(closure);
             case 1:
-                return closure.invoker.invokeExact(closure, args[0]);
+                return closure.genericInvoker().invokeExact(closure, args[0]);
             case 2:
-                return closure.invoker.invokeExact(closure, args[0], args[1]);
+                return closure.genericInvoker().invokeExact(closure, args[0], args[1]);
             case 3:
-                return closure.invoker.invokeExact(closure, args[0], args[1], args[2]);
+                return closure.genericInvoker().invokeExact(closure, args[0], args[1], args[2]);
             case 4:
-                return closure.invoker.invokeExact(closure, args[0], args[1], args[2], args[3]);
+                return closure.genericInvoker().invokeExact(closure, args[0], args[1], args[2], args[3]);
             default:
                 var combined = new Object[args.length + 1];
                 combined[0] = closure;
                 System.arraycopy(args, 0, combined, 1, args.length);
-                return closure.invoker.invokeWithArguments(combined);
+                return closure.genericInvoker().invokeWithArguments(combined);
         }
     }
 

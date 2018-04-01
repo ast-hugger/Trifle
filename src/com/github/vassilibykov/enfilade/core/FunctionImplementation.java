@@ -6,12 +6,10 @@ import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.invoke.CallSite;
-import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.VolatileCallSite;
+import java.lang.invoke.MutableCallSite;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -71,12 +69,13 @@ import java.util.stream.Stream;
  * copied values, if any, to be received by the synthetic parameters prepended by
  * the closure converter.
  *
- * <p>In addition to the generic compiled form bound to the core {@link #callSite}, a
- * function implementation may have a specialized compiled form. A specialized form is
- * produced by the compiler if the profiling interpreter observed at least one of the
- * function arguments to always be of a primitive type. In a specialized form is
- * available, the {@link #specializedCallSite} field is not null. It contains a call
- * site with a method handle of the specialized compiled form.
+ * <p>In addition to the generic compiled form bound to the core {@link
+ * #callSite}, a function implementation may have a specialized compiled form. A
+ * specialized form is produced by the compiler if the profiling interpreter
+ * observed at least one of the function arguments to always be of a primitive
+ * type. In a specialized form is available, the {@link
+ * #specializedImplementation} field is not null. It contains a method handle of
+ * the specialized compiled form. The method does NOT have the leading closure parameter.
  *
  * <p>There are two mechanisms of how a specialized implementation can be invoked. One is
  * from the "normal" generic invocation pipeline, which includes both the interpreted and
@@ -150,16 +149,16 @@ public class FunctionImplementation {
     /*internal*/ int depth = -1;
     /**
      * A call site invoking which will execute the function using the currently
-     * appropriate execution mode (profiled vs compiled). The call site has a
-     * generic signature of {@code (Closure Object*) -> Object}.
+     * appropriate execution mode (profiled vs compiled). The call site has the
+     * generic signature of {@code (Closure Object{n}) -> Object}.
      */
-    private VolatileCallSite callSite;
+    private MutableCallSite callSite;
     /**
      * The dynamic invoker of {@link #callSite}.
      */
     /*internal*/ MethodHandle callSiteInvoker;
-//    @Nullable private VolatileCallSite specializationCallSite;
-    @Nullable private CallSite specializedCallSite;
+//    @Nullable /*internal*/ CallSite specializedCallSite;
+    @Nullable /*internal*/ MethodHandle specializedImplementation;
     /*internal*/ ACodeInstruction[] acode;
     private State state;
 
@@ -182,9 +181,9 @@ public class FunctionImplementation {
 
     /** RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}. */
     void finishInitialization(int localsCount) {
-        this.callSite = new VolatileCallSite(profilingInterpreterInvoker());
-//        this.callSite = new VolatileCallSite(simpleInterpreterInvoker());
-//        this.callSite = new VolatileCallSite(acodeInterpreterInvoker());
+        this.callSite = new MutableCallSite(profilingInterpreterInvoker());
+//        this.callSite = new MutableCallSite(simpleInterpreterInvoker());
+//        this.callSite = new MutableCallSite(acodeInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
         this.localsCount = localsCount;
 //        this.acode = ACodeTranslator.translate(body);
@@ -238,7 +237,7 @@ public class FunctionImplementation {
     /**
      * Return the arity of the underlying abstract definition (before closure conversion).
      */
-    public int definitionArity() {
+    public int declarationArity() {
         return arity;
     }
 
@@ -255,23 +254,6 @@ public class FunctionImplementation {
 
     public ACodeInstruction[] acode() {
         return acode;
-    }
-
-    /**
-     * Return a call site invoking which executes the function in the best
-     * currently possible mode. Invokedynamics calling this function all share
-     * this call site. The type of the call site matches the arity of the
-     * function, so invokedynamics with an incompatible signature will fail at
-     * the bootstrap time unless special measures are taken by the bootstrapper.
-     */
-    public CallSite callSite(MethodType requestedType) {
-        if (specializedCallSite != null && requestedType.equals(specializedCallSite.type())) {
-            return specializedCallSite;
-        } else if (requestedType.equals(callSite.type())){
-            return callSite;
-        } else {
-            throw new UnsupportedOperationException("partial specialization is not yet supported");
-        }
     }
 
     private MethodHandle profilingInterpreterInvoker() {
@@ -363,9 +345,13 @@ public class FunctionImplementation {
 
     private synchronized void applyCompilationResult(Compiler.BatchResult batchResult) {
         var implClass = GeneratedCode.defineClass(batchResult);
+        var callSitesToUpdate = new ArrayList<MutableCallSite>();
         for (var entry : batchResult.results().entrySet()) {
-            entry.getKey().updateCompiledForm(implClass, entry.getValue());
+            var functionImpl = entry.getKey();
+            functionImpl.updateCompiledForm(implClass, entry.getValue());
+            callSitesToUpdate.add(functionImpl.callSite);
         }
+        MutableCallSite.syncAll(callSitesToUpdate.toArray(new MutableCallSite[0]));
     }
 
     private void updateCompiledForm(Class<?> generatedClass, Compiler.FunctionCompilationResult result) {
@@ -384,13 +370,13 @@ public class FunctionImplementation {
         state = State.COMPILED;
         if (specializedMethod == null) {
             callSite.setTarget(dropFunctionArgument(genericMethod));
-            specializedCallSite = null;
+            specializedImplementation = null;
             // this will not work if we allow de-specializing
         } else {
             callSite.setTarget(
                 dropFunctionArgument(
                     makeSpecializationGuard(genericMethod, specializedMethod, result.specializedMethodType())));
-            specializedCallSite = new ConstantCallSite(specializedMethod);
+            specializedImplementation = specializedMethod;
         }
     }
 
