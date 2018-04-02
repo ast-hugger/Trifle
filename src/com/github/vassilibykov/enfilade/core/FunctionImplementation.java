@@ -16,58 +16,62 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * An object holding together all executable representations of a function (though not
- * necessarily all of them are available at any given time). The representations are: a
- * tree of {@link EvaluatorNode}s, a list of recovery interpreter instructions, method
- * handles to invoke generic and specialized compiled representations. This is
- * <em>not</em> a function value in the implemented language. For that, see {@link
- * Closure}.
+ * An object holding together all executable representations of a function
+ * (though not necessarily all of them are available at any given time). The
+ * representations are: a tree of {@link EvaluatorNode}s, a list of recovery
+ * interpreter instructions, method handles to invoke generic and specialized
+ * compiled representations. This is <em>not</em> a function value in the
+ * implemented language. For that, see {@link Closure}.
  *
- * <p>Each function implementation object corresponds to a lambda expression in the source
- * language. Thus, a top-level function with two nested closures would map onto three
- * {@link FunctionImplementation}s. A {@link Closure} instance created when a lambda
- * expression is evaluated references the corresponding function implementation.
+ * <p>Each function implementation object corresponds to a lambda expression in
+ * the source language. Thus, a top-level function with two nested closures
+ * would map onto three {@link FunctionImplementation}s. A {@link Closure}
+ * instance created when a lambda expression is evaluated references the
+ * corresponding function implementation.
  *
- * <p>At the core of a function implementation's invocation mechanism is its {@link
- * #callSite}, and an invoker of that call site stored in the {@link #callSiteInvoker}
- * field. The target of that call site is a method handle invoking which will execute the
- * function using the best currently available option. For a newly created function
- * implementation that would be execution by a profiling interpreter. Later the target of
- * the call site is changed to a faster non-profiling interpreter while the function is
- * being compiled, and eventually to a method handle to the generic compiled form of the
- * function.
+ * <p>At the core of a function implementation's invocation mechanism is its
+ * {@link #callSite}, referred to as "the core call site", and an invoker of
+ * that call site stored in the {@link #callSiteInvoker} field. The target of
+ * that call site is a method handle invoking which will execute the function
+ * using the best currently available option. For a newly created function
+ * implementation that would be execution by a profiling interpreter. Later the
+ * target of the call site is changed to a faster non-profiling interpreter
+ * while the function is being compiled, and eventually to a method handle to
+ * the generic compiled form of the function.
  *
- * <p>In a top-level function with {@code n} declared parameters, the core call site has
- * the type
+ * <p>In a top-level function with {@code n} declared parameters, the core call
+ * site has the type
  *
  * <pre>{@code
- * (Closure Object{n}) -> Object
+ * (Object{n}) -> Object
  * }</pre>
 
- * <p>A non-top-level function may have additional synthetic parameters prepended by the
- * closure conversion process. The core call site of a function with {@code k} parameters
- * introduced by the closure converter has the type
+ * <p>A non-top-level function may have additional synthetic parameters
+ * prepended by the closure conversion process. The core call site of a function
+ * with {@code k} parameters introduced by the closure converter has the type
  *
  * <pre>{@code
- * (Closure Object{k} Object{n}) -> Object
+ * (Object{k} Object{n}) -> Object
  * }</pre>
  *
- * <p>When invoked by the standard {@code call} expression with a closure as the function
- * argument, executed by the interpreter, invocation is kicked off by one of the {@link
- * Closure#invoke} methods, receiving the call arguments ({@code n} Objects).
+ * <p>When invoked by a standard {@code call} expression with a closure as the
+ * function argument, executed by the interpreter, invocation is kicked off by
+ * one of the {@link Closure#invoke} methods, receiving the call arguments
+ * ({@code n} Objects).
  *
- * <p>When the same expression is executed by generic compiled code, the call site in
- * the caller has the signature
+ * <p>When the same expression is executed by generic compiled code, the call
+ * site in the caller has the signature
  *
  * <pre>{@code
  * (Object Object{n}) -> Object
  * }</pre>
  *
- * <p>Note that the leading closure argument is formally typed as {@code Object} rather
- * than closure. Internally a closure maintains an {@link Closure#invoker} method handle
- * which calls its function implementation's {@link #callSiteInvoker} after inserting
- * copied values, if any, to be received by the synthetic parameters prepended by
- * the closure converter.
+ * <p>Note the extra leading argument. It contains the closure being called, but
+ * is formally typed as {@code Object} rather than closure. Internally a closure
+ * maintains an {@link Closure#invoker} method handle which calls its function
+ * implementation's {@link #callSiteInvoker} after inserting copied values, if
+ * any, to be received by the synthetic parameters prepended by the closure
+ * converter.
  *
  * <p>In addition to the generic compiled form bound to the core {@link
  * #callSite}, a function implementation may have a specialized compiled form. A
@@ -75,27 +79,30 @@ import java.util.stream.Stream;
  * observed at least one of the function arguments to always be of a primitive
  * type. In a specialized form is available, the {@link
  * #specializedImplementation} field is not null. It contains a method handle of
- * the specialized compiled form. The method does NOT have the leading closure parameter.
+ * the specialized compiled form. The method does NOT have the leading closure
+ * parameter.
  *
- * <p>There are two mechanisms of how a specialized implementation can be invoked. One is
- * from the "normal" generic invocation pipeline, which includes both the interpreted and
- * the compiled generic cases. If a function has a specialization, the method handle of
- * its core {@link #callSite} is a guard testing the current arguments for applicability
- * to the specialized form. For example, if a unary function has an {@code (int)}
- * specialization, the guard would test the invocation argument for being an {@code
- * Integer}. Depending on the result of the test, either the specialized or the generic
- * form is invoked.
+ * <p>There are two mechanisms of how a specialized implementation can be
+ * invoked. One is from the "normal" generic invocation pipeline, which includes
+ * both the interpreted and the compiled generic cases. If a function has a
+ * specialization, the method handle of its core {@link #callSite} is a guard
+ * testing the current arguments for applicability to the specialized form. For
+ * example, if a unary function has an {@code (int)} specialization, the guard
+ * would test the invocation argument for being an {@code Integer}. Depending on
+ * the result of the test, either the specialized or the generic form is
+ * invoked.
  *
- * <p>The other mechanism is an invocation from specialized code. The specialized code
- * compiler generates a call site with the signature matching the specialized types of
- * arguments. A binary call with both arguments specialized as {@code int} and return
- * typed observed to be {@code int} has its call site typed as {@code (Object int int) ->
- * int} (the leading argument is the closure typed as Object). The same function might be
- * called elsewhere from a call site typed as {@code (Object int Object) -> Object} if
+ * <p>The other mechanism is an invocation from specialized code. The
+ * specialized code compiler generates a call site with the signature matching
+ * the specialized types of arguments. A binary call with both arguments
+ * specialized as {@code int} and return typed observed to be {@code int} has
+ * its call site typed as {@code (Object int int) -> int} (the leading argument
+ * is again the closure typed as Object). The same function might be called
+ * elsewhere from a call site typed as {@code (Object int Object) -> Object} if
  * those were the types observed at that call site.
  *
- * <p>--TBD-- I need to better think through how {@link Closure} and {@link ClosureInvokeDynamic}
- * efficiently can bind to specialized forms.
+ * <p>--TBD-- I need to better think through how {@link Closure} and {@link
+ * ClosureInvokeDynamic} efficiently can bind to specialized forms.
  */
 public class FunctionImplementation {
 
@@ -258,7 +265,6 @@ public class FunctionImplementation {
 
     private MethodHandle profilingInterpreterInvoker() {
         var type = MethodType.genericMethodType(implementationArity());
-        type = type.insertParameterTypes(0, Closure.class);
         try {
             var handle = MethodHandles.lookup().findVirtual(FunctionImplementation.class, "profile", type);
             return handle.bindTo(this);
@@ -269,10 +275,10 @@ public class FunctionImplementation {
 
     private MethodHandle simpleInterpreterInvoker() {
         var type = MethodType.genericMethodType(implementationArity());
-        type = type.insertParameterTypes(0, Closure.class);
+        type = type.insertParameterTypes(0, FunctionImplementation.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
-            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE);
+            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, this);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
@@ -280,7 +286,7 @@ public class FunctionImplementation {
 
     private MethodHandle acodeInterpreterInvoker() {
         var type = MethodType.genericMethodType(implementationArity());
-        type = type.insertParameterTypes(0, Closure.class);
+        type = type.insertParameterTypes(0, FunctionImplementation.class);
         try {
             MethodHandle interpret = MethodHandles.lookup().findStatic(ACodeInterpreter.class, "interpret", type);
             return MethodHandles.insertArguments(interpret, 0, this);
@@ -289,45 +295,37 @@ public class FunctionImplementation {
         }
     }
 
-    public Object profile(Closure closure) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(closure);
+    public Object profile() {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
         return result;
     }
 
-    public Object profile(Closure closure, Object arg) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(closure, arg);
+    public Object profile(Object arg) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
         return result;
     }
 
-    public Object profile(Closure closure, Object arg1, Object arg2) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(closure, arg1, arg2);
+    public Object profile(Object arg1, Object arg2) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg1, arg2);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
         return result;
     }
 
-    public Object profile(Closure closure, Object arg1, Object arg2, Object arg3) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(closure, arg1, arg2, arg3);
+    public Object profile(Object arg1, Object arg2, Object arg3) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg1, arg2, arg3);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
         return result;
     }
-
-    private MethodHandle dropFunctionArgument(MethodHandle original) {
-        return MethodHandles.dropArguments(original, 0, Closure.class);
-    }
-
-    /*
-        For now let's just keep all the machinery here.
-     */
 
     private synchronized void scheduleCompilation() {
         // For now no scheduling, just compile and set synchronously.
@@ -369,13 +367,12 @@ public class FunctionImplementation {
         }
         state = State.COMPILED;
         if (specializedMethod == null) {
-            callSite.setTarget(dropFunctionArgument(genericMethod));
+            callSite.setTarget(genericMethod);
             specializedImplementation = null;
             // this will not work if we allow de-specializing
         } else {
             callSite.setTarget(
-                dropFunctionArgument(
-                    makeSpecializationGuard(genericMethod, specializedMethod, result.specializedMethodType())));
+                    makeSpecializationGuard(genericMethod, specializedMethod, result.specializedMethodType()));
             specializedImplementation = specializedMethod;
         }
     }

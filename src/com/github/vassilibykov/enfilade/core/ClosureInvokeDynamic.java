@@ -48,26 +48,30 @@ public final class ClosureInvokeDynamic {
 
     public static Object dispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args) throws Throwable {
         var closure = (Closure) closureArg;
+        MethodHandle target;
         if (!thisSite.isMegamorphic()) {
-            var target = closure.specializedInvoker(thisSite.type());
-            thisSite.addCacheEntry(IS_SAME_FUNCTION.bindTo(closure.implementation), target);
+            target = closure.invokerForCallSite(thisSite.type());
+            thisSite.addCacheEntry(
+                IS_SAME_FUNCTION.bindTo(closure.implementation),
+                MethodHandles.dropArguments(target, 0, Object.class));
+            // so we can use the target in the switch below:
+            target = target.asType(MethodType.genericMethodType(target.type().parameterCount()));
+        } else {
+            target = closure.genericInvoker();
         }
         switch (args.length) {
             case 0:
-                return closure.genericInvoker().invokeExact(closure);
+                return target.invokeExact();
             case 1:
-                return closure.genericInvoker().invokeExact(closure, args[0]);
+                return target.invokeExact(args[0]);
             case 2:
-                return closure.genericInvoker().invokeExact(closure, args[0], args[1]);
+                return target.invokeExact(args[0], args[1]);
             case 3:
-                return closure.genericInvoker().invokeExact(closure, args[0], args[1], args[2]);
+                return target.invokeExact(args[0], args[1], args[2]);
             case 4:
-                return closure.genericInvoker().invokeExact(closure, args[0], args[1], args[2], args[3]);
+                return target.invokeExact(args[0], args[1], args[2], args[3]);
             default:
-                var combined = new Object[args.length + 1];
-                combined[0] = closure;
-                System.arraycopy(args, 0, combined, 1, args.length);
-                return closure.genericInvoker().invokeWithArguments(combined);
+                return target.invokeWithArguments(args);
         }
     }
 

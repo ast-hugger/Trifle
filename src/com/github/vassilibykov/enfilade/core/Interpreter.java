@@ -127,8 +127,7 @@ public class Interpreter {
         Instance
      */
 
-    public Object interpret(Closure closure) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction) {
         var frame = new Object[implFunction.frameSize()];
         try {
             return implFunction.body().accept(new Evaluator(frame));
@@ -137,8 +136,7 @@ public class Interpreter {
         }
     }
 
-    public Object interpret(Closure closure, Object arg) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction, Object arg) {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg);
         try {
@@ -148,8 +146,7 @@ public class Interpreter {
         }
     }
 
-    public Object interpret(Closure closure, Object arg1, Object arg2) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2) {
         var frame = new Object[implFunction.frameSize()];
         var allParameters = implFunction.allParameters();
         allParameters[0].setupArgumentIn(frame, arg1);
@@ -161,8 +158,7 @@ public class Interpreter {
         }
     }
 
-    public Object interpret(Closure closure, Object arg1, Object arg2, Object arg3) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2, Object arg3) {
         var frame = new Object[implFunction.frameSize()];
         var allParameters = implFunction.allParameters();
         allParameters[0].setupArgumentIn(frame, arg1);

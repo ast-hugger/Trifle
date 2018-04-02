@@ -32,8 +32,6 @@ public final class ConstantFunctionInvokeDynamic {
     @SuppressWarnings("unused") // called by generated code
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
         var closure = ConstantFunctionNode.lookup(targetId);
-        var typeWithLeadingClosure = callSiteType.insertParameterTypes(0, Closure.class);
-        var invoker = closure.specializedInvoker(typeWithLeadingClosure);
-        return new ConstantCallSite(invoker.bindTo(closure));
+        return new ConstantCallSite(closure.specializedInvoker(callSiteType));
     }
 }

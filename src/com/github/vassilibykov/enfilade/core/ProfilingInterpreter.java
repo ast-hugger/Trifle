@@ -83,8 +83,7 @@ public class ProfilingInterpreter extends Interpreter {
      */
 
     @Override
-    public Object interpret(Closure closure) {
-        var implementation = closure.implementation;
+    public Object interpret(FunctionImplementation implementation) {
         var frame = new Object[implementation.frameSize()];
         implementation.profile.recordInvocation(frame);
         try {
@@ -97,8 +96,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(Closure closure, Object arg) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction, Object arg) {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg);
         implFunction.profile.recordInvocation(frame);
@@ -112,8 +110,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(Closure closure, Object arg1, Object arg2) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2) {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
         implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
@@ -128,8 +125,7 @@ public class ProfilingInterpreter extends Interpreter {
     }
 
     @Override
-    public Object interpret(Closure closure, Object arg1, Object arg2, Object arg3) {
-        var implFunction = closure.implementation;
+    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2, Object arg3) {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
         implFunction.allParameters()[1].setupArgumentIn(frame, arg2);

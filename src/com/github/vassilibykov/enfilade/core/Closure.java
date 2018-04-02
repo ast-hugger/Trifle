@@ -23,52 +23,62 @@ public class Closure {
 
     @NotNull /*internal*/ final FunctionImplementation implementation;
     private final Object[] copiedValues;
-    private final MethodHandle invoker;
+    private final MethodHandle genericInvoker;
 
     Closure(@NotNull FunctionImplementation implementation, @NotNull Object[] copiedValues) {
         this.implementation = implementation;
         this.copiedValues = copiedValues;
-        // callSiteInvoker type: (Closure synthetic:Object* declared:Object*) -> Object
-        // invoker type: (Closure declared:Object*) -> Object
-        this.invoker = MethodHandles.insertArguments(implementation.callSiteInvoker, 1, copiedValues);
+        // callSiteInvoker type: (synthetic:Object* declared:Object*) -> Object
+        // invoker type: (declared:Object*) -> Object
+        this.genericInvoker = MethodHandles.insertArguments(implementation.callSiteInvoker, 0, copiedValues);
     }
 
     /**
      * A method handle invoking which evaluates the closure. Its type is
-     * {@code (Closure Object{n}) -> Object}, where {@code n} is the closure arity.
+     * {@code (Object{n}) -> Object}, where {@code n} is the closure arity.
      */
     MethodHandle genericInvoker() {
-        return invoker;
+        return genericInvoker;
     }
 
     /**
-     * Return an invoker of the requested type, if such an invoker can be created.
-     * The result may in fact delegate to the generic invoker after adapting
-     * its arguments.
-     *
-     * @throws IllegalArgumentException if it's impossible to create an invoker of the
-     *         requested type, for example because of a function arity mismatch.
+     * Return an invoker of the specified type, where the type only considers
+     * the function's declared parameters. It does not include the leading
+     * closure as do the types of invokedynamic call sites. The result uses
+     * the implementation's specialized compiled form, if possible.
      */
     MethodHandle specializedInvoker(MethodType requiredType) {
-        if (requiredType.parameterCount() != implementation.declarationArity() + 1) {
+        if (requiredType.parameterCount() != implementation.declarationArity()) {
             throw new IllegalArgumentException();
         }
         var specializedForm = implementation.specializedImplementation;
         if (specializedForm != null) {
-            if (specializedForm.type().equals(requiredType.dropParameterTypes(0, 1))) {
-                var invoker = MethodHandles.insertArguments(
-                    MethodHandles.dropArguments(specializedForm, 0, Closure.class),
-                    1,
-                    copiedValues);
-                return invoker.asType(requiredType);
+            // The type of specializedForm includes the leading parameters for copied values
+            var cleanType = specializedForm.type().dropParameterTypes(0, copiedValues.length);
+            if (cleanType.equals(requiredType)) {
+                var specializedInvoker = MethodHandles.insertArguments(specializedForm, 0, copiedValues);
+                return specializedInvoker.asType(requiredType);
             }
         }
-        return invoker.asType(requiredType);
+        return genericInvoker.asType(requiredType);
+    }
+
+    /**
+     * Return an invoker of the requested type. The type describes the call site
+     * which will be bound to the invoker, so it has the additional leading
+     * {@code Object} parameter to receive the closure.
+     *
+     * @throws IllegalArgumentException if it's impossible to create an invoker of the
+     *         requested type, for example because of a function arity mismatch.
+     */
+    MethodHandle invokerForCallSite(MethodType callSiteType) {
+        var typeWithoutLeadingClosure = callSiteType.dropParameterTypes(0, 1);
+        return specializedInvoker(typeWithoutLeadingClosure);
     }
 
     public Object invoke() {
         try {
-            return invoker.invokeExact(this);
+            return genericInvoker.invokeExact();
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -76,7 +86,7 @@ public class Closure {
 
     public Object invoke(Object arg) {
         try {
-            return invoker.invokeExact(this, arg);
+            return genericInvoker.invokeExact(arg);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -84,7 +94,7 @@ public class Closure {
 
     public Object invoke(Object arg1, Object arg2) {
         try {
-            return invoker.invokeExact(this, arg1, arg2);
+            return genericInvoker.invokeExact(arg1, arg2);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
