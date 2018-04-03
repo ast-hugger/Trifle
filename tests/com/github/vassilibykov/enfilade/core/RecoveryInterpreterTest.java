@@ -162,6 +162,6 @@ public class RecoveryInterpreterTest {
     }
 
     private FunctionImplementation bogusRuntimeFunction() {
-        return new FunctionImplementation(Lambda.with(List.of(), Const.value(null)));
+        return new FunctionImplementation(Lambda.with(List.of(), Const.value(null)), null);
     }
 }

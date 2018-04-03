@@ -4,6 +4,7 @@ package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -121,6 +122,13 @@ public class FunctionImplementation {
 
     @NotNull private final Lambda definition;
     /**
+     * For an implementation of non-top level lambda expression, contains the
+     * implementation of the topmost lambda expression containing this one.
+     * For an implementation of the top-leve expression, contains this function
+     * implementation.
+     */
+    @NotNull private final FunctionImplementation topImplementation;
+    /**
      * Apparent parameters from the function definition. Does not include synthetic
      * parameters introduced by closure conversion to copy down free variables.
      */
@@ -168,8 +176,9 @@ public class FunctionImplementation {
     /*internal*/ ACodeInstruction[] acode;
     private volatile State state;
 
-    FunctionImplementation(@NotNull Lambda definition) {
+    FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topImplOrNull) {
         this.definition = definition;
+        this.topImplementation = topImplOrNull != null ? topImplOrNull : this;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
     }
@@ -330,16 +339,25 @@ public class FunctionImplementation {
         return result;
     }
 
-    private synchronized void scheduleCompilation() {
-        // For now no scheduling, just compile and set synchronously.
+    private void scheduleCompilation() {
+        topImplementation.scheduleCompilationAtTop();
+    }
+
+    private synchronized void scheduleCompilationAtTop() {
         if (state == State.PROFILING) {
-            state = State.COMPILING;
-            callSite.setTarget(simpleInterpreterInvoker());
+            markAsBeingCompiled();
+            for (var each : closureImplementations) each.markAsBeingCompiled();
             forceCompile();
         }
     }
 
+    private void markAsBeingCompiled() {
+        state = State.COMPILING;
+        callSite.setTarget(simpleInterpreterInvoker());
+    }
+
     void forceCompile() {
+        if (this != topImplementation) throw new AssertionError("must be invoked on a top function implementation");
         var result = Compiler.compile(this);
         applyCompilationResult(result);
     }
@@ -388,13 +406,17 @@ public class FunctionImplementation {
     }
 
     /**
-     * Take a method handle of a type involving some non-Object types and wrap
-     * it so that it accepts and returns all Objects.
+     * Take a method handle of a type involving some primitive types and wrap it
+     * so that it accepts and returns all Objects.
      */
     private MethodHandle generify(MethodHandle specialization) {
-        MethodType genericType = MethodType.genericMethodType(specialization.type().parameterCount());
-        MethodHandle generic = specialization.asType(genericType);
-        return MethodHandles.catchException(generic, SquarePegException.class, EXTRACT_SQUARE_PEG);
+        MethodHandle generic = specialization.asType(specialization.type().generic());
+        // If return type is primitive, a return value not fitting the type will come back as SPE
+        if (specialization.type().returnType().isPrimitive()) {
+            return MethodHandles.catchException(generic, SquarePegException.class, EXTRACT_SQUARE_PEG);
+        } else {
+            return generic;
+        }
     }
 
     @SuppressWarnings("unused") // called by generated code

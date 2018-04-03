@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 public class FunctionTranslator {
 
     public static Closure translate(Lambda lambda) {
-        var implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
+        var implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda, null);
         var translator = new FunctionTranslator(lambda, implementation);
         translator.translate();
         implementation.addClosureImplementations(translator.nestedFunctions);
@@ -63,17 +63,17 @@ public class FunctionTranslator {
      */
 
     private final Lambda topLambda;
-    private final FunctionImplementation functionImplementation;
+    private final FunctionImplementation topFunctionImplementation;
     private final Map<Variable, VariableDefinition> variableDefinitions = new HashMap<>();
     private final List<FunctionImplementation> nestedFunctions = new ArrayList<>();
 
-    private FunctionTranslator(Lambda lambda, FunctionImplementation functionImplementation) {
+    private FunctionTranslator(Lambda lambda, FunctionImplementation topFunctionImplementation) {
         this.topLambda = lambda;
-        this.functionImplementation = functionImplementation;
+        this.topFunctionImplementation = topFunctionImplementation;
     }
 
     void translate() {
-        var lambdaTranslator = new LambdaTranslator(topLambda, 0, functionImplementation);
+        var lambdaTranslator = new LambdaTranslator(topLambda, 0, topFunctionImplementation);
         lambdaTranslator.translate();
     }
 
@@ -151,7 +151,7 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitLambda(Lambda lambda) {
-            var nestedFunction = FunctionRegistry.INSTANCE.lookupOrMake(lambda);
+            var nestedFunction = FunctionRegistry.INSTANCE.lookupOrMake(lambda, topFunctionImplementation);
             nestedFunctions.add(nestedFunction);
             var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
             nestedTranslator.translate();

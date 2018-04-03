@@ -34,8 +34,8 @@ public class FunctionRegistry {
         return functionsByDefinition.get(source);
     }
 
-    public synchronized FunctionImplementation lookupOrMake(Lambda source) {
-        return functionsByDefinition.computeIfAbsent(source, k -> new FunctionImplementation(source));
+    public synchronized FunctionImplementation lookupOrMake(Lambda source, FunctionImplementation topFunction) {
+        return functionsByDefinition.computeIfAbsent(source, k -> new FunctionImplementation(source, topFunction));
     }
 
     /**
