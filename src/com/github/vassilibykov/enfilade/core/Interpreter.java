@@ -106,7 +106,7 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitRet(ReturnNode ret) {
+        public Object visitReturn(ReturnNode ret) {
             throw new ReturnException(ret.value().accept(this));
         }
 

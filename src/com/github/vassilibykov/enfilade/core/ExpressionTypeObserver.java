@@ -187,7 +187,7 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
      * body type, while the return itself has the void type.
      */
     @Override
-    public ExpressionType visitRet(ReturnNode ret) {
+    public ExpressionType visitReturn(ReturnNode ret) {
         var valueType = ret.value().accept(this);
         functionBody.unifyObservedTypeWith(valueType);
         return setKnownType(ret, JvmType.VOID);

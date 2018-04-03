@@ -51,7 +51,7 @@ public class Mul extends Primitive2Node {
                 return arg2Category.match(new JvmType.Matcher<JvmType>() {
                     public JvmType ifReference() { // (int, Object)
                         writer
-                            .adaptType(REFERENCE, INT)
+                            .convertType(REFERENCE, INT)
                             .asm().visitInsn(IMUL);
                         return INT;
                     }

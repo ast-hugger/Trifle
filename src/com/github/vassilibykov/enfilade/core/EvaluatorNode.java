@@ -32,7 +32,7 @@ public abstract class EvaluatorNode {
         T visitLet(LetNode let);
         T visitPrimitive1(Primitive1Node primitive);
         T visitPrimitive2(Primitive2Node primitive);
-        T visitRet(ReturnNode ret);
+        T visitReturn(ReturnNode ret);
         T visitSetVar(SetVariableNode setVar);
         T visitConstantFunction(ConstantFunctionNode constFunction);
     }
@@ -110,7 +110,7 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitRet(ReturnNode ret) {
+        public T visitReturn(ReturnNode ret) {
             return ret.value().accept(this);
         }
 

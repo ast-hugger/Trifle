@@ -10,6 +10,7 @@ import java.lang.invoke.MethodType;
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
+import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
  * A code generator producing code for the generic version of a function.
@@ -73,7 +74,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         call.function().accept(this); // puts a value on the stack which must be a closure
         var argType = call.arg().accept(this);
         var type = MethodType.genericMethodType(2);
-        writer.adaptType(argType, REFERENCE);
+        writer.convertType(argType, REFERENCE);
         writer.invokeDynamic(
             ClosureInvokeDynamic.BOOTSTRAP,
             "call1",
@@ -84,7 +85,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
         var type = MethodType.genericMethodType(1);
         var argType = call.arg().accept(this);
-        writer.adaptType(argType, REFERENCE);
+        writer.convertType(argType, REFERENCE);
         writer.invokeDynamic(
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call1",
@@ -101,9 +102,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         call.function().accept(this); // puts a value on the stack that must be a closure
         var arg1Type = call.arg1().accept(this);
         var type = MethodType.genericMethodType(3);
-        writer.adaptType(arg1Type, REFERENCE);
+        writer.convertType(arg1Type, REFERENCE);
         var arg2Type = call.arg2().accept(this);
-        writer.adaptType(arg2Type, REFERENCE);
+        writer.convertType(arg2Type, REFERENCE);
         writer.invokeDynamic(
             ClosureInvokeDynamic.BOOTSTRAP,
             "call2",
@@ -114,9 +115,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     private JvmType generateConstantFunctionCall2(CallNode.Call2 call, ConstantFunctionNode function) {
         var type = MethodType.genericMethodType(1);
         var arg1Type = call.arg1().accept(this);
-        writer.adaptType(arg1Type, REFERENCE);
+        writer.convertType(arg1Type, REFERENCE);
         var arg2Type = call.arg2().accept(this);
-        writer.adaptType(arg2Type, REFERENCE);
+        writer.convertType(arg2Type, REFERENCE);
         writer.invokeDynamic(
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call1",
@@ -173,15 +174,15 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitIf(IfNode anIf) {
         JvmType testType = anIf.condition().accept(this);
-        writer.adaptType(testType, BOOL);
+        writer.convertType(testType, BOOL);
         writer.ifThenElse(
             () -> {
                 JvmType type = anIf.trueBranch().accept(this);
-                writer.adaptType(type, REFERENCE);
+                writer.convertType(type, REFERENCE);
             },
             () -> {
                 JvmType type = anIf.falseBranch().accept(this);
-                writer.adaptType(type, REFERENCE);
+                writer.convertType(type, REFERENCE);
             }
         );
         return REFERENCE;
@@ -196,7 +197,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
                 .initBoxedReference(variable.index);
         }
         var initType = let.initializer().accept(this);
-        writer.adaptType(initType, REFERENCE);
+        writer.convertType(initType, REFERENCE);
         if (variable.isBoxed()) {
             if (let.isLetrec()) {
                 writer.storeBoxedReference(variable.index());
@@ -239,8 +240,10 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitRet(ReturnNode ret) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    public JvmType visitReturn(ReturnNode ret) {
+        var valueType = ret.accept(this);
+        writer.ret(valueType);
+        return VOID;
     }
 
     @Override
@@ -248,7 +251,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         var variable = setVar.variable();
         var varType = setVar.value().accept(this);
         writer
-            .adaptType(varType, REFERENCE)
+            .convertType(varType, REFERENCE)
             .dup();
         if (variable.isBoxed()) {
             writer.storeBoxedReference(variable.index());

@@ -35,6 +35,8 @@ public class GhostWriter {
     private static final String BOXED_REFERENCE_ICN = internalClassName(BoxedReference.class);
     private static final String BOXED_BOOL_ICN = internalClassName(BoxedBool.class);
     private static final String BOXED_INT_ICN = internalClassName(BoxedInt.class);
+    private static final String INTEGER_ICN = internalClassName(Integer.class);
+    private static final String BOOLEAN_ICN = internalClassName(Boolean.class);
 
     /*
         Instance
@@ -50,47 +52,55 @@ public class GhostWriter {
         return asmWriter;
     }
 
-    public GhostWriter adaptType(JvmType from, JvmType to) {
+    public GhostWriter convertType(JvmType from, JvmType to) {
         from.match(new JvmType.VoidMatcher() {
             public void ifReference() {
                 to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { }
-                    public void ifInt() { unboxInteger(); }
-                    public void ifBoolean() { unboxBoolean(); }
+                    public void ifInt() { unwrapInteger(); }
+                    public void ifBoolean() { unwrapBoolean(); }
                 });
             }
             public void ifInt() {
                 to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { boxInteger(); }
+                    public void ifReference() { wrapInteger(); }
                     public void ifInt() { }
                     public void ifBoolean() { throw new CompilerError("cannot adapt int to boolean"); }
                 });
             }
             public void ifBoolean() {
                 to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { boxBoolean(); }
+                    public void ifReference() { wrapBoolean(); }
                     public void ifInt() {
                         throw new CompilerError("cannot adapt boolean to int");
                     }
                     public void ifBoolean() { }
                 });
             }
+            public void ifVoid() {
+                // means the computation that produced the value terminated the current invocation
+            }
         });
         return this;
     }
 
-    public GhostWriter boxBoolean() {
+    public GhostWriter wrapBoolean() {
         invokeStatic(Boolean.class, "valueOf", Boolean.class, boolean.class);
         return this;
     }
 
-    public GhostWriter boxInteger() {
+    public GhostWriter wrapInteger() {
         invokeStatic(Integer.class, "valueOf", Integer.class, int.class);
         return this;
     }
 
     public GhostWriter checkCast(Class<?> castClass) {
         asmWriter.visitTypeInsn(CHECKCAST, internalClassName(castClass));
+        return this;
+    }
+
+    public GhostWriter checkCast(String internalClassName) {
+        asmWriter.visitTypeInsn(CHECKCAST, internalClassName);
         return this;
     }
 
@@ -167,6 +177,11 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter instanceOf(String internalClassName) {
+        asmWriter.visitTypeInsn(INSTANCEOF, internalClassName);
+        return this;
+    }
+
     public GhostWriter invokeDynamic(Handle bootstrapper, String name, MethodType callSiteType, Object... bootstrapperArgs) {
         asmWriter.visitInvokeDynamicInsn(
             name,
@@ -187,9 +202,14 @@ public class GhostWriter {
     }
 
     public GhostWriter invokeVirtual(Class<?> owner, String methodName, Class<?> returnType, Class<?>... argTypes) {
+        invokeVirtual(internalClassName(owner), methodName, returnType, argTypes);
+        return this;
+    }
+
+    public GhostWriter invokeVirtual(String ownerClassName, String methodName, Class<?> returnType, Class<?>... argTypes) {
         asmWriter.visitMethodInsn(
             INVOKEVIRTUAL,
-            internalClassName(owner),
+            ownerClassName,
             methodName,
             MethodType.methodType(returnType, argTypes).toMethodDescriptorString(),
             false);
@@ -327,21 +347,11 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter unboxBoolean() {
-        checkCast(Boolean.class);
-        invokeVirtual(Boolean.class, "booleanValue", boolean.class);
-        return this;
-    }
-
-    public GhostWriter unboxInteger() {
-        checkCast(Integer.class);
-        invokeVirtual(Integer.class, "intValue", int.class);
-        return this;
-    }
-
     /**
-     * Generate code to unbox the value currently on the stack, which must be
-     * a box of the appropriate type.
+     * Generate code to unbox the value currently on the stack, which must be a
+     * box of the appropriate type. This is not unboxing in the Java sense
+     * between a wrapper and a primitive type. To avoid confusion we refer to
+     * the latter as <em>unwrapping</em>.
      */
     public GhostWriter unboxValue(JvmType type) {
         type.match(new JvmType.VoidMatcher() {
@@ -358,6 +368,50 @@ public class GhostWriter {
                 asmWriter.visitFieldInsn(GETFIELD, BOXED_BOOL_ICN, "value", BOOL_DESC);
             }
         });
+        return this;
+    }
+
+    public GhostWriter unwrapBoolean() {
+        checkCast(Boolean.class);
+        invokeVirtual(Boolean.class, "booleanValue", boolean.class);
+        return this;
+    }
+
+    public GhostWriter unwrapBooleanOrThrowSPE() {
+        dup();
+        instanceOf(BOOLEAN_ICN);
+        ifThenElse(
+            () -> {
+                checkCast(BOOLEAN_ICN);
+                invokeVirtual(BOOLEAN_ICN, "booleanValue", boolean.class);
+                ret(JvmType.BOOL);
+            },
+            () -> {
+                throwSquarePegException();
+            }
+        );
+        return this;
+    }
+
+    public GhostWriter unwrapInteger() {
+        checkCast(Integer.class);
+        invokeVirtual(Integer.class, "intValue", int.class);
+        return this;
+    }
+
+    public GhostWriter unwrapIntegerOrThrowSPE() {
+        dup();
+        instanceOf(INTEGER_ICN);
+        ifThenElse(
+            () -> {
+                checkCast(INTEGER_ICN);
+                invokeVirtual(INTEGER_ICN, "intValue", int.class);
+                ret(JvmType.INT);
+            },
+            () -> {
+                throwSquarePegException();
+            }
+        );
         return this;
     }
 

@@ -123,7 +123,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
      * function body.
      */
     @Override
-    public ExpressionType visitRet(ReturnNode ret) {
+    public ExpressionType visitReturn(ReturnNode ret) {
         ExpressionType valueType = ret.value().accept(this);
         functionBody.unifyInferredTypeWith(valueType);
         return andSetIn(ret, ExpressionType.known(VOID));

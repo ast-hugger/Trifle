@@ -18,6 +18,8 @@ import java.lang.invoke.MethodType;
  * (Object Object Object) -> Object} in the generic case, of {@code (Object
  * <type1> <type2>) -> <type3>} in a specialized case, where {@code <typeN>}
  * is an arbitrary type, reference or primitive.
+ *
+ * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
 public final class ClosureInvokeDynamic {
     public static final Handle BOOTSTRAP = new Handle(

@@ -13,6 +13,8 @@ import java.util.Objects;
 /**
  * A function value in a program. Produced by evaluating a lambda expression or
  * by referencing a top-level function.
+ *
+ * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
 public class Closure {
     @SuppressWarnings("unused") // called by generated code

@@ -158,7 +158,7 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitRet(ReturnNode ret) {
+    public Void visitReturn(ReturnNode ret) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

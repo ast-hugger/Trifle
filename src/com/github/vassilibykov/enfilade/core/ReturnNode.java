@@ -20,7 +20,7 @@ class ReturnNode extends EvaluatorNode {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitRet(this);
+        return visitor.visitReturn(this);
     }
 
     @Override

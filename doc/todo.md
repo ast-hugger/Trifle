@@ -1,6 +1,7 @@
 # To do
 
-* Clean up the specialized compiler.
+* Write up design overview of specialized code compilation and recovery.
+* Untangle `let` and `letrec` in evaluator nodes. Make `letrec` multivariate.
 
 ## Longer term
 

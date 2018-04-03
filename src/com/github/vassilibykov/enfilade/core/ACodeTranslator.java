@@ -103,7 +103,7 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitRet(ReturnNode ret) {
+    public Void visitReturn(ReturnNode ret) {
         ret.value().accept(this);
         emit(new ACodeInstruction.Return());
         return null;
