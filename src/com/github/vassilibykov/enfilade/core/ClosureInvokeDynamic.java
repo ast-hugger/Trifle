@@ -49,15 +49,18 @@ public final class ClosureInvokeDynamic {
     public static Object dispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args) throws Throwable {
         var closure = (Closure) closureArg;
         MethodHandle target;
-        if (!thisSite.isMegamorphic()) {
-            target = closure.invokerForCallSite(thisSite.type());
-            thisSite.addCacheEntry(
-                IS_SAME_FUNCTION.bindTo(closure.implementation),
-                MethodHandles.dropArguments(target, 0, Object.class));
-            // so we can use the target in the switch below:
-            target = target.asType(MethodType.genericMethodType(target.type().parameterCount()));
+        if (closure.implementation.isCompiled()) {
+            target = closure.optimalCallSiteInvoker(thisSite.type());
+            if (!thisSite.isMegamorphic() && !closure.hasCopiedValues()) {
+                thisSite.addCacheEntry(
+                    IS_SAME_FUNCTION.bindTo(closure.implementation),
+                    MethodHandles.dropArguments(target, 0, Object.class));
+            }
+            target = target.asType(target.type().generic()); // so we can use it in the switch below
         } else {
-            target = closure.genericInvoker();
+            /* If the implementation function has not been compiled yet, it doesn't
+               make sense to install inline cache because we can do better later. */
+            target = closure.defaultInvoker();
         }
         switch (args.length) {
             case 0:

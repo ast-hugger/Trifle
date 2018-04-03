@@ -4,7 +4,6 @@ package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -68,10 +67,10 @@ import java.util.stream.Stream;
  *
  * <p>Note the extra leading argument. It contains the closure being called, but
  * is formally typed as {@code Object} rather than closure. Internally a closure
- * maintains an {@link Closure#invoker} method handle which calls its function
- * implementation's {@link #callSiteInvoker} after inserting copied values, if
- * any, to be received by the synthetic parameters prepended by the closure
- * converter.
+ * maintains an {@link Closure#defaultInvoker} method handle which calls its
+ * function implementation's {@link #callSiteInvoker} after inserting copied
+ * values, if any, to be received by the synthetic parameters prepended by the
+ * closure converter.
  *
  * <p>In addition to the generic compiled form bound to the core {@link
  * #callSite}, a function implementation may have a specialized compiled form. A
@@ -164,10 +163,10 @@ public class FunctionImplementation {
      * The dynamic invoker of {@link #callSite}.
      */
     /*internal*/ MethodHandle callSiteInvoker;
-//    @Nullable /*internal*/ CallSite specializedCallSite;
-    @Nullable /*internal*/ MethodHandle specializedImplementation;
+    /*internal*/ MethodHandle genericImplementation;
+    /*internal*/ MethodHandle specializedImplementation;
     /*internal*/ ACodeInstruction[] acode;
-    private State state;
+    private volatile State state;
 
     FunctionImplementation(@NotNull Lambda definition) {
         this.definition = definition;
@@ -263,6 +262,10 @@ public class FunctionImplementation {
         return acode;
     }
 
+    public boolean isCompiled() {
+        return state == State.COMPILED;
+    }
+
     private MethodHandle profilingInterpreterInvoker() {
         var type = MethodType.genericMethodType(implementationArity());
         try {
@@ -353,10 +356,9 @@ public class FunctionImplementation {
     }
 
     private void updateCompiledForm(Class<?> generatedClass, Compiler.FunctionCompilationResult result) {
-        MethodHandle genericMethod;
         MethodHandle specializedMethod = null;
         try {
-            genericMethod = MethodHandles.lookup()
+            genericImplementation = MethodHandles.lookup()
                 .findStatic(generatedClass, result.genericMethodName(), MethodType.genericMethodType(implementationArity()));
             if (result.specializedMethodName() != null) {
                 specializedMethod = MethodHandles.lookup()
@@ -367,12 +369,12 @@ public class FunctionImplementation {
         }
         state = State.COMPILED;
         if (specializedMethod == null) {
-            callSite.setTarget(genericMethod);
+            callSite.setTarget(genericImplementation);
             specializedImplementation = null;
             // this will not work if we allow de-specializing
         } else {
             callSite.setTarget(
-                    makeSpecializationGuard(genericMethod, specializedMethod, result.specializedMethodType()));
+                    makeSpecializationGuard(genericImplementation, specializedMethod, result.specializedMethodType()));
             specializedImplementation = specializedMethod;
         }
     }
@@ -399,9 +401,10 @@ public class FunctionImplementation {
     public static boolean checkSpecializationApplicability(MethodType specialization, Object[] args) {
         for (int i = 0; i < args.length; i++) {
             Class<?> type = specialization.parameterType(i);
-            Object arg = args[i];
-            if (type.equals(int.class) && !(arg instanceof Integer)) return false;
-            if (type.equals(boolean.class) && !(arg instanceof Boolean)) return false;
+            if (type.isPrimitive()) {
+                Object arg = args[i];
+                if (!JvmType.isCompatibleValue(type, arg)) return false;
+            }
         }
         return true;
     }

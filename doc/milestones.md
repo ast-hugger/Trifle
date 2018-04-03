@@ -7,3 +7,6 @@
 3/23/2018: The core scheme is all there: profiling interpreter, compiler,
 recovery interpreter (a-code), the catching of SPEs and recovery using
 the a-code interpreter. 58 classes, 4,500 loc.  
+
+4/1/2018: Implemented closures for all execution modes, cleaned up call
+sequence. 78 classes, 4900 loc.

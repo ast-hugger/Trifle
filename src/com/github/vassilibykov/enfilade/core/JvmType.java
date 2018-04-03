@@ -28,6 +28,15 @@ public enum JvmType {
         }
     }
 
+    public static boolean isCompatibleValue(Class<?> primitiveClass, Object value) {
+        /* This method has nothing to do with JvmType directly, but its logic depends on
+           the set of primitive types enumerated by JvmType and it needs to be updated if
+           those ever change. So, it's better to keep it here. */
+        if (primitiveClass == int.class && !(value instanceof Integer)) return false;
+        if (primitiveClass == boolean.class && !(value instanceof Boolean)) return false;
+        return true;
+    }
+
     public interface Matcher<T> {
         T ifReference();
         T ifInt();
@@ -87,7 +96,7 @@ public enum JvmType {
             case BOOL: return matcher.ifBoolean();
             case VOID: return matcher.ifVoid();
             default:
-                throw new AssertionError("missing matcher case");
+                throw new AssertionError("no match() method case for " + this);
         }
     }
 
@@ -106,7 +115,7 @@ public enum JvmType {
                 matcher.ifVoid();
                 break;
             default:
-                throw new AssertionError("missing matcher case");
+                throw new AssertionError("no match() method case for " + this);
         }
     }
 }

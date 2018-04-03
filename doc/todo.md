@@ -1,11 +1,5 @@
 # To do
 
-* Closure#invokerForCallSite() binds to the specialized implementation only if it's
-  already available. If not, it will bind to the generic invoker. If a specialization
-  becomes available in the future, it will be used, but only via a specialization
-  check guard of the generic invoker. Should rethink the whole scheme of call site
-  management/relinking on compiled form availability change.
-* Specialization check guard should only consider the arguments that may be specialized.
 * Clean up compilation story as applied to a top function+nested closures bundle.
 
 ## Longer term
