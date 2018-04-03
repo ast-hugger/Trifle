@@ -52,7 +52,7 @@ public class GhostWriter {
         return asmWriter;
     }
 
-    public GhostWriter convertType(JvmType from, JvmType to) {
+    public GhostWriter adaptValue(JvmType from, JvmType to) {
         from.match(new JvmType.VoidMatcher() {
             public void ifReference() {
                 to.match(new JvmType.VoidMatcher() {
@@ -79,6 +79,35 @@ public class GhostWriter {
             }
             public void ifVoid() {
                 // means the computation that produced the value terminated the current invocation
+            }
+        });
+        return this;
+    }
+
+    public GhostWriter ensureValue(JvmType from, JvmType to) {
+        from.match(new JvmType.VoidMatcher() {
+            public void ifReference() {
+                to.match(new JvmType.VoidMatcher() {
+                    public void ifReference() { }
+                    public void ifInt() { unwrapIntegerOr(() -> throwIntegerExpected()); }
+                    public void ifBoolean() { unwrapBooleanOr(() -> throwBooleanExpected()); }
+                });
+            }
+            public void ifInt() {
+                to.match(new JvmType.VoidMatcher() {
+                    public void ifReference() { wrapInteger(); }
+                    public void ifInt() { }
+                    public void ifBoolean() { throw new CompilerError("cannot convert int to boolean"); }
+                });
+            }
+            public void ifBoolean() {
+                to.match(new JvmType.VoidMatcher() {
+                    public void ifReference() { wrapBoolean(); }
+                    public void ifInt() {
+                        throw new CompilerError("cannot convert boolean to int");
+                    }
+                    public void ifBoolean() { }
+                });
             }
         });
         return this;
@@ -341,6 +370,25 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter throwBooleanExpected() {
+        invokeStatic(Error.class, "booleanExpected", Error.class);
+        asmWriter.visitInsn(ATHROW);
+        return this;
+    }
+
+    public GhostWriter throwError(String message) {
+        loadString(message);
+        invokeStatic(Error.class, "message", Error.class, String.class);
+        asmWriter.visitInsn(ATHROW);
+        return this;
+    }
+
+    public GhostWriter throwIntegerExpected() {
+        invokeStatic(Error.class, "integerExpected", Error.class);
+        asmWriter.visitInsn(ATHROW);
+        return this;
+    }
+
     public GhostWriter throwSquarePegException() {
         invokeStatic(SquarePegException.class, "with", SquarePegException.class, Object.class);
         asmWriter.visitInsn(ATHROW);
@@ -377,7 +425,7 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter unwrapBooleanOrThrowSPE() {
+    public GhostWriter unwrapBooleanOr(Runnable failureCodeGenerator) {
         dup();
         instanceOf(BOOLEAN_ICN);
         ifThenElse(
@@ -386,9 +434,7 @@ public class GhostWriter {
                 invokeVirtual(BOOLEAN_ICN, "booleanValue", boolean.class);
                 ret(JvmType.BOOL);
             },
-            () -> {
-                throwSquarePegException();
-            }
+            failureCodeGenerator
         );
         return this;
     }
@@ -399,7 +445,7 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter unwrapIntegerOrThrowSPE() {
+    public GhostWriter unwrapIntegerOr(Runnable failureCodeGenerator) {
         dup();
         instanceOf(INTEGER_ICN);
         ifThenElse(
@@ -408,12 +454,11 @@ public class GhostWriter {
                 invokeVirtual(INTEGER_ICN, "intValue", int.class);
                 ret(JvmType.INT);
             },
-            () -> {
-                throwSquarePegException();
-            }
+            failureCodeGenerator
         );
         return this;
     }
+
 
     public GhostWriter withLabelAtEnd(Consumer<Label> emitter) {
         Label label = new Label();

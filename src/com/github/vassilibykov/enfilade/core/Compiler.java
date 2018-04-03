@@ -187,7 +187,7 @@ public class Compiler {
         methodWriter.visitCode();
         CompilerCodeGeneratorGeneric generator = new CompilerCodeGeneratorGeneric(methodWriter);
         JvmType resultType = generator.generate(closureImpl);
-        generator.writer.convertType(resultType, REFERENCE);
+        generator.writer.adaptValue(resultType, REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();

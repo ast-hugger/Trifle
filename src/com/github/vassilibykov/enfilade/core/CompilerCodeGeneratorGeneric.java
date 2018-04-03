@@ -74,7 +74,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         call.function().accept(this); // puts a value on the stack which must be a closure
         var argType = call.arg().accept(this);
         var type = MethodType.genericMethodType(2);
-        writer.convertType(argType, REFERENCE);
+        writer.adaptValue(argType, REFERENCE);
         writer.invokeDynamic(
             ClosureInvokeDynamic.BOOTSTRAP,
             "call1",
@@ -85,7 +85,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
         var type = MethodType.genericMethodType(1);
         var argType = call.arg().accept(this);
-        writer.convertType(argType, REFERENCE);
+        writer.adaptValue(argType, REFERENCE);
         writer.invokeDynamic(
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call1",
@@ -102,9 +102,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         call.function().accept(this); // puts a value on the stack that must be a closure
         var arg1Type = call.arg1().accept(this);
         var type = MethodType.genericMethodType(3);
-        writer.convertType(arg1Type, REFERENCE);
+        writer.adaptValue(arg1Type, REFERENCE);
         var arg2Type = call.arg2().accept(this);
-        writer.convertType(arg2Type, REFERENCE);
+        writer.adaptValue(arg2Type, REFERENCE);
         writer.invokeDynamic(
             ClosureInvokeDynamic.BOOTSTRAP,
             "call2",
@@ -115,9 +115,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     private JvmType generateConstantFunctionCall2(CallNode.Call2 call, ConstantFunctionNode function) {
         var type = MethodType.genericMethodType(1);
         var arg1Type = call.arg1().accept(this);
-        writer.convertType(arg1Type, REFERENCE);
+        writer.adaptValue(arg1Type, REFERENCE);
         var arg2Type = call.arg2().accept(this);
-        writer.convertType(arg2Type, REFERENCE);
+        writer.adaptValue(arg2Type, REFERENCE);
         writer.invokeDynamic(
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call1",
@@ -174,15 +174,15 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitIf(IfNode anIf) {
         JvmType testType = anIf.condition().accept(this);
-        writer.convertType(testType, BOOL);
+        writer.adaptValue(testType, BOOL);
         writer.ifThenElse(
             () -> {
                 JvmType type = anIf.trueBranch().accept(this);
-                writer.convertType(type, REFERENCE);
+                writer.adaptValue(type, REFERENCE);
             },
             () -> {
                 JvmType type = anIf.falseBranch().accept(this);
-                writer.convertType(type, REFERENCE);
+                writer.adaptValue(type, REFERENCE);
             }
         );
         return REFERENCE;
@@ -197,7 +197,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
                 .initBoxedReference(variable.index);
         }
         var initType = let.initializer().accept(this);
-        writer.convertType(initType, REFERENCE);
+        writer.adaptValue(initType, REFERENCE);
         if (variable.isBoxed()) {
             if (let.isLetrec()) {
                 writer.storeBoxedReference(variable.index());
@@ -251,7 +251,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         var variable = setVar.variable();
         var varType = setVar.value().accept(this);
         writer
-            .convertType(varType, REFERENCE)
+            .adaptValue(varType, REFERENCE)
             .dup();
         if (variable.isBoxed()) {
             writer.storeBoxedReference(variable.index());

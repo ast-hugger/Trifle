@@ -33,7 +33,7 @@ public class Negate extends Primitive1Node {
         return argCategory.match(new JvmType.Matcher<JvmType>() {
             public JvmType ifReference() {
                 writer
-                    .convertType(REFERENCE, INT)
+                    .adaptValue(REFERENCE, INT)
                     .loadInt(0)
                     .swap()
                     .asm().visitInsn(ISUB);

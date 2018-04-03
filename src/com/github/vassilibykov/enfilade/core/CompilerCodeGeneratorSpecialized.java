@@ -83,13 +83,26 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         return continuationTypes.peek();
     }
 
+    /*
+        Invariants in the visit methods:
+
+        An atomic expression visitor returns the type of the value produced.
+        It's not supposed to need any of the 'generateFor...' methods, or something
+        is not right.
+
+        A complex expression visitor does not need to return a meaningful value.
+        I'm returning null so things break if assumptions are wrong.
+        Instead, it needs to do 'bridgeValue' before returning
+     */
+
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        generateForContinuationType(REFERENCE, call.function());
+        var functionType = call.function().accept(this);
+        writer.ensureValue(functionType, REFERENCE);
         var returnType = call.specializationType();
         var callSiteSignature = MethodType.methodType(returnType.representativeClass(), Object.class);
         writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call0", callSiteSignature);
-        bridgeCurrentValue(returnType, currentContinuationType());
+        bridgeToCurrentContinuationType(returnType);
         return null;
     }
 
@@ -98,43 +111,36 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         if (call.function() instanceof ConstantFunctionNode) {
             return generateConstantFunctionCall1(call, (ConstantFunctionNode) call.function());
         }
-
-        generateForContinuationType(REFERENCE, call.function());
-        var arg = call.arg();
-        var argType = arg.specializationType();
-        generateForContinuationType(argType, arg);
+        var functionType = call.function().accept(this);
+        writer.ensureValue(functionType, REFERENCE);
+        var argType = call.arg().accept(this);
         var returnType = call.specializationType();
         var callSiteSignature = MethodType.methodType(
             returnType.representativeClass(),
             Object.class, // the closure being called
             argType.representativeClass());
         writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature);
-        bridgeCurrentValue(returnType, currentContinuationType());
+        bridgeToCurrentContinuationType(returnType);
         return null;
     }
 
     private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
-        var arg = call.arg();
-        var argType = arg.specializationType();
-        generateForContinuationType(argType, arg);
+        var argType = call.arg().accept(this);
         var returnType = call.specializationType();
         var callSiteSignature = MethodType.methodType(
             returnType.representativeClass(),
             argType.representativeClass());
         writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, function.id());
-        bridgeCurrentValue(returnType, currentContinuationType());
+        bridgeToCurrentContinuationType(returnType);
         return null;
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        generateForContinuationType(REFERENCE, call.function()); // FIXME: 3/30/18 should not be 'expecting'; a type error is an error
-        var arg1 = call.arg1();
-        var arg1Type = arg1.specializationType();
-        generateForContinuationType(arg1Type, arg1);
-        var arg2 = call.arg2();
-        var arg2Type = arg2.specializationType();
-        generateForContinuationType(arg2Type, arg2);
+        var functionType = call.function().accept(this);
+        writer.ensureValue(functionType, REFERENCE);
+        var arg1Type = call.arg1().specializationType();
+        var arg2Type = call.arg2().specializationType();
         var returnType = call.specializationType();
         var callSiteSignature = MethodType.methodType(
             returnType.representativeClass(),
@@ -142,7 +148,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
             arg1Type.representativeClass(),
             arg2Type.representativeClass());
         writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call2", callSiteSignature);
-        bridgeCurrentValue(returnType, currentContinuationType());
+        bridgeToCurrentContinuationType(returnType);
         return null;
     }
 
@@ -161,15 +167,14 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
                 JvmType variableType = variable.specializationType();
                 writer
                     .loadLocal(variableType, variable.index())
-                    .convertType(variableType, REFERENCE);
+                    .adaptValue(variableType, REFERENCE);
             }
             writer.asm().visitInsn(Opcodes.AASTORE);
         }
         writer
             .loadInt(FunctionRegistry.INSTANCE.lookup(closure.function()))
             .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
-        bridgeCurrentValue(REFERENCE, currentContinuationType());
-        return null;
+        return REFERENCE;
     }
 
     @Override
@@ -177,20 +182,16 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
-            bridgeCurrentValue(INT, currentContinuationType());
         } else if (value instanceof String) {
             writer.loadString((String) value);
-            bridgeCurrentValue(REFERENCE, currentContinuationType());
         } else if (value == null) {
             writer.loadNull();
-            bridgeCurrentValue(REFERENCE, currentContinuationType());
         } else if (value instanceof Boolean) {
             writer.loadInt((Boolean) value ? 1 : 0);
-            bridgeCurrentValue(BOOL, currentContinuationType());
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
-        return null;
+        return aConst.specializationType();
     }
 
     @Override
@@ -204,21 +205,24 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         } else {
             writer.loadLocal(varType, variable.index());
         }
-        bridgeCurrentValue(varType, currentContinuationType());
-        return null;
+        return varType;
     }
 
     @Override
     public JvmType visitIf(IfNode anIf) {
         if (anIf.condition() instanceof LessThan) {
             ((LessThan) anIf.condition()).generateIf(
-                (type, arg) -> generateForContinuationType(type, arg),
+                (type, arg) -> {
+                    var argType = arg.accept(this);
+                    writer.ensureValue(argType, type);
+                },
                 () -> generateForCurrentContinuation(anIf.trueBranch()),
                 () -> generateForCurrentContinuation(anIf.falseBranch()),
                 writer);
             return null;
         }
-        generateForContinuationType(BOOL, anIf.condition());
+        var conditionType = anIf.condition().accept(this);
+        writer.ensureValue(conditionType, BOOL);
         writer.ifThenElse(
             () -> generateForCurrentContinuation(anIf.trueBranch()),
             () -> generateForCurrentContinuation(anIf.falseBranch())
@@ -257,22 +261,17 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitPrimitive1(Primitive1Node primitive) {
-        var argType = primitive.argument().specializationType();
-        generateForContinuationType(argType, primitive.argument());
+        var argType = primitive.argument().accept(this); // argument is a primitive
         primitive.generate(writer, argType);
-        bridgeCurrentValue(primitive.jvmType(), currentContinuationType());
-        return null;
+        return primitive.jvmType();
     }
 
     @Override
     public JvmType visitPrimitive2(Primitive2Node primitive) {
-        var arg1Type = primitive.argument1().specializationType();
-        var arg2Type = primitive.argument2().specializationType();
-        generateForContinuationType(arg1Type, primitive.argument1());
-        generateForContinuationType(arg2Type, primitive.argument2());
+        var arg1Type = primitive.argument1().accept(this);
+        var arg2Type = primitive.argument2().accept(this);
         primitive.generate(writer, arg1Type, arg2Type);
-        bridgeCurrentValue(primitive.jvmType(), currentContinuationType());
-        return null;
+        return primitive.jvmType();
     }
 
     @Override
@@ -281,8 +280,8 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         if (expressions.length == 0) {
             writer
                 .loadNull()
-                .convertType(REFERENCE, currentContinuationType());
-            return null;
+                .adaptValue(REFERENCE, currentContinuationType());
+            return REFERENCE;
         }
         int i;
         for (i = 0; i < expressions.length - 1; i++) {
@@ -295,8 +294,9 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitReturn(ReturnNode ret) {
-        generateForContinuationType(functionReturnType, ret.value());
+    public JvmType visitReturn(ReturnNode returnNode) {
+        var valueType = returnNode.value().accept(this);
+        bridgeValue(valueType, functionReturnType);
         writer.ret(functionReturnType);
         return null;
     }
@@ -304,14 +304,19 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     @Override
     public JvmType visitSetVar(SetVariableNode set) {
         var var = set.variable();
-        JvmType varType = var.specializationType();
-        generateForContinuationType(varType, set.value());
+        var varType = var.specializationType();
+        if (varType == REFERENCE) {
+            generateForContinuationType(REFERENCE, set.value());
+        } else {
+            withSquarePegRecovery(set, () -> generateForContinuationType(varType, set.value()));
+        }
         writer.dup(); // to leave the value on the stack as the result
         if (var.isBoxed()) {
             writer.storeBoxedVariable(varType, var.index());
         } else {
             writer.storeLocal(varType, var.index());
         }
+        bridgeToCurrentContinuationType(set.specializationType());
         return null;
     }
 
@@ -322,8 +327,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         writer
             .loadInt(id)
             .invokeStatic(ConstantFunctionNode.class, "lookup", Closure.class, int.class);
-        bridgeCurrentValue(REFERENCE, currentContinuationType());
-        return null;
+        return REFERENCE;
     }
 
     private void generateForContinuationType(JvmType expectedType, EvaluatorNode expression) {
@@ -349,7 +353,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
      * <p>If the 'to' type is VOID, that means the value will be discarded by
      * the continuation, so it doesn't matter what it is.
      *
-     * <p>This is different from {@link GhostWriter#convertType(JvmType,
+     * <p>This is different from {@link GhostWriter#adaptValue(JvmType,
      * JvmType)}. The latter performs wrapping and unwrapping of values,
      * assuming that in a conversion between a primitive and a reference type,
      * the reference type is a valid wrapper value for the primitive. In a
@@ -363,13 +367,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
      * packaged up and thrown as a {@link SquarePegException}.
      *
      */
-    private void bridgeCurrentValue(JvmType from, JvmType to) {
+    private void bridgeValue(JvmType from, JvmType to) {
         from.match(new JvmType.VoidMatcher() {
             public void ifReference() {
                 to.match(new JvmType.VoidMatcher() {
                     public void ifReference() { }
-                    public void ifInt() { writer.unwrapIntegerOrThrowSPE(); }
-                    public void ifBoolean() { writer.unwrapBooleanOrThrowSPE(); }
+                    public void ifInt() { writer.unwrapIntegerOr(writer::throwSquarePegException); }
+                    public void ifBoolean() { writer.unwrapBooleanOr(writer::throwSquarePegException); }
                     public void ifVoid() { }
                 });
             }
@@ -392,12 +396,16 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         });
     }
 
-    private void withSquarePegRecovery(LetNode requestor, Runnable generate) {
+    private void bridgeToCurrentContinuationType(JvmType from) {
+        bridgeValue(from, currentContinuationType());
+    }
+
+    private void withSquarePegRecovery(RecoverySite requestor, Runnable generate) {
         Label handlerStart = new Label();
         SquarePegHandler handler = new SquarePegHandler(
             handlerStart,
             new ArrayList<>(liveLocals),
-            requestor.setInstructionAddress());
+            requestor.resumptionAddress());
         squarePegHandlers.add(handler);
         writer.withLabelsAround((begin, end) -> {
             generate.run();
@@ -440,7 +448,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         JvmType localType = local.specializationType();
         writer.storeArray(local.index(), () -> {
             writer.loadLocal(localType, local.index());
-            writer.convertType(localType, REFERENCE);
+            writer.adaptValue(localType, REFERENCE);
         });
     }
 
@@ -459,43 +467,6 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
             .invokeVirtual(SquarePegException.class, "value", Object.class)
             // stack: Interpreter, Object
             .invokeVirtual(ACodeInterpreter.class, "interpret", Object.class, Object.class);
-        functionReturnType.match(new JvmType.VoidMatcher() {
-            @Override
-            public void ifReference() {
-                writer.ret(REFERENCE);
-            }
-
-            @Override
-            public void ifInt() {
-                writer.dup();
-                writer.instanceOf(Integer.class);
-                writer.ifThenElse(
-                    () -> {
-                        writer.checkCast(Integer.class);
-                        writer.invokeVirtual(Integer.class, "intValue", int.class);
-                        writer.ret(INT);
-                    },
-                    () -> {
-                        writer.throwSquarePegException();
-                    }
-                );
-            }
-
-            @Override
-            public void ifBoolean() {
-                writer.dup();
-                writer.instanceOf(Boolean.class);
-                writer.ifThenElse(
-                    () -> {
-                        writer.checkCast(Boolean.class);
-                        writer.invokeVirtual(Boolean.class, "booleanValue", boolean.class);
-                        writer.ret(BOOL);
-                    },
-                    () -> {
-                        writer.throwSquarePegException();
-                    }
-                );
-            }
-        });
+        bridgeValue(REFERENCE, functionReturnType);
     }
 }

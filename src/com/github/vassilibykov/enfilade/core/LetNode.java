@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents both {@code let} and {@code letrec} of the expression language.
  */
-class LetNode extends EvaluatorNode {
+class LetNode extends EvaluatorNode implements RecoverySite {
     private final boolean isLetrec;
     @NotNull private final VariableDefinition variable;
     @NotNull private final EvaluatorNode initializer;
@@ -37,12 +37,14 @@ class LetNode extends EvaluatorNode {
         return body;
     }
 
-    public int setInstructionAddress() {
+    @Override
+    public int resumptionAddress() {
         return setInstructionAddress;
     }
 
-    public void setSetInstructionAddress(int setInstructionAddress) {
-        this.setInstructionAddress = setInstructionAddress;
+    @Override
+    public void setResumptionAddress(int resumptionAddress) {
+        this.setInstructionAddress = resumptionAddress;
     }
 
     @Override

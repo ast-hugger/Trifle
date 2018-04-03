@@ -5,14 +5,14 @@ package com.github.vassilibykov.enfilade.expression;
 import org.jetbrains.annotations.NotNull;
 
 public class SetVariable extends ComplexExpression {
-    public static SetVariable with(Variable variable, AtomicExpression value) {
+    public static SetVariable with(Variable variable, Expression value) {
         return new SetVariable(variable, value);
     }
 
     @NotNull private final Variable variable;
-    @NotNull private final AtomicExpression value;
+    @NotNull private final Expression value;
 
-    private SetVariable(@NotNull Variable variable, @NotNull AtomicExpression value) {
+    private SetVariable(@NotNull Variable variable, @NotNull Expression value) {
         this.variable = variable;
         this.value = value;
     }
@@ -21,7 +21,7 @@ public class SetVariable extends ComplexExpression {
         return variable;
     }
 
-    public AtomicExpression value() {
+    public Expression value() {
         return value;
     }
 
