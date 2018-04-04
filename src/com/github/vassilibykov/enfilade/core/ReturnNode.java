@@ -7,8 +7,9 @@ import org.jetbrains.annotations.NotNull;
 /**
  * An explicit return (a bypass in the normal chain of continuations).
  */
-class ReturnNode extends EvaluatorNode {
+class ReturnNode extends EvaluatorNode implements RecoverySite {
     @NotNull private final EvaluatorNode value;
+    private int returnInstructionAddress;
 
     ReturnNode(@NotNull EvaluatorNode value) {
         this.value = value;
@@ -16,6 +17,16 @@ class ReturnNode extends EvaluatorNode {
 
     public EvaluatorNode value() {
         return value;
+    }
+
+    @Override
+    public int resumptionAddress() {
+        return returnInstructionAddress;
+    }
+
+    @Override
+    public void setResumptionAddress(int resumptionAddress) {
+        returnInstructionAddress = resumptionAddress;
     }
 
     @Override

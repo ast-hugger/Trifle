@@ -191,23 +191,32 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitLet(LetNode let) {
         var variable = let.variable();
-        if (variable.isBoxed() && let.isLetrec()) {
-            writer
-                .loadNull()
-                .initBoxedReference(variable.index);
-        }
         var initType = let.initializer().accept(this);
         writer.adaptValue(initType, REFERENCE);
         if (variable.isBoxed()) {
-            if (let.isLetrec()) {
-                writer.storeBoxedReference(variable.index());
-            } else {
-                writer.initBoxedReference(variable.index());
-            }
+            writer.initBoxedReference(variable.index());
         } else {
             writer.storeLocal(REFERENCE, variable.index());
         }
         return let.body().accept(this);
+    }
+
+    @Override
+    public JvmType visitLetrec(LetrecNode letrec) {
+        var variable = letrec.variable();
+        if (variable.isBoxed()) {
+            writer
+                .loadNull()
+                .initBoxedReference(variable.index);
+        }
+        var initType = letrec.initializer().accept(this);
+        writer.adaptValue(initType, REFERENCE);
+        if (variable.isBoxed()) {
+            writer.storeBoxedReference(variable.index());
+        } else {
+            writer.storeLocal(REFERENCE, variable.index());
+        }
+        return letrec.body().accept(this);
     }
 
     @Override

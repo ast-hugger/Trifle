@@ -4,12 +4,12 @@ package com.github.vassilibykov.enfilade.expression;
 
 import org.jetbrains.annotations.NotNull;
 
-public class LetRec extends Let {
-    public static LetRec with(Variable variable, Expression initializer, Expression body) {
-        return new LetRec(variable, initializer, body);
+public class Letrec extends Let {
+    public static Letrec with(Variable variable, Expression initializer, Expression body) {
+        return new Letrec(variable, initializer, body);
     }
 
-    LetRec(@NotNull Variable variable, @NotNull Expression initializer, @NotNull Expression body) {
+    Letrec(@NotNull Variable variable, @NotNull Expression initializer, @NotNull Expression body) {
         super(variable, initializer, body);
     }
 
@@ -20,6 +20,6 @@ public class LetRec extends Let {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitLetRec(this);
+        return visitor.visitLetrec(this);
     }
 }

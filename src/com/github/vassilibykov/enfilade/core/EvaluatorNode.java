@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.stream.Stream;
 
 /**
- * A node of a executable representation of the original expression tree. There
+ * A node of an executable representation of the original expression tree. There
  * is a overall resemblance between the type hierarchy of this class and of
  * {@code Expression}, but not a 1:1 correspondence. For example, in executable
  * form expressions are not formally separated into atomic and complex types.
@@ -27,14 +27,15 @@ public abstract class EvaluatorNode {
         T visitCall2(CallNode.Call2 call);
         T visitClosure(ClosureNode closure);
         T visitConst(ConstNode aConst);
+        T visitConstantFunction(ConstantFunctionNode constFunction);
         T visitGetVar(GetVariableNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
+        T visitLetrec(LetrecNode letrecNode);
         T visitPrimitive1(Primitive1Node primitive);
         T visitPrimitive2(Primitive2Node primitive);
         T visitReturn(ReturnNode ret);
         T visitSetVar(SetVariableNode setVar);
-        T visitConstantFunction(ConstantFunctionNode constFunction);
     }
 
     public static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -94,6 +95,11 @@ public abstract class EvaluatorNode {
             let.initializer().accept(this);
             let.body().accept(this);
             return null;
+        }
+
+        @Override
+        public T visitLetrec(LetrecNode letrecNode) {
+            return visitLet(letrecNode);
         }
 
         @Override

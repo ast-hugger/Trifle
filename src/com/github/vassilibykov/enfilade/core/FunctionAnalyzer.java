@@ -76,14 +76,20 @@ class FunctionAnalyzer {
         public Void visitLet(LetNode let) {
             AbstractVariable var = let.variable();
             if (scope.contains(var)) throw new CompilerError("let variable is already bound: " + var);
-            if (let.isLetrec()) {
-                scope.add(var);
-                let.initializer().accept(this);
-            } else {
-                let.initializer().accept(this);
-                scope.add(var);
-            }
+            let.initializer().accept(this);
+            scope.add(var);
             let.body().accept(this);
+            scope.remove(var);
+            return null;
+        }
+
+        @Override
+        public Void visitLetrec(LetrecNode letrec) {
+            AbstractVariable var = letrec.variable();
+            if (scope.contains(var)) throw new CompilerError("let variable is already bound: " + var);
+            scope.add(var);
+            letrec.initializer().accept(this);
+            letrec.body().accept(this);
             scope.remove(var);
             return null;
         }
@@ -207,14 +213,17 @@ class FunctionAnalyzer {
 
         @Override
         public Void visitLet(LetNode let) {
-            if (let.isLetrec()) {
-                let.variable().index = nextIndex++;
-                let.initializer().accept(this);
-            } else {
-                let.initializer().accept(this);
-                let.variable().index = nextIndex++;
-            }
+            let.initializer().accept(this);
+            let.variable().index = nextIndex++;
             let.body().accept(this);
+            return null;
+        }
+
+        @Override
+        public Void visitLetrec(LetrecNode letrec) {
+            letrec.variable().index = nextIndex++;
+            letrec.initializer().accept(this);
+            letrec.body().accept(this);
             return null;
         }
     }

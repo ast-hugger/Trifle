@@ -82,15 +82,18 @@ public class Interpreter {
         @Override
         public Object visitLet(LetNode let) {
             var var = let.variable();
-            if (let.isLetrec()) {
-                var.initValueIn(frame, null);
-                var value = let.initializer().accept(this);
-                var.setValueIn(frame, value);
-            } else {
-                var value = let.initializer().accept(this);
-                var.initValueIn(frame, value);
-            }
+            var value = let.initializer().accept(this);
+            var.initValueIn(frame, value);
             return let.body().accept(this);
+        }
+
+        @Override
+        public Object visitLetrec(LetrecNode letrec) {
+            var var = letrec.variable();
+            var.initValueIn(frame, null);
+            var value = letrec.initializer().accept(this);
+            var.setValueIn(frame, value);
+            return letrec.body().accept(this);
         }
 
         @Override

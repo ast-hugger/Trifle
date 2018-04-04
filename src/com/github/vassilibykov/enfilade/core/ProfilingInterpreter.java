@@ -58,16 +58,21 @@ public class ProfilingInterpreter extends Interpreter {
         public Object visitLet(LetNode let) {
             VariableDefinition variable = let.variable();
             Object value;
-            if (let.isLetrec()) {
-                variable.initValueIn(frame, null);
-                value = let.initializer().accept(this);
-                variable.setValueIn(frame, value);
-            } else {
-                value = let.initializer().accept(this);
-                variable.initValueIn(frame, value);
-            }
+            value = let.initializer().accept(this);
+            variable.initValueIn(frame, value);
             variable.profile.recordValue(value);
             return let.body().accept(this);
+        }
+
+        @Override
+        public Object visitLetrec(LetrecNode letrec) {
+            VariableDefinition variable = letrec.variable();
+            Object value;
+            variable.initValueIn(frame, null);
+            value = letrec.initializer().accept(this);
+            variable.setValueIn(frame, value);
+            variable.profile.recordValue(value);
+            return letrec.body().accept(this);
         }
 
         @Override

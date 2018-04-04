@@ -8,7 +8,7 @@ import com.github.vassilibykov.enfilade.expression.Const;
 import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Let;
-import com.github.vassilibykov.enfilade.expression.LetRec;
+import com.github.vassilibykov.enfilade.expression.Letrec;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
 import com.github.vassilibykov.enfilade.expression.Return;
 import com.github.vassilibykov.enfilade.expression.SetVariable;
@@ -162,17 +162,15 @@ public class FunctionTranslator {
         public EvaluatorNode visitLet(Let let) {
             var initializer = let.initializer().accept(this);
             var var = defineVariable(let.variable());
-            return new LetNode(false, var, initializer,
-                let.body().accept(this));
+            return new LetNode(var, initializer, let.body().accept(this));
         }
 
         @Override
-        public EvaluatorNode visitLetRec(LetRec letRec) {
-            var var = defineVariable(letRec.variable());
+        public EvaluatorNode visitLetrec(Letrec letrec) {
+            var var = defineVariable(letrec.variable());
             var.markAsMutable(); // even if it's not explicitly mutated!
-            var initializer = letRec.initializer().accept(this);
-            return new LetNode(true, var, initializer,
-                letRec.body().accept(this));
+            var initializer = letrec.initializer().accept(this);
+            return new LetrecNode(var, initializer, letrec.body().accept(this));
         }
 
         @Override

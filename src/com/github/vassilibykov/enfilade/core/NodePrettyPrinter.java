@@ -120,17 +120,27 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
 
     @Override
     public Void visitLet(LetNode let) {
+        printLet("let", let);
+        return null;
+    }
+
+    @Override
+    public Void visitLetrec(LetrecNode letrec) {
+        printLet("letrec", letrec);
+        return null;
+    }
+
+    private void printLet(String keyword, LetNode letOrLetrec) {
         printLine(() -> {
             output
-                .append("let ")
-                .append(let.variable().toString());
-            printNodeProfile(let);
+                .append(keyword).append(" ")
+                .append(letOrLetrec.variable().toString());
+            printNodeProfile(letOrLetrec);
         });
         printLine(() -> output.append("initExpr:"));
-        indented(() -> let.initializer().accept(this));
+        indented(() -> letOrLetrec.initializer().accept(this));
         printLine(() -> output.append("body:"));
-        indented(() -> let.body().accept(this));
-        return null;
+        indented(() -> letOrLetrec.body().accept(this));
     }
 
     @Override

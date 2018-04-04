@@ -62,8 +62,8 @@ public class ExpressionLanguage {
         return Let.with(variable, initializer, body);
     }
 
-    public static LetRec letrec(Variable variable, Expression initializer, Expression body) {
-        return LetRec.with(variable, initializer, body);
+    public static Letrec letrec(Variable variable, Expression initializer, Expression body) {
+        return Letrec.with(variable, initializer, body);
     }
 
     public static Block block(Expression... expressions) {

@@ -155,6 +155,16 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
         return bodyType;
     }
 
+    @Override
+    public ExpressionType visitLetrec(LetrecNode let) {
+        let.initializer().accept(this);
+        var var = let.variable();
+        var.unifyObservedTypeWith(var.profile.observedType());
+        var bodyType = let.body().accept(this);
+        let.unifyObservedTypeWith(bodyType);
+        return bodyType;
+    }
+
     /**
      * Same as for {@link #visitConst(ConstNode)}, we know the type but we can't
      * claim we've observed the primitive produce it.

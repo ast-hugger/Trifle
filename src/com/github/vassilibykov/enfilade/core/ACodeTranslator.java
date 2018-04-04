@@ -80,6 +80,11 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
+    public Void visitLetrec(LetrecNode letrec) {
+        return visitLet(letrec);
+    }
+
+    @Override
     public Void visitPrimitive1(Primitive1Node primitive) {
         emit(new ACodeInstruction.Load(primitive));
         return null;
