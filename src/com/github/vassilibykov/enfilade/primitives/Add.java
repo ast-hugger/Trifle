@@ -3,23 +3,18 @@
 package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.CompilerError;
-import com.github.vassilibykov.enfilade.core.EvaluatorNode;
+import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.JvmType;
-import org.jetbrains.annotations.NotNull;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static org.objectweb.asm.Opcodes.IADD;
 
-public class Add extends Primitive2Node {
-    public Add(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
-        super(argument1, argument2);
-    }
+public class Add extends Primitive2 {
 
     @Override
-    public JvmType jvmType() {
-        return INT;
+    public ExpressionType inferredType(ExpressionType argument1Type, ExpressionType argument2Type) {
+        return ExpressionType.known(INT);
     }
 
     @Override
@@ -81,10 +76,5 @@ public class Add extends Primitive2Node {
     @SuppressWarnings("unused") // called by generated code
     public static int add(int arg1, Object arg2) {
         return arg1 + (Integer) arg2;
-    }
-
-    @Override
-    public String toString() {
-        return "(ADD " + argument1() + " " + argument2() + ")";
     }
 }

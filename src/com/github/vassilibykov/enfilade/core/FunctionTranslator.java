@@ -9,13 +9,17 @@ import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Let;
 import com.github.vassilibykov.enfilade.expression.Letrec;
+import com.github.vassilibykov.enfilade.expression.Primitive;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
 import com.github.vassilibykov.enfilade.expression.Return;
 import com.github.vassilibykov.enfilade.expression.SetVariable;
 import com.github.vassilibykov.enfilade.expression.TopLevel;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
+import com.github.vassilibykov.enfilade.primitives.Primitive1;
+import com.github.vassilibykov.enfilade.primitives.Primitive2;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -175,10 +179,23 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitPrimitiveCall(PrimitiveCall primitiveCall) {
+            Primitive primitive = null;
+            try {
+                primitive = primitiveCall.target().getDeclaredConstructor().newInstance();
+            } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                throw new AssertionError(e);
+            }
             var args = primitiveCall.arguments().stream()
                 .map(each -> each.accept(this))
                 .collect(Collectors.toList());
-            return primitiveCall.target().link(args);
+            switch (args.size()) {
+                case 1:
+                    return new Primitive1Node((Primitive1) primitive, args.get(0));
+                case 2:
+                    return new Primitive2Node((Primitive2) primitive, args.get(0), args.get(1));
+                default:
+                    throw new UnsupportedOperationException("primitive arity not supported: " + args.size());
+            }
         }
 
         @Override

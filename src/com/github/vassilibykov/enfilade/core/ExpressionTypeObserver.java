@@ -171,15 +171,17 @@ class ExpressionTypeObserver implements EvaluatorNode.Visitor<ExpressionType> {
      */
     @Override
     public ExpressionType visitPrimitive1(Primitive1Node primitive) {
-        primitive.argument().accept(this);
-        return setKnownType(primitive, primitive.jvmType());
+        var argType = primitive.argument().accept(this);
+        var resultType = primitive.implementation().inferredType(argType).jvmType().orElse(JvmType.REFERENCE);
+        return setKnownType(primitive, resultType);
     }
 
     @Override
     public ExpressionType visitPrimitive2(Primitive2Node primitive) {
-        primitive.argument1().accept(this);
-        primitive.argument2().accept(this);
-        return setKnownType(primitive, primitive.jvmType());
+        var arg1Type = primitive.argument1().accept(this);
+        var arg2Type = primitive.argument2().accept(this);
+        var resultType = primitive.implementation().inferredType(arg1Type, arg2Type).jvmType().orElse(JvmType.REFERENCE);
+        return setKnownType(primitive, resultType);
     }
 
     @Override

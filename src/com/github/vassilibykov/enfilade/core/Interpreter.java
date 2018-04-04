@@ -97,15 +97,15 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitPrimitive1(Primitive1Node primitive) {
-            return primitive.apply(primitive.argument().accept(this));
+        public Object visitPrimitive1(Primitive1Node primitiveNode) {
+            return primitiveNode.implementation().apply(primitiveNode.argument().accept(this));
         }
 
         @Override
-        public Object visitPrimitive2(Primitive2Node primitive) {
-            return primitive.apply(
-                primitive.argument1().accept(this),
-                primitive.argument2().accept(this));
+        public Object visitPrimitive2(Primitive2Node primitiveNode) {
+            return primitiveNode.implementation().apply(
+                primitiveNode.argument1().accept(this),
+                primitiveNode.argument2().accept(this));
         }
 
         @Override

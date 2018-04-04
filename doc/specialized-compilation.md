@@ -23,4 +23,7 @@ produces a reference other than `Integer`, bridging throws a
 `SquarePegException` the handler of which switches to interpreted mode and runs
 the recovery interpreter to execute the consumer node logic.
 
+Bridging is an operation that can fail, and it only appears in the implementation
+of complex expressions. 
+
 

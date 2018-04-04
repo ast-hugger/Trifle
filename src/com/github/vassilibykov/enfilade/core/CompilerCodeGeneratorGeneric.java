@@ -222,14 +222,14 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitPrimitive1(Primitive1Node primitive1) {
         JvmType argType = primitive1.argument().accept(this);
-        return primitive1.generate(writer, argType);
+        return primitive1.implementation().generate(writer, argType);
     }
 
     @Override
     public JvmType visitPrimitive2(Primitive2Node primitive2) {
         JvmType arg1Type =  primitive2.argument1().accept(this);
         JvmType arg2Type = primitive2.argument2().accept(this);
-        return primitive2.generate(writer, arg1Type, arg2Type);
+        return primitive2.implementation().generate(writer, arg1Type, arg2Type);
     }
 
     @Override

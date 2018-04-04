@@ -4,25 +4,25 @@ package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.EvaluatorNode;
+import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.JvmType;
-import org.jetbrains.annotations.NotNull;
+import com.github.vassilibykov.enfilade.core.Primitive2Node;
+import com.github.vassilibykov.enfilade.core.PrimitiveNode;
+import com.github.vassilibykov.enfilade.expression.Expression;
+import org.objectweb.asm.Opcodes;
 
-import java.util.function.BiConsumer;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
-import static org.objectweb.asm.Opcodes.IF_ICMPGE;
 
-public class LessThan extends Primitive2Node {
-    public LessThan(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
-        super(argument1, argument2);
-    }
+public class LessThan extends Primitive2 implements IfAware {
 
     @Override
-    public JvmType jvmType() {
-        return JvmType.BOOL;
+    public ExpressionType inferredType(ExpressionType argument1Type, ExpressionType argument2Type) {
+        return ExpressionType.known(BOOL);
     }
 
     @Override
@@ -96,26 +96,34 @@ public class LessThan extends Primitive2Node {
         return a < b;
     }
 
-    public void generateIf(
-        BiConsumer<JvmType, EvaluatorNode> argGenerator,
-        Runnable trueBranchGenerator,
-        Runnable falseBranchGenerator,
-        GhostWriter writer)
-    {
-        argGenerator.accept(INT, argument1());
-        argGenerator.accept(INT, argument2());
-        writer.withLabelAtEnd(end -> {
-            writer.withLabelAtEnd(elseStart -> {
-                writer.asm().visitJumpInsn(IF_ICMPGE, elseStart);
-                trueBranchGenerator.run();
-                writer.jump(end);
-            });
-            falseBranchGenerator.run();
-        });
+    @Override
+    public Optional<OptimizedIfForm> optimizedFormFor(PrimitiveNode ifCondition) {
+        var primitive = (Primitive2Node) ifCondition; // cast must succeed
+        if (primitive.argument1().specializationType() == INT
+            && primitive.argument2().specializationType() == INT)
+        {
+            return Optional.of(new IfFormOptimizedForInts(primitive));
+        } else {
+            return Optional.empty();
+        }
     }
 
-    @Override
-    public String toString() {
-        return "(LT " + argument1() + " " + argument2() + ")";
+    private static class IfFormOptimizedForInts implements OptimizedIfForm {
+        private Primitive2Node primitiveCall;
+
+        private IfFormOptimizedForInts(Primitive2Node primitiveCall) {
+            this.primitiveCall = primitiveCall;
+        }
+
+        @Override
+        public void loadArguments(Consumer<EvaluatorNode> argumentGenerator) {
+            argumentGenerator.accept(primitiveCall.argument1());
+            argumentGenerator.accept(primitiveCall.argument2());
+        }
+
+        @Override
+        public int jumpInstruction() {
+            return Opcodes.IF_ICMPGE;
+        }
     }
 }

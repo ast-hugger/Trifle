@@ -4,22 +4,20 @@ package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.EvaluatorNode;
+import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.JvmType;
+import com.github.vassilibykov.enfilade.expression.Expression;
 import org.jetbrains.annotations.NotNull;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static org.objectweb.asm.Opcodes.ISUB;
 
-public class Sub extends Primitive2Node {
-    public Sub(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
-        super(argument1, argument2);
-    }
-
+public class Sub extends Primitive2 {
     @Override
-    public JvmType jvmType() {
-        return JvmType.INT;
+    public ExpressionType inferredType(ExpressionType argument1Type, ExpressionType argument2Type) {
+        return ExpressionType.known(INT);
     }
 
     @Override
@@ -66,11 +64,6 @@ public class Sub extends Primitive2Node {
                 throw new CompilerError("SUB is not applicable to a boolean");
             }
         });
-    }
-
-    @Override
-    public String toString() {
-        return "(SUB " + argument1() + " " + argument2() + ")";
     }
 
     @SuppressWarnings("unused") // called by generated code

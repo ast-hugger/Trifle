@@ -50,7 +50,7 @@ public class RecoveryInterpreterTest {
         code = Asm
             .vars(arg)
             .code(
-                load(new Negate(ref(arg))),
+                load(new Primitive1Node(new Negate(), ref(arg))),
                 ret());
         assertEquals(-42, code.interpretWith(42));
     }
@@ -60,7 +60,7 @@ public class RecoveryInterpreterTest {
         code = Asm
             .vars()
             .code(
-                load(new Add(const_(3), const_(4))),
+                load(new Primitive2Node(new Add(), const_(3), const_(4))),
                 ret());
         assertEquals(7, code.interpretWith());
     }
@@ -84,7 +84,7 @@ public class RecoveryInterpreterTest {
         code = Asm
             .vars(arg)
             .code(
-                jump(new LessThan(ref(arg), const_(0)), 3),
+                jump(new Primitive2Node(new LessThan(), ref(arg), const_(0)), 3),
                 load("positive"),
                 jump(4),
                 load("negative"),

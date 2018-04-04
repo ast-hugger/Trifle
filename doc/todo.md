@@ -1,10 +1,11 @@
 # To do
 
-* Separate primitive operations definitions from primitive calls.
 * Rethink the specialization story. Generic signature method should be
 compiled specialized as well. Perhaps we need at up to three forms:
 pure generic as a fast fallback, specialized with a generic signature,
-and specialized with a specialized signature. 
+and specialized with a specialized signature.
+* Recovery interpreter can be replaced with a compiled generic implementation
+of a special form. 
 
 ## Longer term
 

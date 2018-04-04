@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.primitives.LessThan;
+import com.github.vassilibykov.enfilade.primitives.IfAware;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -217,23 +217,30 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         var trueBranch = anIf.trueBranch();
         var falseBranch = anIf.falseBranch();
         var resultType = trueBranch.specializationType().union(falseBranch.specializationType());
-        if (anIf.condition() instanceof LessThan) {
-            ((LessThan) anIf.condition()).generateIf(
-                (type, arg) -> {
-                    var argType = arg.accept(this);
-                    writer.ensureValue(argType, type);
-                },
-                () -> {
-                    var valueType = trueBranch.accept(this);
-                    bridgeValue(valueType, resultType); // in tail position
-                },
-                () -> {
-                    var valueType = falseBranch.accept(this);
-                    bridgeValue(valueType, resultType); // in tail position
-                },
-                writer);
-            return resultType;
+        // Generate an optimized 'if' form, if possible
+        if (anIf.condition() instanceof PrimitiveNode) {
+            var primitiveCall = (PrimitiveNode) anIf.condition();
+            if (primitiveCall.implementation() instanceof IfAware) {
+                var generator = (IfAware) primitiveCall.implementation();
+                var maybeOptimized = generator.optimizedFormFor(primitiveCall);
+                if (maybeOptimized.isPresent()) {
+                    var optimized = maybeOptimized.get();
+                    optimized.loadArguments(each -> each.accept(this));
+                    writer.withLabelAtEnd(end -> {
+                        writer.withLabelAtEnd(elseStart -> {
+                            writer.asm().visitJumpInsn(optimized.jumpInstruction(), elseStart);
+                            var valueType = trueBranch.accept(this);
+                            bridgeValue(valueType, resultType); // in tail position
+                            writer.jump(end);
+                        });
+                        var valueType = falseBranch.accept(this);
+                        bridgeValue(valueType, resultType); // in tail position
+                    });
+                    return resultType;
+                }
+            }
         }
+        // General 'if' form
         var conditionType = anIf.condition().accept(this);
         writer.ensureValue(conditionType, BOOL);
         writer.ifThenElse(
@@ -304,17 +311,15 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitPrimitive1(Primitive1Node primitive) {
-        var argType = primitive.argument().accept(this); // argument is a primitive
-        primitive.generate(writer, argType);
-        return primitive.jvmType();
+        var argType = primitive.argument().accept(this);
+        return primitive.implementation().generate(writer, argType);
     }
 
     @Override
     public JvmType visitPrimitive2(Primitive2Node primitive) {
         var arg1Type = primitive.argument1().accept(this);
         var arg2Type = primitive.argument2().accept(this);
-        primitive.generate(writer, arg1Type, arg2Type);
-        return primitive.jvmType();
+        return primitive.implementation().generate(writer, arg1Type, arg2Type);
     }
 
     @Override

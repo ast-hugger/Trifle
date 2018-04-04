@@ -25,11 +25,11 @@ method calls of expression node classes.
         var t2 = var("t2");
         return TopLevel.define(
             fibonacci -> Lambda.with(List.of(n),
-                If.with(PrimitiveCall.with(new PrimitiveKey("lessThan", LessThan::new), n, Const.value(2)),
+                If.with(PrimitiveCall.with(LessThan.class, n, Const.value(2)),
                     Const.value(1),
-                    Let.with(t1, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(1))),
-                        Let.with(t2, Call.with(fibonacci, PrimitiveCall.with(new PrimitiveKey("sub", Sub::new), n, Const.value(2))),
-                            PrimitiveCall.with(new PrimitiveKey("add", Add::new), t1, t2))))));
+                    Let.with(t1, Call.with(fibonacci, PrimitiveCall.with(Sub.class, n, Const.value(1))),
+                        Let.with(t2, Call.with(fibonacci, PrimitiveCall.with(Sub.class, n, Const.value(2))),
+                            PrimitiveCall.with(Add.class, t1, t2))))));
     }
 
 

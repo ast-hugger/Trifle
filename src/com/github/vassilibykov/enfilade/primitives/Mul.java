@@ -3,24 +3,18 @@
 package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.CompilerError;
-import com.github.vassilibykov.enfilade.core.EvaluatorNode;
+import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.JvmType;
-import org.jetbrains.annotations.NotNull;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static org.objectweb.asm.Opcodes.IMUL;
 
-public class Mul extends Primitive2Node {
-    public Mul(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
-        super(argument1, argument2);
-    }
-
+public class Mul extends Primitive2 {
     @Override
-    public JvmType jvmType() {
-        return JvmType.INT;
+    public ExpressionType inferredType(ExpressionType argument1Type, ExpressionType argument2Type) {
+        return ExpressionType.known(INT);
     }
 
     @Override
@@ -69,11 +63,6 @@ public class Mul extends Primitive2Node {
                 throw new CompilerError("MUL is not applicable to a boolean");
             }
         });
-    }
-
-    @Override
-    public String toString() {
-        return "(MUL " + argument1() + " " + argument2() + ")";
     }
 
     public static int mul(Object a, Object b) {

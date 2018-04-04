@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.primitives.Primitive2;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -9,13 +10,18 @@ import org.jetbrains.annotations.NotNull;
  * implementations in the {@link com.github.vassilibykov.enfilade.primitives} package.
  * Note that we conflate the notions of a primitive and a call of a primitive.
  */
-public abstract class Primitive2Node extends EvaluatorNode {
+public class Primitive2Node extends PrimitiveNode {
     @NotNull private final EvaluatorNode argument1;
     @NotNull private final EvaluatorNode argument2;
 
-    protected Primitive2Node(@NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
+    protected Primitive2Node(@NotNull Primitive2 primitive, @NotNull EvaluatorNode argument1, @NotNull EvaluatorNode argument2) {
+        super(primitive);
         this.argument1 = argument1;
         this.argument2 = argument2;
+    }
+
+    public Primitive2 implementation() {
+        return (Primitive2) implementation;
     }
 
     public EvaluatorNode argument1() {
@@ -25,12 +31,6 @@ public abstract class Primitive2Node extends EvaluatorNode {
     public EvaluatorNode argument2() {
         return argument2;
     }
-
-    public abstract JvmType jvmType();
-
-    public abstract Object apply(Object arg1, Object arg2);
-
-    public abstract JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category);
 
     @Override
     public <T> T accept(Visitor<T> visitor) {

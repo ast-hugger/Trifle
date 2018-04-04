@@ -9,23 +9,23 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class PrimitiveCall extends AtomicExpression {
-    public static PrimitiveCall with(PrimitiveCallTarget target, AtomicExpression... arguments) {
+    public static PrimitiveCall with(Class<? extends Primitive> target, AtomicExpression... arguments) {
         return new PrimitiveCall(target, List.of(arguments));
     }
 
-    public static PrimitiveCall with(PrimitiveCallTarget target, List<? extends AtomicExpression> arguments) {
+    public static PrimitiveCall with(Class<? extends Primitive> target, List<? extends AtomicExpression> arguments) {
         return new PrimitiveCall(target, arguments);
     }
 
-    @NotNull private final PrimitiveCallTarget target;
+    @NotNull private final Class<? extends Primitive> target;
     @NotNull private final List<AtomicExpression> arguments;
 
-    private PrimitiveCall(@NotNull PrimitiveCallTarget target, @NotNull List<? extends AtomicExpression> arguments) {
+    private PrimitiveCall(@NotNull Class<? extends Primitive> target, @NotNull List<? extends AtomicExpression> arguments) {
         this.target = target;
         this.arguments = Collections.unmodifiableList(arguments);
     }
 
-    public PrimitiveCallTarget target() {
+    public Class<? extends Primitive> target() {
         return target;
     }
 
@@ -35,7 +35,7 @@ public class PrimitiveCall extends AtomicExpression {
 
     @Override
     public String toString() {
-        return target.name()
+        return target.getSimpleName()
             + "("
             + arguments.stream().map(it -> it.toString()).collect(Collectors.joining(", "))
             + ")";
