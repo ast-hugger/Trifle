@@ -73,7 +73,7 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     @Override
     public Void visitLet(LetNode let) {
         let.initializer().accept(this);
-        let.setResumptionAddress(nextInstructionAddress());
+        let.setRecoverySiteIndex(nextInstructionAddress());
         emit(new ACodeInstruction.Store(let.variable()));
         let.body().accept(this);
         return null;
@@ -117,7 +117,7 @@ public class ACodeTranslator implements EvaluatorNode.Visitor<Void> {
     @Override
     public Void visitSetVar(SetVariableNode set) {
         set.value().accept(this);
-        set.setResumptionAddress(nextInstructionAddress());
+        set.setRecoverySiteIndex(nextInstructionAddress());
         emit(new ACodeInstruction.Store(set.variable()));
         return null;
     }

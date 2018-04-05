@@ -4,8 +4,10 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,7 +33,7 @@ class FunctionAnalyzer {
     void analyze() {
         new ScopeValidator().apply();
         new ClosureConverter(function).apply();
-        new VariableIndexer(function).apply();
+        new Indexer(function).apply();
     }
 
     /**
@@ -170,16 +172,16 @@ class FunctionAnalyzer {
     }
 
     /**
-     * Assigns generic indices to all let-bound variables in a function body. Indices are
-     * allocated sequentially and uniquely. Two variables are guaranteed to have different
-     * generic indices even if they are never live at the same time. This is necessary to
-     * support closure escapes in interpreted code.
+     * Assigns generic indices to all let-bound variables in a function body.
+     * Also compiles a list of recovery sites of the function.
      */
-    private class VariableIndexer extends EvaluatorNode.VisitorSkeleton<Void> {
+    private class Indexer extends EvaluatorNode.VisitorSkeleton<Void> {
         private final FunctionImplementation thisFunction;
         private int nextIndex;
+        private int frameSize;
+        private List<RecoverySite> recoverySites = new ArrayList<>();
 
-        private VariableIndexer(FunctionImplementation function) {
+        private Indexer(FunctionImplementation function) {
             thisFunction = function;
             var arguments = function.allParameters();
             int i;
@@ -187,25 +189,22 @@ class FunctionAnalyzer {
                 arguments[i].index = i;
             }
             nextIndex = i;
+            frameSize = i;
         }
 
         public void apply() {
             thisFunction.body().accept(this);
-            thisFunction.finishInitialization(nextIndex);
+            thisFunction.finishInitialization(frameSize, recoverySites);
         }
 
-        /**
-         * The nested function is processed with the same validator because its inherits
-         * the scope. However, its arguments and local variables are indexed anew.
-         */
         @Override
         public Void visitClosure(ClosureNode closure) {
-            var nestedIndexer = new VariableIndexer(closure.function());
+            var nestedIndexer = new Indexer(closure.function());
             nestedIndexer.apply();
             closure.copiedOuterVariables = closure.function().syntheticParameters().stream()
                 .map(each -> each.supplier())
                 .collect(Collectors.toList());
-            closure.copiedVariablesGenericIndices = closure.copiedOuterVariables.stream()
+            closure.copiedVariableIndices = closure.copiedOuterVariables.stream()
                 .mapToInt(each -> each.index())
                 .toArray();
             return null;
@@ -213,18 +212,49 @@ class FunctionAnalyzer {
 
         @Override
         public Void visitLet(LetNode let) {
+            addRecoverySite(let);
             let.initializer().accept(this);
-            let.variable().index = nextIndex++;
+            let.variable().index = allocateLocalIndex();
             let.body().accept(this);
+            releaseLocalIndex();
             return null;
         }
 
         @Override
         public Void visitLetrec(LetrecNode letrec) {
-            letrec.variable().index = nextIndex++;
+            addRecoverySite(letrec);
+            letrec.variable().index = allocateLocalIndex();
             letrec.initializer().accept(this);
             letrec.body().accept(this);
+            releaseLocalIndex();
             return null;
+        }
+
+        @Override
+        public Void visitReturn(ReturnNode ret) {
+            addRecoverySite(ret);
+            return super.visitReturn(ret);
+        }
+
+        @Override
+        public Void visitSetVar(SetVariableNode setVar) {
+            addRecoverySite(setVar);
+            return super.visitSetVar(setVar);
+        }
+
+        private void addRecoverySite(RecoverySite site) {
+            site.setRecoverySiteIndex(recoverySites.size());
+            recoverySites.add(site);
+        }
+
+        private int allocateLocalIndex() {
+            var allocated = nextIndex++;
+            frameSize = Math.max(frameSize, nextIndex);
+            return allocated;
+        }
+
+        private void releaseLocalIndex() {
+            nextIndex--;
         }
     }
 }

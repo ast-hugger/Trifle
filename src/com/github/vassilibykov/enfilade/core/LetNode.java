@@ -32,13 +32,13 @@ class LetNode extends EvaluatorNode implements RecoverySite {
     }
 
     @Override
-    public int resumptionAddress() {
+    public int recoverySiteIndex() {
         return setInstructionAddress;
     }
 
     @Override
-    public void setResumptionAddress(int resumptionAddress) {
-        this.setInstructionAddress = resumptionAddress;
+    public void setRecoverySiteIndex(int recoverySiteIndex) {
+        this.setInstructionAddress = recoverySiteIndex;
     }
 
     @Override

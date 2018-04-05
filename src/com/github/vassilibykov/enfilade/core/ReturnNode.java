@@ -20,13 +20,13 @@ class ReturnNode extends EvaluatorNode implements RecoverySite {
     }
 
     @Override
-    public int resumptionAddress() {
+    public int recoverySiteIndex() {
         return returnInstructionAddress;
     }
 
     @Override
-    public void setResumptionAddress(int resumptionAddress) {
-        returnInstructionAddress = resumptionAddress;
+    public void setRecoverySiteIndex(int recoverySiteIndex) {
+        returnInstructionAddress = recoverySiteIndex;
     }
 
     @Override

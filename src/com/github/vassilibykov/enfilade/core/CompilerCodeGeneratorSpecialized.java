@@ -24,13 +24,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     private static class SquarePegHandler {
         private final Label handlerStart;
-        private final List<AbstractVariable> capturedLocals;
-        private final int acodeInitialPC;
+        private final List<AbstractVariable> liveLocals;
+        private final int recoverySiteId;
 
-        private SquarePegHandler(Label handlerStart, List<AbstractVariable> capturedLocals, int acodeInitialPC) {
+        private SquarePegHandler(Label handlerStart, List<AbstractVariable> liveLocals, int recoverySiteId) {
             this.handlerStart = handlerStart;
-            this.capturedLocals = capturedLocals;
-            this.acodeInitialPC = acodeInitialPC;
+            this.liveLocals = liveLocals;
+            this.recoverySiteId = recoverySiteId;
         }
     }
 
@@ -49,7 +49,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     void generate() {
-        function.acode = ACodeTranslator.translate(function.body());
+//        function.acode = ACodeTranslator.translate(function.body());
         generatePrologue();
         var expressionType = function.body().accept(this);
         bridgeValue(expressionType, functionReturnType);
@@ -260,15 +260,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitLet(LetNode let) {
         VariableDefinition variable = let.variable();
         JvmType varType = variable.specializationType();
-        if (varType == REFERENCE) {
+        withSquarePegRecovery(let, () -> {
             var initType = let.initializer().accept(this);
-            bridgeValue(initType, REFERENCE); // never fails
-        } else {
-            withSquarePegRecovery(let, () -> {
-                var initType = let.initializer().accept(this);
-                bridgeValue(initType, varType);
-            });
-        }
+            bridgeValue(initType, varType);
+        });
         if (variable.isBoxed()) {
             writer.initBoxedVariable(varType, variable.index());
         } else {
@@ -290,15 +285,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
                 .initBoxedVariable(varType, variable.index());
         }
         liveLocals.add(variable);
-        if (varType == REFERENCE) {
+        withSquarePegRecovery(letrec, () -> {
             var initType = letrec.initializer().accept(this);
-            bridgeValue(initType, REFERENCE); // never fails
-        } else {
-            withSquarePegRecovery(letrec, () -> {
-                var initType = letrec.initializer().accept(this);
-                bridgeValue(initType, varType);
-            });
-        }
+            bridgeValue(initType, varType);
+        });
         if (variable.isBoxed()) {
             writer.storeBoxedVariable(varType, variable.index());
         } else {
@@ -339,11 +329,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitReturn(ReturnNode returnNode) {
+        /* Return causes a non-local control transfer, so the bridging of the return value
+           is not in the tail position and must have an SPE handler established.
+           The return value is atomic and in principle there is no need to place
+           its code within an SPE handler. But just in case we might lift that
+           restriction and forget to modify the code here accordingly, we treat
+           value() as if it were complex already. */
         withSquarePegRecovery(returnNode, () -> {
-            /* Return node value is currently required to be atomic, so in principle
-               there is no need to place its code within an SPE handler. Just in case
-               we might lift that restriction and forget to modify the code here accordingly,
-               we handle value() here as if it already were complex. */
             var returnType = returnNode.value().accept(this);
             bridgeValue(returnType, functionReturnType);
         });
@@ -355,15 +347,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitSetVar(SetVariableNode set) {
         var var = set.variable();
         var varType = var.specializationType();
-        if (varType == REFERENCE) {
+        withSquarePegRecovery(set, () -> {
             var valueType = set.value().accept(this);
-            bridgeValue(valueType, REFERENCE); // bridging to REFERENCE never fails
-        } else {
-            withSquarePegRecovery(set, () -> {
-                var valueType = set.value().accept(this);
-                bridgeValue(valueType, varType);
-            });
-        }
+            bridgeValue(valueType, varType);
+        });
         writer.dup(); // the duplicate is left on the stack as the set expression value
         if (var.isBoxed()) {
             writer.storeBoxedVariable(varType, var.index());
@@ -447,7 +434,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         SquarePegHandler handler = new SquarePegHandler(
             handlerStart,
             new ArrayList<>(liveLocals),
-            requestor.resumptionAddress());
+            requestor.recoverySiteIndex());
         squarePegHandlers.add(handler);
         writer.withLabelsAround((begin, end) -> {
             generate.run();
@@ -456,9 +443,16 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     /**
-     * Generate code that loads onto the stack a replica of the frame locals
-     * live for the specified handler (an Object[]) and the restart position in
-     * A-code, then jumps to the epilogue unless this is the last handler.
+     * Generate code that loads onto the stack the state to be passed to the recovery
+     * method. Note that the stack already contains an exception with the value to
+     * recover. Once the handler and the epilogue has ran and are ready to call the
+     * recovery method, the stack contains (bottom to top):
+     * <ul>
+     *     <li>SquarePegException exception
+     *     <li>int recoverySiteId
+     *     <li>Object[] frameReplica
+     *     <li>int functionID
+     * </ul>
      */
     private void generateSquarePegHandler(SquarePegHandler handler, boolean isLastHandler, Label epilogueStart) {
         // TODO: 3/23/18 an optimization opportunity
@@ -469,7 +463,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         // function epilogue is factored out.
         writer.asm().visitLabel(handler.handlerStart);
         // stack: SquarePegException
-        writer.loadInt(handler.acodeInitialPC);
+        writer.loadInt(handler.recoverySiteId);
         generateFrameReplicator(handler);
         // stack: SPE, int, Object[]
         if (!isLastHandler) writer.jump(epilogueStart);
@@ -483,11 +477,11 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     private void generateFrameReplicator(SquarePegHandler handler) {
         int size = function.frameSize();
         writer.newObjectArray(size);
-        handler.capturedLocals.forEach(this::storeInFrameReplica);
+        handler.liveLocals.forEach(this::storeInFrameReplica);
     }
 
     private void storeInFrameReplica(AbstractVariable local) {
-        JvmType localType = local.specializationType();
+        JvmType localType = local.isBoxed() ? REFERENCE : local.specializationType();
         writer.storeArray(local.index(), () -> {
             writer.loadLocal(localType, local.index());
             writer.adaptValue(localType, REFERENCE);
@@ -502,13 +496,8 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         writer
             .loadInt(FunctionRegistry.INSTANCE.lookup(function))
             // stack: SPE, int initialPC, Object[] frame, int functionId
-            .invokeStatic(ACodeInterpreter.class, "forRecovery", ACodeInterpreter.class, int.class, Object[].class, int.class)
-            // stack: SPE, Interpreter
-            .swap()
-            // stack: Interpreter, SPE
-            .invokeVirtual(SquarePegException.class, "value", Object.class)
-            // stack: Interpreter, Object
-            .invokeVirtual(ACodeInterpreter.class, "interpret", Object.class, Object.class);
+            .invokeStatic(FunctionImplementation.class, "recover",
+                Object.class, SquarePegException.class, int.class, Object[].class, int.class);
         bridgeValue(REFERENCE, functionReturnType);
     }
 }

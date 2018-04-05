@@ -52,7 +52,7 @@ public class Interpreter {
 
         @Override
         public Object visitClosure(ClosureNode closure) {
-            int[] indicesToCopy = closure.copiedVariablesGenericIndices;
+            int[] indicesToCopy = closure.copiedVariableIndices;
             var size = indicesToCopy.length;
             var copies = new Object[size];
             for (int i = 0; i < size; i++) copies[i] = frame[indicesToCopy[i]];

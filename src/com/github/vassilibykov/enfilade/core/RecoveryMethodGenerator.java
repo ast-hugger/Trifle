@@ -2,10 +2,13 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
@@ -13,31 +16,52 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
- * A code generator producing code for the generic version of a function.
- * The result returned by each visitor method is the type category of the
- * value of the the subexpression compiled by the method.
+ * A code generator producing code for the recovery method of a function.
  */
-class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
-    protected final GhostWriter writer;
+class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
+    private final static int RECOVERY_ADDRESS_ARG = 0;
+    private final static int VALUE_ARG = 1;
+    private final static int FRAME_ARG = 2;
+    private final static int LOCAL_VAR_BASE = 3;
 
-    CompilerCodeGeneratorGeneric(MethodVisitor visitor) {
+    private final FunctionImplementation function;
+    protected final GhostWriter writer;
+    private Map<RecoverySite, Label> recoverySiteLabels = new HashMap<>();
+
+    RecoveryMethodGenerator(FunctionImplementation function, MethodVisitor visitor) {
+        this.function = function;
         this.writer = new GhostWriter(visitor);
     }
 
-    JvmType generate(FunctionImplementation function) {
+    JvmType generate() {
         generatePrologue(function);
         return function.body().accept(this);
     }
 
     private void generatePrologue(FunctionImplementation function) {
-        for (var each : function.declaredParameters()) {
-            if (each.isBoxed()) {
-                int index = each.index();
-                writer
-                    .loadLocal(REFERENCE, index)
-                    .initBoxedReference(index);
-            }
+        writer.loadLocal(REFERENCE, FRAME_ARG);
+        for (int i = 0; i < function.frameSize(); i++) {
+            writer
+                .dup()
+                .loadInt(i);
+            writer.asm().visitInsn(Opcodes.AALOAD);
+            writer.storeLocal(REFERENCE, i + LOCAL_VAR_BASE);
         }
+        writer
+            .pop()
+            .loadLocal(REFERENCE, VALUE_ARG)
+            .loadLocal(INT, RECOVERY_ADDRESS_ARG);
+        var recoverySites = function.recoverySites();
+        var labels = new Label[recoverySites.size()];
+        for (int i = 0; i < recoverySites.size(); i++) {
+            RecoverySite site = recoverySites.get(i);
+            var label = new Label();
+            recoverySiteLabels.put(site, label);
+            labels[i] = label;
+        }
+        writer.withLabelAtEnd(methodStart ->
+            writer.asm().visitTableSwitchInsn(0, recoverySites.size() - 1, methodStart, labels));
+        writer.pop();
     }
 
     @Override
@@ -134,7 +158,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
             writer
                 .dup()
                 .loadInt(i)
-                .loadLocal(REFERENCE, indicesToCopy[i]);
+                .loadLocal(REFERENCE, indicesToCopy[i] + LOCAL_VAR_BASE);
             writer.asm().visitInsn(Opcodes.AASTORE);
         }
         writer
@@ -166,7 +190,7 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitGetVar(GetVariableNode getVar) {
         var variable = getVar.variable();
-        writer.loadLocal(REFERENCE, variable.index());
+        writer.loadLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
         if (variable.isBoxed()) writer.extractBoxedVariable();
         return REFERENCE;
     }
@@ -193,10 +217,11 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         var variable = let.variable();
         var initType = let.initializer().accept(this);
         writer.adaptValue(initType, REFERENCE);
+        setRecoveryLabelHere(let);
         if (variable.isBoxed()) {
-            writer.initBoxedReference(variable.index());
+            writer.initBoxedReference(variable.index() + LOCAL_VAR_BASE);
         } else {
-            writer.storeLocal(REFERENCE, variable.index());
+            writer.storeLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
         }
         return let.body().accept(this);
     }
@@ -207,14 +232,15 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
         if (variable.isBoxed()) {
             writer
                 .loadNull()
-                .initBoxedReference(variable.index);
+                .initBoxedReference(variable.index() + LOCAL_VAR_BASE);
         }
         var initType = letrec.initializer().accept(this);
         writer.adaptValue(initType, REFERENCE);
+        setRecoveryLabelHere(letrec);
         if (variable.isBoxed()) {
-            writer.storeBoxedReference(variable.index());
+            writer.storeBoxedReference(variable.index() + LOCAL_VAR_BASE);
         } else {
-            writer.storeLocal(REFERENCE, variable.index());
+            writer.storeLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
         }
         return letrec.body().accept(this);
     }
@@ -251,6 +277,8 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitReturn(ReturnNode ret) {
         var valueType = ret.accept(this);
+        writer.adaptValue(valueType, REFERENCE);
+        setRecoveryLabelHere(ret);
         writer.ret(valueType);
         return VOID;
     }
@@ -259,13 +287,13 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
     public JvmType visitSetVar(SetVariableNode setVar) {
         var variable = setVar.variable();
         var varType = setVar.value().accept(this);
-        writer
-            .adaptValue(varType, REFERENCE)
-            .dup();
+        writer.adaptValue(varType, REFERENCE);
+        setRecoveryLabelHere(setVar);
+        writer.dup();
         if (variable.isBoxed()) {
-            writer.storeBoxedReference(variable.index());
+            writer.storeBoxedReference(variable.index() + LOCAL_VAR_BASE);
         } else {
-            writer.storeLocal(REFERENCE, variable.index());
+            writer.storeLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
         }
         return REFERENCE;
     }
@@ -278,5 +306,9 @@ class CompilerCodeGeneratorGeneric implements EvaluatorNode.Visitor<JvmType> {
             .loadInt(id)
             .invokeStatic(ConstantFunctionNode.class, "lookup", Closure.class, int.class);
         return REFERENCE;
+    }
+
+    private void setRecoveryLabelHere(RecoverySite site) {
+        writer.asm().visitLabel(recoverySiteLabels.get(site));
     }
 }

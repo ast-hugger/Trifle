@@ -7,6 +7,6 @@ package com.github.vassilibykov.enfilade.core;
  * to recovery mode when their compiled representation is running.
  */
 interface RecoverySite {
-    int resumptionAddress();
-    void setResumptionAddress(int resumptionAddress);
+    int recoverySiteIndex();
+    void setRecoverySiteIndex(int recoverySiteIndex);
 }

@@ -12,7 +12,9 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.MutableCallSite;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -106,6 +108,26 @@ import java.util.stream.Stream;
  */
 public class FunctionImplementation {
 
+    /**
+     * RESTRICTED. Not for normal use. Invoked by generated code in a
+     * specialized method to recover from an SPE by switching to a generic
+     * recovery method.
+     */
+    // FIXME change the whole thing to use an invokedynamic
+    @SuppressWarnings("unused") // called by generated code
+    public static Object recover(SquarePegException spe, int siteIndex, Object[] frame, int functionId) {
+        var value = spe.value;
+        var function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId),
+            "internal error: function to recover not found by ID");
+        var recovery = Objects.requireNonNull(function.recoveryImplementation,
+            "internal error: function is missing a recovery method");
+        try {
+            return recovery.invokeExact(siteIndex, value, frame);
+        } catch (Throwable throwable) {
+            throw new IllegalStateException(throwable);
+        }
+    }
+
     /** The number of times a function is profiled before it's queued for compilation. */
     private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
 
@@ -151,7 +173,8 @@ public class FunctionImplementation {
     private final List<FunctionImplementation> closureImplementations = new ArrayList<>();
     private final int arity;
     private EvaluatorNode body;
-    private int localsCount = -1;
+    private int frameSize = -1;
+    private List<RecoverySite> recoverySites;
     /*internal*/ FunctionProfile profile;
     /**
      * The unique ID of the function in the function registry.
@@ -173,6 +196,7 @@ public class FunctionImplementation {
     /*internal*/ MethodHandle callSiteInvoker;
     /*internal*/ MethodHandle genericImplementation;
     /*internal*/ MethodHandle specializedImplementation;
+    /*internal*/ MethodHandle recoveryImplementation;
     /*internal*/ ACodeInstruction[] acode;
     private volatile State state;
 
@@ -194,14 +218,13 @@ public class FunctionImplementation {
         closureImplementations.addAll(functions);
     }
 
-    /** RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}. */
-    void finishInitialization(int localsCount) {
+    /** RESTRICTED. Intended for {@link FunctionAnalyzer.Indexer}. */
+    void finishInitialization(int frameSize, List<RecoverySite> recoverySites) {
         this.callSite = new MutableCallSite(profilingInterpreterInvoker());
 //        this.callSite = new MutableCallSite(simpleInterpreterInvoker());
-//        this.callSite = new MutableCallSite(acodeInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
-        this.localsCount = localsCount;
-//        this.acode = ACodeTranslator.translate(body);
+        this.frameSize = frameSize;
+        this.recoverySites = Collections.unmodifiableList(recoverySites);
         this.state = State.PROFILING;
     }
 
@@ -235,7 +258,7 @@ public class FunctionImplementation {
     }
 
     /**
-     * RESTRICTED. Intended for {@link FunctionAnalyzer.VariableIndexer}.
+     * RESTRICTED. Intended for {@link FunctionAnalyzer.ClosureConverter}.
      * Accept the synthetic variables into which free variable references have been
      * rewritten in this function.
      */
@@ -257,14 +280,19 @@ public class FunctionImplementation {
     }
 
     /**
-     * Return the arity of the closure-converted function.
+     * Return the arity of the closure-converted function, which includes both
+     * synthetic and declared parameters.
      */
     public int implementationArity() {
         return allParameters.length;
     }
 
     public int frameSize() {
-        return localsCount;
+        return frameSize;
+    }
+
+    public List<RecoverySite> recoverySites() {
+        return recoverySites;
     }
 
     public ACodeInstruction[] acode() {
@@ -381,6 +409,10 @@ public class FunctionImplementation {
             if (result.specializedMethodName() != null) {
                 specializedMethod = MethodHandles.lookup()
                     .findStatic(generatedClass, result.specializedMethodName(), result.specializedMethodType());
+            }
+            if (result.recoveryMethodName() != null) {
+                recoveryImplementation = MethodHandles.lookup()
+                    .findStatic(generatedClass, result.recoveryMethodName(), Compiler.RECOVERY_METHOD_TYPE);
             }
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);

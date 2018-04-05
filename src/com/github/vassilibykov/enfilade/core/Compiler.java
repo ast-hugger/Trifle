@@ -27,8 +27,12 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
  */
 public class Compiler {
 
-    public static final String GENERIC_METHOD_NAME = "generic";
-    public static final String SPECIALIZED_METHOD_NAME = "specialized";
+    public static final MethodType RECOVERY_METHOD_TYPE = MethodType.methodType(
+        Object.class, int.class, Object.class, Object[].class);
+
+    private static final String GENERIC_METHOD_PREFIX = "generic";
+    private static final String SPECIALIZED_METHOD_PREFIX = "specialized";
+    private static final String RECOVERY_METHOD_PREFIX = "recovery$";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
     private static final String GENERATED_CODE_PACKAGE = "com.github.vassilibykov.enfilade.core";
     private static final String GENERATED_CLASS_NAME_PREFIX = GENERATED_CODE_PACKAGE + ".$gen$";
@@ -84,14 +88,17 @@ public class Compiler {
     static class FunctionCompilationResult {
         @NotNull private final String genericMethodName;
         @Nullable private final String specializedMethodName;
+        @Nullable private final String recoveryMethodName;
         @Nullable private final MethodType specializedMethodType;
 
         FunctionCompilationResult(@NotNull String genericMethodName,
                                   @Nullable String specializedMethodName,
+                                  @Nullable String recoveryMethodName,
                                   @Nullable MethodType specializedMethodType)
         {
             this.genericMethodName = genericMethodName;
             this.specializedMethodName = specializedMethodName;
+            this.recoveryMethodName = recoveryMethodName;
             this.specializedMethodType = specializedMethodType;
         }
 
@@ -101,6 +108,10 @@ public class Compiler {
 
         String specializedMethodName() {
             return specializedMethodName;
+        }
+
+        String recoveryMethodName() {
+            return recoveryMethodName;
         }
 
         MethodType specializedMethodType() {
@@ -158,12 +169,16 @@ public class Compiler {
         var methodName = generateGenericMethod(function);
         specializedMethodName = null;
         specializationType = null;
+        String recoveryMethodName = null;
         if (function.profile.canBeSpecialized()) {
             generateSpecializedMethod(function); // sets 'specializedMethodName' and 'specializationType'
+            if (!function.recoverySites().isEmpty()) {
+                recoveryMethodName = generateRecoveryMethod(specializedMethodName, function);
+            }
         }
         individualResults.put(
             function,
-            new FunctionCompilationResult(methodName, specializedMethodName, specializationType));
+            new FunctionCompilationResult(methodName, specializedMethodName, recoveryMethodName, specializationType));
         generatedMethodSerial++;
     }
 
@@ -178,15 +193,15 @@ public class Compiler {
     }
 
     private String generateGenericMethod(FunctionImplementation closureImpl) {
-        var methodName = GENERIC_METHOD_NAME + generatedMethodSerial;
+        var methodName = GENERIC_METHOD_PREFIX + generatedMethodSerial;
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
             methodName,
             MethodType.genericMethodType(closureImpl.implementationArity()).toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        CompilerCodeGeneratorGeneric generator = new CompilerCodeGeneratorGeneric(methodWriter);
-        JvmType resultType = generator.generate(closureImpl);
+        var generator = new CompilerCodeGeneratorGeneric(methodWriter);
+        var resultType = generator.generate(closureImpl);
         generator.writer.adaptValue(resultType, REFERENCE);
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
@@ -194,8 +209,8 @@ public class Compiler {
         return methodName;
     }
 
-    private void generateSpecializedMethod(FunctionImplementation closureImpl) {
-        specializedMethodName = SPECIALIZED_METHOD_NAME + generatedMethodSerial; // assuming it's been incremented by generic generator
+    private String generateSpecializedMethod(FunctionImplementation closureImpl) {
+        specializedMethodName = SPECIALIZED_METHOD_PREFIX + generatedMethodSerial;
         specializationType = computeSpecializationType(closureImpl);
         System.out.println("generating a specialized method of type " + specializationType);
         MethodVisitor methodWriter = classWriter.visitMethod(
@@ -204,10 +219,28 @@ public class Compiler {
             specializationType.toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        CompilerCodeGeneratorSpecialized generator = new CompilerCodeGeneratorSpecialized(closureImpl, methodWriter);
+        var generator = new CompilerCodeGeneratorSpecialized(closureImpl, methodWriter);
         generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
+        return specializedMethodName;
+    }
+
+    private String generateRecoveryMethod(String originalMethodName, FunctionImplementation closureImpl) {
+        var methodName = RECOVERY_METHOD_PREFIX + originalMethodName;
+        MethodVisitor methodWriter = classWriter.visitMethod(
+            ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
+            methodName,
+            RECOVERY_METHOD_TYPE.toMethodDescriptorString(),
+            null, null);
+        methodWriter.visitCode();
+        var generator = new RecoveryMethodGenerator(closureImpl, methodWriter);
+        var resultType = generator.generate();
+        generator.writer.adaptValue(resultType, REFERENCE);
+        methodWriter.visitInsn(Opcodes.ARETURN);
+        methodWriter.visitMaxs(-1, -1);
+        methodWriter.visitEnd();
+        return methodName;
     }
 
     @NotNull private MethodType computeSpecializationType(FunctionImplementation closureImpl) {

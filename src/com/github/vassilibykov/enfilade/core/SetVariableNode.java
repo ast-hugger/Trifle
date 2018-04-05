@@ -31,13 +31,13 @@ class SetVariableNode extends EvaluatorNode implements RecoverySite {
     }
 
     @Override
-    public int resumptionAddress() {
+    public int recoverySiteIndex() {
         return setInstructionAddress;
     }
 
     @Override
-    public void setResumptionAddress(int resumptionAddress) {
-        setInstructionAddress = resumptionAddress;
+    public void setRecoverySiteIndex(int recoverySiteIndex) {
+        setInstructionAddress = recoverySiteIndex;
     }
 
     @Override

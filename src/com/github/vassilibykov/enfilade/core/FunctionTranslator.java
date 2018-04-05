@@ -85,6 +85,7 @@ public class FunctionTranslator {
         private final Lambda thisLambda;
         private final FunctionImplementation thisFunction;
         private List<VariableDefinition> arguments;
+        private List<RecoverySite> recoverySites = new ArrayList<>();
 
         private LambdaTranslator(Lambda thisLambda, int depth, FunctionImplementation thisFunction) {
             this.thisLambda = thisLambda;
@@ -95,7 +96,7 @@ public class FunctionTranslator {
         void translate() {
             arguments = thisLambda.arguments().stream()
                 .map(each -> variableDefinitions.computeIfAbsent(each,
-                    definition -> new VariableDefinition(definition, thisFunction)))
+                    definition -> new ParameterDefinition(definition, thisFunction)))
                 .collect(Collectors.toList());
             var body = thisLambda.body().accept(this);
             thisFunction.partiallyInitialize(arguments, body);
