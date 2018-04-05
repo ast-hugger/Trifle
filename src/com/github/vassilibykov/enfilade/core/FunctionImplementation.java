@@ -177,7 +177,6 @@ public class FunctionImplementation {
     /*internal*/ MethodHandle genericImplementation;
     /*internal*/ MethodHandle specializedImplementation;
     /*internal*/ MethodHandle recoveryImplementation;
-    /*internal*/ ACodeInstruction[] acode;
     private volatile State state;
 
     FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topImplOrNull) {
@@ -275,10 +274,6 @@ public class FunctionImplementation {
         return recoverySites;
     }
 
-    public ACodeInstruction[] acode() {
-        return acode;
-    }
-
     public boolean isCompiled() {
         return state == State.COMPILED;
     }
@@ -299,17 +294,6 @@ public class FunctionImplementation {
         try {
             MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
             return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, this);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    private MethodHandle acodeInterpreterInvoker() {
-        var type = MethodType.genericMethodType(implementationArity());
-        type = type.insertParameterTypes(0, FunctionImplementation.class);
-        try {
-            MethodHandle interpret = MethodHandles.lookup().findStatic(ACodeInterpreter.class, "interpret", type);
-            return MethodHandles.insertArguments(interpret, 0, this);
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
