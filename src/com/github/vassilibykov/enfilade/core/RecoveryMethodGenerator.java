@@ -19,8 +19,8 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
  * A code generator producing code for the recovery method of a function.
  */
 class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
-    private final static int RECOVERY_ADDRESS_ARG = 0;
-    private final static int VALUE_ARG = 1;
+    private final static int VALUE_ARG = 0;
+    private final static int RECOVERY_ADDRESS_ARG = 1;
     private final static int FRAME_ARG = 2;
     private final static int LOCAL_VAR_BASE = 3;
 

@@ -28,7 +28,7 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
 public class Compiler {
 
     public static final MethodType RECOVERY_METHOD_TYPE = MethodType.methodType(
-        Object.class, int.class, Object.class, Object[].class);
+        Object.class, Object.class, int.class, Object[].class);
 
     private static final String GENERIC_METHOD_PREFIX = "generic";
     private static final String SPECIALIZED_METHOD_PREFIX = "specialized";

@@ -108,26 +108,6 @@ import java.util.stream.Stream;
  */
 public class FunctionImplementation {
 
-    /**
-     * RESTRICTED. Not for normal use. Invoked by generated code in a
-     * specialized method to recover from an SPE by switching to a generic
-     * recovery method.
-     */
-    // FIXME change the whole thing to use an invokedynamic
-    @SuppressWarnings("unused") // called by generated code
-    public static Object recover(SquarePegException spe, int siteIndex, Object[] frame, int functionId) {
-        var value = spe.value;
-        var function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId),
-            "internal error: function to recover not found by ID");
-        var recovery = Objects.requireNonNull(function.recoveryImplementation,
-            "internal error: function is missing a recovery method");
-        try {
-            return recovery.invokeExact(siteIndex, value, frame);
-        } catch (Throwable throwable) {
-            throw new IllegalStateException(throwable);
-        }
-    }
-
     /** The number of times a function is profiled before it's queued for compilation. */
     private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
 

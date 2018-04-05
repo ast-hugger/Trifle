@@ -16,6 +16,10 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType> {
+
+    public static final MethodType RECOVERY_METHOD_CALL_SITE_TYPE = MethodType.methodType(
+        Object.class, SquarePegException.class, int.class, Object[].class);
+
     private final FunctionImplementation function;
     private final GhostWriter writer;
     private final List<AbstractVariable> liveLocals = new ArrayList<>();
@@ -489,15 +493,11 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     private void generateEpilogue(Label epilogueStart) {
+        // stack: SPE, int recoverySiteId, Object[] frame
         writer.asm().visitLabel(epilogueStart);
-        // stack: SPE, int initialPC, Object[] frame
         function.declaredParameters().forEach(this::storeInFrameReplica);
-        // stack: SPE, int initialPC, Object[] frame
-        writer
-            .loadInt(FunctionRegistry.INSTANCE.lookup(function))
-            // stack: SPE, int initialPC, Object[] frame, int functionId
-            .invokeStatic(FunctionImplementation.class, "recover",
-                Object.class, SquarePegException.class, int.class, Object[].class, int.class);
+        var functionId = FunctionRegistry.INSTANCE.lookup(function);
+        writer.invokeDynamic(RecoveryCallInvokeDynamic.BOOTSTRAP, "recover", RECOVERY_METHOD_CALL_SITE_TYPE, functionId);
         bridgeValue(REFERENCE, functionReturnType);
     }
 }
