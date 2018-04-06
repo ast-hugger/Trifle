@@ -10,11 +10,11 @@ import java.util.function.Consumer;
 
 /**
  * A primitive implementation class implements this interface if it's a
- * boolean-valued primitive, and for some combinations of argument types there
- * is a JVM instruction that will perform the test and a conditional jump as a
- * single operation. For example, an {@code if} expression whose test is the
- * {@link LessThan} primitive can be implemented as {@code IF_ICMPGE} if the
- * arguments are {@code ints}.
+ * boolean-valued primitive, and for some combinations of argument types it can
+ * compile an {@code if} expression using a JVM instruction performing the test
+ * and a conditional jump as a single operation. For example, an {@code if}
+ * expression whose test is the {@link LessThan} primitive can be implemented as
+ * {@code IF_ICMPGE} if the arguments are {@code ints}.
  */
 public interface IfAware {
 
@@ -23,5 +23,10 @@ public interface IfAware {
         int  jumpInstruction();
     }
 
+    /**
+     * Check if this primitive can produce an optimized form of {@code if}
+     * for the given call. If it can, return a helper object that will
+     * assist the compiler with generating the optimized form.
+     */
     Optional<OptimizedIfForm> optimizedFormFor(PrimitiveNode ifCondition);
 }

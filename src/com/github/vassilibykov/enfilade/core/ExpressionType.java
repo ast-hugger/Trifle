@@ -101,10 +101,11 @@ public abstract class ExpressionType {
 
         @Override
         public ExpressionType union(ExpressionType other) {
-            return other.match(new Matcher<ExpressionType>() {
+            return other.match(new Matcher<>() {
                 public ExpressionType ifUnknown() {
                     return other;
                 }
+
                 public ExpressionType ifKnown(JvmType otherType) {
                     return ExpressionType.known(type.union(otherType));
                 }
@@ -113,10 +114,11 @@ public abstract class ExpressionType {
 
         @Override
         public ExpressionType opportunisticUnion(ExpressionType other) {
-            return other.match(new Matcher<ExpressionType>() {
+            return other.match(new Matcher<>() {
                 public ExpressionType ifUnknown() {
                     return Known.this;
                 }
+
                 public ExpressionType ifKnown(JvmType otherType) {
                     return ExpressionType.known(type.union(otherType));
                 }

@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -126,7 +125,7 @@ public class FunctionImplementation {
     /**
      * For an implementation of non-top level lambda expression, contains the
      * implementation of the topmost lambda expression containing this one.
-     * For an implementation of the top-leve expression, contains this function
+     * For an implementation of the top-level expression, contains this function
      * implementation.
      */
     @NotNull private final FunctionImplementation topImplementation;
@@ -146,7 +145,7 @@ public class FunctionImplementation {
     private AbstractVariable[] allParameters;
     /**
      * In a top-level function, contains function implementations of closures defined in
-     * it. Empty in non-toplevel functions even if they do contain closures. Functions
+     * it. Empty in non-top-level functions even if they do contain closures. Functions
      * are listed in tree traversal encounter order, so they are topologically sorted
      * with respect to their nesting.
      */
@@ -156,6 +155,7 @@ public class FunctionImplementation {
     private int frameSize = -1;
     private List<RecoverySite> recoverySites;
     /*internal*/ FunctionProfile profile;
+    /*internal*/ JvmType specializedReturnType;
     /**
      * The unique ID of the function in the function registry.
      */
@@ -270,6 +270,10 @@ public class FunctionImplementation {
         return frameSize;
     }
 
+    public boolean isTopLevel() {
+        return topImplementation == this;
+    }
+
     public List<RecoverySite> recoverySites() {
         return recoverySites;
     }
@@ -354,10 +358,10 @@ public class FunctionImplementation {
         applyCompilationResult(result);
     }
 
-    private synchronized void applyCompilationResult(Compiler.BatchResult batchResult) {
-        var implClass = GeneratedCode.defineClass(batchResult);
+    private synchronized void applyCompilationResult(Compiler.Result result) {
+        var implClass = GeneratedCode.defineClass(result);
         var callSitesToUpdate = new ArrayList<MutableCallSite>();
-        for (var entry : batchResult.results().entrySet()) {
+        for (var entry : result.results().entrySet()) {
             var functionImpl = entry.getKey();
             functionImpl.updateCompiledForm(implClass, entry.getValue());
             callSitesToUpdate.add(functionImpl.callSite);
@@ -365,7 +369,7 @@ public class FunctionImplementation {
         MutableCallSite.syncAll(callSitesToUpdate.toArray(new MutableCallSite[0]));
     }
 
-    private void updateCompiledForm(Class<?> generatedClass, Compiler.FunctionCompilationResult result) {
+    private void updateCompiledForm(Class<?> generatedClass, Compiler.FunctionResult result) {
         MethodHandle specializedMethod = null;
         try {
             genericImplementation = MethodHandles.lookup()

@@ -26,8 +26,8 @@ public abstract class EvaluatorNode {
         T visitCall1(CallNode.Call1 call);
         T visitCall2(CallNode.Call2 call);
         T visitClosure(ClosureNode closure);
-        T visitConst(ConstNode aConst);
-        T visitConstantFunction(ConstantFunctionNode constFunction);
+        T visitConstant(ConstantNode aConst);
+        T visitConstantFunction(FunctionConstantNode constFunction);
         T visitGetVar(GetVariableNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
@@ -67,7 +67,7 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitConst(ConstNode aConst) {
+        public T visitConstant(ConstantNode aConst) {
             return null;
         }
 
@@ -127,7 +127,7 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitConstantFunction(ConstantFunctionNode topLevelBinding) {
+        public T visitConstantFunction(FunctionConstantNode topLevelBinding) {
             return null;
         }
 
@@ -137,43 +137,30 @@ public abstract class EvaluatorNode {
     }
 
     private static final ExpressionType KNOWN_VOID = ExpressionType.known(JvmType.VOID);
-    private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     /*
         Instance
      */
 
     private ExpressionType inferredType = KNOWN_VOID;
-    private ExpressionType observedType = UNKNOWN;
+    private JvmType specializedType = null; // should always get replaced by something meaningful
 
     public abstract <T> T accept(Visitor<T> visitor);
 
-    /**
-     * Return a type the expression should be assumed to produced while
-     * generating specialized code. Because specialized code is opportunistic,
-     * observed type trumps the inferred type because it's potentially more
-     * specific, even if incorrect for the general case.
-     */
-    public synchronized JvmType specializationType() {
-        return observedType.jvmType()
-            .orElseGet(() -> inferredType.jvmType()
-                .orElse(JvmType.REFERENCE));
-    }
-
-    /*internal*/ synchronized ExpressionType inferredType() {
+    /*internal*/ ExpressionType inferredType() {
         return inferredType;
     }
 
-    /*internal*/ synchronized ExpressionType observedType() {
-        return observedType;
-    }
-
-    /*internal*/ synchronized void setInferredType(@NotNull ExpressionType expressionType) {
+    /*internal*/ void setInferredType(@NotNull ExpressionType expressionType) {
         this.inferredType = expressionType;
     }
 
-    /*internal*/ synchronized void setObservedType(@NotNull ExpressionType type) {
-        observedType = type;
+    public JvmType specializedType() {
+        return specializedType;
+    }
+
+    /*internal*/ void setSpecializedType(@NotNull JvmType type) {
+        specializedType = type;
     }
 
     /**
@@ -181,17 +168,10 @@ public abstract class EvaluatorNode {
      * specified inferred type and the current one. Return a boolean indicating
      * whether the unified inferred type is different from the original.
      */
-    /*internal*/ synchronized boolean unifyInferredTypeWith(ExpressionType type) {
+    /*internal*/ boolean unifyInferredTypeWith(ExpressionType type) {
         ExpressionType newType = inferredType.union(type);
         boolean changed = !inferredType.equals(newType);
         inferredType = newType;
-        return changed;
-    }
-
-    /*internal*/ synchronized boolean unifyObservedTypeWith(ExpressionType type) {
-        ExpressionType newType = observedType.opportunisticUnion(type);
-        boolean changed = !observedType.equals(newType);
-        observedType = newType;
         return changed;
     }
 }

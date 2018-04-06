@@ -48,38 +48,28 @@ class CopiedVariable extends AbstractVariable {
     }
 
     @Override
-    public JvmType specializationType() {
-        return original.specializationType();
-    }
-
-    @Override
     ExpressionType inferredType() {
         return original.inferredType();
     }
 
     @Override
-    ExpressionType observedType() {
-        return original.observedType();
+    JvmType specializedType() {
+        return original.specializedType();
     }
 
     @Override
     void setInferredType(@NotNull ExpressionType expressionType) {
-        // nothing to set; the original tracks the type
+        // nothing to set; the original determines the type
     }
 
     @Override
-    void setObservedType(@NotNull ExpressionType type) {
-        // nothing to set; the original tracks the type
+    void setSpecializedType(@NotNull JvmType type) {
+        // nothing to set; the original determines the type
     }
 
     @Override
     boolean unifyInferredTypeWith(ExpressionType type) {
         return original.unifyInferredTypeWith(type);
-    }
-
-    @Override
-    boolean unifyObservedTypeWith(ExpressionType type) {
-        return original.unifyObservedTypeWith(type);
     }
 
     @Override

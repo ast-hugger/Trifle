@@ -1,11 +1,14 @@
 # To do
 
-* Rethink the specialization story. Generic signature method should be
-compiled specialized as well. Perhaps we need at up to three forms:
-pure generic as a fast fallback, specialized with a generic signature,
-and specialized with a specialized signature.
-* Recovery interpreter can be replaced with a compiled generic implementation
-of a special form. 
+* Implement the passing of locals from a regular to recovery method
+  using call arguments instead of an array.
+* Need a story for built-in functions. Probably:
+  * Implement something like an environment where they can be defined
+    and references to which can be compiled into FunctionConstantNoded.
+  * Provide a mechanism for function implementation-like object whose
+    implementation is built-in in the Java layer.
+  * Might need a common interface for this and FunctionImplementations.
+  * Might need a similar thing for "closures" of such objects.
 
 ## Longer term
 
@@ -14,5 +17,4 @@ of a special form.
   support Smalltalk-like late bound selector-based dispatch).
 * Support for Smalltalk-like objects with flexible layout; and/or
 * support for JS-like objects.
-* Maube untangle `let` and `letrec` in evaluator nodes. Make `letrec` multivariate.
 * Enable concurrent compilation.

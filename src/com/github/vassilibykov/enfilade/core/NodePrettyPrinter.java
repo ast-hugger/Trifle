@@ -39,9 +39,8 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     private void printNodeProfile(EvaluatorNode node) {
-        output.append(" [").append(node.inferredType().toString());
-        output.append(" ").append(node.observedType().toString());
-        output.append("] ").append(node.specializationType().toString());
+        output.append(" [").append(Objects.toString(node.inferredType()));
+        output.append(" ").append(Objects.toString(node.specializedType()));
     }
 
     @Override
@@ -93,7 +92,7 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitConst(ConstNode aConst) {
+    public Void visitConstant(ConstantNode aConst) {
         printLine(() -> {
             output
                 .append("const ")
@@ -178,7 +177,7 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitConstantFunction(ConstantFunctionNode topLevelBinding) {
+    public Void visitConstantFunction(FunctionConstantNode topLevelBinding) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

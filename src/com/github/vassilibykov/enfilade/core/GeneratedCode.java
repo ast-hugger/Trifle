@@ -25,7 +25,7 @@ class GeneratedCode {
         }
     }
 
-    static Class<?> defineClass(Compiler.BatchResult compilerBatchResult) {
-        return UNSAFE.defineAnonymousClass(GeneratedCode.class, compilerBatchResult.bytecode(), null);
+    static Class<?> defineClass(Compiler.Result compilerResult) {
+        return UNSAFE.defineAnonymousClass(GeneratedCode.class, compilerResult.bytecode(), null);
     }
 }

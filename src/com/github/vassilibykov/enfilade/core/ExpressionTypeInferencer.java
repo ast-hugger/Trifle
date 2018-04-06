@@ -69,7 +69,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitConst(ConstNode aConst) {
+    public ExpressionType visitConstant(ConstantNode aConst) {
         return andSetIn(aConst, ExpressionType.known(JvmType.ofObject(aConst.value())));
     }
 
@@ -146,7 +146,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitConstantFunction(ConstantFunctionNode topLevelBinding) {
+    public ExpressionType visitConstantFunction(FunctionConstantNode topLevelBinding) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

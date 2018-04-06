@@ -60,7 +60,7 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitConst(ConstNode aConst) {
+        public Object visitConstant(ConstantNode aConst) {
             return aConst.value();
         }
 
@@ -121,8 +121,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitConstantFunction(ConstantFunctionNode constFunction) {
-            return constFunction.closure();
+        public Object visitConstantFunction(FunctionConstantNode constFunction) {
+            return new Closure(constFunction.function(), new Object[0]);
         }
     }
 

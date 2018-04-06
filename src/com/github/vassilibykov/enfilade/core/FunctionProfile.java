@@ -9,25 +9,25 @@ import java.util.List;
  * arguments and other locals.
  */
 public class FunctionProfile {
-    private final List<VariableDefinition> methodArguments;
+    private final List<VariableDefinition> methodParameters;
     private long invocationCount = 0;
     private final ValueProfile resultProfile = new ValueProfile();
 
     FunctionProfile(List<VariableDefinition> arguments) {
-        this.methodArguments = arguments;
+        this.methodParameters = arguments;
     }
 
     public synchronized long invocationCount() {
         return invocationCount;
     }
 
-    public ValueProfile result() {
+    public ValueProfile resultProfile() {
         return resultProfile;
     }
 
     public synchronized void recordInvocation(Object[] frame) {
         invocationCount++;
-        for (var each : methodArguments) {
+        for (var each : methodParameters) {
             each.profile.recordValue(each.getValueIn(frame));
         }
     }
@@ -37,7 +37,7 @@ public class FunctionProfile {
     }
 
     public boolean canBeSpecialized() {
-        return methodArguments.stream()
+        return methodParameters.stream()
             .anyMatch(some -> some.profile.jvmType() != JvmType.REFERENCE);
     }
 }

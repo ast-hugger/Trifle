@@ -3,13 +3,9 @@
 package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.CompilerError;
-import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.JvmType;
-import com.github.vassilibykov.enfilade.expression.Expression;
-import org.jetbrains.annotations.NotNull;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static org.objectweb.asm.Opcodes.ISUB;
@@ -27,17 +23,19 @@ public class Sub extends Primitive2 {
 
     @Override
     public JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category) {
-        return arg1Category.match(new JvmType.Matcher<JvmType>() {
+        return arg1Category.match(new JvmType.Matcher<>() {
             public JvmType ifReference() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (Object, Object)
                         writer.invokeStatic(Sub.class, "sub", int.class, Object.class, Object.class);
                         return INT;
                     }
+
                     public JvmType ifInt() { // (Object, int)
                         writer.invokeStatic(Sub.class, "sub", int.class, Object.class, int.class);
                         return INT;
                     }
+
                     public JvmType ifBoolean() { // (Object, boolean)
                         throw new CompilerError("SUB is not applicable to a boolean");
                     }
@@ -45,15 +43,17 @@ public class Sub extends Primitive2 {
             }
 
             public JvmType ifInt() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (int, Object)
                         writer.invokeStatic(Sub.class, "sub", int.class, int.class, Object.class);
                         return INT;
                     }
+
                     public JvmType ifInt() { // (int, int)
                         writer.asm().visitInsn(ISUB);
                         return INT;
                     }
+
                     public JvmType ifBoolean() {
                         throw new CompilerError("SUB is not applicable to a boolean");
                     }

@@ -432,7 +432,6 @@ public class GhostWriter {
             () -> {
                 checkCast(BOOLEAN_ICN);
                 invokeVirtual(BOOLEAN_ICN, "booleanValue", boolean.class);
-                ret(JvmType.BOOL);
             },
             failureCodeGenerator
         );
@@ -452,7 +451,6 @@ public class GhostWriter {
             () -> {
                 checkCast(INTEGER_ICN);
                 invokeVirtual(INTEGER_ICN, "intValue", int.class);
-                ret(JvmType.INT);
             },
             failureCodeGenerator
         );

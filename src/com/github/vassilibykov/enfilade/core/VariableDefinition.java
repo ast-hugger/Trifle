@@ -12,7 +12,6 @@ import org.jetbrains.annotations.NotNull;
  */
 class VariableDefinition extends AbstractVariable {
     private static final ExpressionType KNOWN_VOID = ExpressionType.known(JvmType.VOID);
-    private static final ExpressionType UNKNOWN = ExpressionType.unknown();
 
     /*
         Instance
@@ -23,7 +22,7 @@ class VariableDefinition extends AbstractVariable {
     private boolean isMutable = false;
     /*internal*/ final ValueProfile profile = new ValueProfile();
     private ExpressionType inferredType = KNOWN_VOID;
-    private ExpressionType observedType = UNKNOWN;
+    private JvmType specializedType = JvmType.VOID;
 
     VariableDefinition(@NotNull Variable definition, FunctionImplementation hostFunction) {
         super(hostFunction);
@@ -65,21 +64,14 @@ class VariableDefinition extends AbstractVariable {
         return profile;
     }
 
-    @Override
-    public synchronized JvmType specializationType() {
-        return observedType.jvmType()
-            .orElseGet(() -> inferredType.jvmType()
-                .orElse(JvmType.REFERENCE));
-    }
-
     /*internal*/ @Override
     synchronized ExpressionType inferredType() {
         return inferredType;
     }
 
     /*internal*/ @Override
-    synchronized ExpressionType observedType() {
-        return observedType;
+    synchronized JvmType specializedType() {
+        return specializedType;
     }
 
     /*internal*/ @Override
@@ -88,8 +80,8 @@ class VariableDefinition extends AbstractVariable {
     }
 
     /*internal*/ @Override
-    synchronized void setObservedType(@NotNull ExpressionType type) {
-        observedType = type;
+    synchronized void setSpecializedType(@NotNull JvmType type) {
+        specializedType = type;
     }
 
     /*internal*/ @Override
@@ -97,14 +89,6 @@ class VariableDefinition extends AbstractVariable {
         ExpressionType newType = inferredType.union(type);
         boolean changed = !inferredType.equals(newType);
         inferredType = newType;
-        return changed;
-    }
-
-    /*internal*/ @Override
-    synchronized boolean unifyObservedTypeWith(ExpressionType type) {
-        ExpressionType newType = observedType.opportunisticUnion(type);
-        boolean changed = !observedType.equals(newType);
-        observedType = newType;
         return changed;
     }
 

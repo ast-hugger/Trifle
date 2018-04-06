@@ -15,16 +15,13 @@ import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
-class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType> {
+/**
+ * Generates the "main" executable representation of a function.
+ */
+class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
 
-    public static final MethodType RECOVERY_METHOD_CALL_SITE_TYPE = MethodType.methodType(
+    private static final MethodType RECOVERY_METHOD_CALL_SITE_TYPE = MethodType.methodType(
         Object.class, SquarePegException.class, int.class, Object[].class);
-
-    private final FunctionImplementation function;
-    private final GhostWriter writer;
-    private final List<AbstractVariable> liveLocals = new ArrayList<>();
-    private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
-    private final JvmType functionReturnType;
 
     private static class SquarePegHandler {
         private final Label handlerStart;
@@ -42,9 +39,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         Instance
      */
 
-    CompilerCodeGeneratorSpecialized(FunctionImplementation function, MethodVisitor writer) {
+    private final FunctionImplementation function;
+    private final GhostWriter writer;
+    private final List<AbstractVariable> liveLocals = new ArrayList<>();
+    private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
+
+    MethodGenerator(FunctionImplementation function, MethodVisitor writer) {
         this.function = function;
-        this.functionReturnType = function.body().specializationType();
         this.writer = new GhostWriter(writer);
     }
 
@@ -53,11 +54,10 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     void generate() {
-//        function.acode = ACodeTranslator.translate(function.body());
         generatePrologue();
         var expressionType = function.body().accept(this);
-        bridgeValue(expressionType, functionReturnType);
-        writer.ret(functionReturnType);
+        bridgeValue(expressionType, function.specializedReturnType);
+        writer.ret(function.specializedReturnType);
         if (!squarePegHandlers.isEmpty()) {
             Label epilogue = new Label();
             for (int i = 0; i < squarePegHandlers.size(); i++) {
@@ -71,7 +71,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     private void generatePrologue() {
         for (var each : function.declaredParameters()) {
             if (each.isBoxed()) {
-                var paramType = each.specializationType();
+                var paramType = each.specializedType();
                 int index = each.index();
                 writer
                     .loadLocal(paramType, index)
@@ -111,7 +111,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitCall0(CallNode.Call0 call) {
         var functionType = call.function().accept(this);
         writer.ensureValue(functionType, REFERENCE);
-        var returnType = call.specializationType();
+        var returnType = call.specializedType();
         var callSiteSignature = MethodType.methodType(returnType.representativeClass(), Object.class);
         writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call0", callSiteSignature);
         return returnType;
@@ -119,13 +119,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        if (call.function() instanceof ConstantFunctionNode) {
-            return generateConstantFunctionCall1(call, (ConstantFunctionNode) call.function());
+        if (call.function() instanceof FunctionConstantNode) {
+            return generateConstantFunctionCall1(call, (FunctionConstantNode) call.function());
         }
         var functionType = call.function().accept(this);
         writer.ensureValue(functionType, REFERENCE);
         var argType = call.arg().accept(this);
-        var returnType = call.specializationType();
+        var returnType = call.specializedType();
         var callSiteSignature = MethodType.methodType(
             returnType.representativeClass(),
             Object.class, // the closure being called
@@ -134,13 +134,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         return returnType;
     }
 
-    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
+    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, FunctionConstantNode constFunction) {
         var argType = call.arg().accept(this);
-        var returnType = call.specializationType();
+        var returnType = call.specializedType();
         var callSiteSignature = MethodType.methodType(
             returnType.representativeClass(),
             argType.representativeClass());
-        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, function.id());
+        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, constFunction.id());
         return returnType;
     }
 
@@ -148,9 +148,9 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitCall2(CallNode.Call2 call) {
         var functionType = call.function().accept(this);
         writer.ensureValue(functionType, REFERENCE);
-        var arg1Type = call.arg1().specializationType();
-        var arg2Type = call.arg2().specializationType();
-        var returnType = call.specializationType();
+        var arg1Type = call.arg1().specializedType();
+        var arg2Type = call.arg2().specializedType();
+        var returnType = call.specializedType();
         var callSiteSignature = MethodType.methodType(
             returnType.representativeClass(),
             Object.class, // really a Closure, but we type it as Object to catch errors locally
@@ -172,7 +172,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
             if (variable.isBoxed()) {
                 writer.loadLocal(REFERENCE, variable.index());
             } else {
-                JvmType variableType = variable.specializationType();
+                JvmType variableType = variable.specializedType();
                 writer
                     .loadLocal(variableType, variable.index())
                     .adaptValue(variableType, REFERENCE);
@@ -186,7 +186,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitConst(ConstNode aConst) {
+    public JvmType visitConstant(ConstantNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -199,13 +199,13 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
-        return aConst.specializationType();
+        return aConst.specializedType();
     }
 
     @Override
     public JvmType visitGetVar(GetVariableNode varRef) {
         var variable = varRef.variable();
-        var varType = variable.specializationType();
+        var varType = variable.specializedType();
         if (variable.isBoxed()) {
             writer
                 .loadLocal(REFERENCE, variable.index())
@@ -220,7 +220,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     public JvmType visitIf(IfNode anIf) {
         var trueBranch = anIf.trueBranch();
         var falseBranch = anIf.falseBranch();
-        var resultType = trueBranch.specializationType().union(falseBranch.specializationType());
+        var resultType = anIf.specializedType();
         // Generate an optimized 'if' form, if possible
         if (anIf.condition() instanceof PrimitiveNode) {
             var primitiveCall = (PrimitiveNode) anIf.condition();
@@ -263,7 +263,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     @Override
     public JvmType visitLet(LetNode let) {
         VariableDefinition variable = let.variable();
-        JvmType varType = variable.specializationType();
+        JvmType varType = variable.specializedType();
         withSquarePegRecovery(let, () -> {
             var initType = let.initializer().accept(this);
             bridgeValue(initType, varType);
@@ -282,7 +282,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     @Override
     public JvmType visitLetrec(LetrecNode letrec) {
         VariableDefinition variable = letrec.variable();
-        JvmType varType = variable.specializationType();
+        JvmType varType = variable.specializedType();
         if (variable.isBoxed()) {
             writer
                 .loadDefaultValue(varType)
@@ -341,16 +341,16 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
            value() as if it were complex already. */
         withSquarePegRecovery(returnNode, () -> {
             var returnType = returnNode.value().accept(this);
-            bridgeValue(returnType, functionReturnType);
+            bridgeValue(returnType, function.specializedReturnType);
         });
-        writer.ret(functionReturnType);
+        writer.ret(function.specializedReturnType);
         return VOID;
     }
 
     @Override
     public JvmType visitSetVar(SetVariableNode set) {
         var var = set.variable();
-        var varType = var.specializationType();
+        var varType = var.specializedType();
         withSquarePegRecovery(set, () -> {
             var valueType = set.value().accept(this);
             bridgeValue(valueType, varType);
@@ -365,12 +365,11 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     @Override
-    public JvmType visitConstantFunction(ConstantFunctionNode constFunction) {
-        var closure = constFunction.closure();
-        int id = ConstantFunctionNode.lookup(closure);
+    public JvmType visitConstantFunction(FunctionConstantNode constFunction) {
+        int id = constFunction.id();
         writer
             .loadInt(id)
-            .invokeStatic(ConstantFunctionNode.class, "lookup", Closure.class, int.class);
+            .invokeStatic(FunctionRegistry.class, "findAsClosure", Closure.class, int.class);
         return REFERENCE;
     }
 
@@ -485,7 +484,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
     }
 
     private void storeInFrameReplica(AbstractVariable local) {
-        JvmType localType = local.isBoxed() ? REFERENCE : local.specializationType();
+        JvmType localType = local.isBoxed() ? REFERENCE : local.specializedType();
         writer.storeArray(local.index(), () -> {
             writer.loadLocal(localType, local.index());
             writer.adaptValue(localType, REFERENCE);
@@ -498,6 +497,7 @@ class CompilerCodeGeneratorSpecialized implements EvaluatorNode.Visitor<JvmType>
         function.declaredParameters().forEach(this::storeInFrameReplica);
         var functionId = FunctionRegistry.INSTANCE.lookup(function);
         writer.invokeDynamic(RecoveryCallInvokeDynamic.BOOTSTRAP, "recover", RECOVERY_METHOD_CALL_SITE_TYPE, functionId);
-        bridgeValue(REFERENCE, functionReturnType);
+        bridgeValue(REFERENCE, function.specializedReturnType);
+        writer.ret(function.specializedReturnType);
     }
 }

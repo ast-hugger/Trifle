@@ -24,17 +24,19 @@ public class Mul extends Primitive2 {
 
     @Override
     public JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category) {
-        return arg1Category.match(new JvmType.Matcher<JvmType>() {
+        return arg1Category.match(new JvmType.Matcher<>() {
             public JvmType ifReference() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (Object, Object)
                         writer.invokeStatic(Mul.class, "mul", int.class, Object.class, Object.class);
                         return INT;
                     }
+
                     public JvmType ifInt() { // (Object, int)
                         writer.invokeStatic(Mul.class, "mul", int.class, Object.class, int.class);
                         return INT;
                     }
+
                     public JvmType ifBoolean() { // (Object, boolean)
                         throw new CompilerError("MUL is not applicable to a boolean");
                     }
@@ -42,17 +44,19 @@ public class Mul extends Primitive2 {
             }
 
             public JvmType ifInt() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (int, Object)
                         writer
                             .adaptValue(REFERENCE, INT)
                             .asm().visitInsn(IMUL);
                         return INT;
                     }
+
                     public JvmType ifInt() { // (int, int)
                         writer.asm().visitInsn(IMUL);
                         return INT;
                     }
+
                     public JvmType ifBoolean() {
                         throw new CompilerError("MUL is not applicable to a boolean");
                     }

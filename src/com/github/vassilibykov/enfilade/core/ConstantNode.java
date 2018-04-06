@@ -4,10 +4,10 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.Nullable;
 
-class ConstNode extends EvaluatorNode {
+class ConstantNode extends EvaluatorNode {
     @Nullable private final Object value;
 
-    public ConstNode(@Nullable Object value) {
+    public ConstantNode(@Nullable Object value) {
         this.value = value;
     }
 
@@ -17,7 +17,7 @@ class ConstNode extends EvaluatorNode {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        return visitor.visitConst(this);
+        return visitor.visitConstant(this);
     }
 
     @Override

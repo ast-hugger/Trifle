@@ -9,7 +9,6 @@ import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.JvmType;
 import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.PrimitiveNode;
-import com.github.vassilibykov.enfilade.expression.Expression;
 import org.objectweb.asm.Opcodes;
 
 import java.util.Optional;
@@ -41,17 +40,19 @@ public class LessThan extends Primitive2 implements IfAware {
 
     @Override
     public JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category) {
-        return arg1Category.match(new JvmType.Matcher<JvmType>() {
+        return arg1Category.match(new JvmType.Matcher<>() {
             public JvmType ifReference() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (Object, Object)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, Object.class, Object.class);
                         return BOOL;
                     }
+
                     public JvmType ifInt() { // (Object, int)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, Object.class, int.class);
                         return BOOL;
                     }
+
                     public JvmType ifBoolean() { // (Object, boolean)
                         throw new CompilerError("LT is not applicable to a boolean");
                     }
@@ -59,15 +60,17 @@ public class LessThan extends Primitive2 implements IfAware {
             }
 
             public JvmType ifInt() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (int, Object)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, int.class, Object.class);
                         return BOOL;
                     }
+
                     public JvmType ifInt() { // (int, int)
                         writer.invokeStatic(LessThan.class, "lessThan", boolean.class, int.class, int.class);
                         return BOOL;
                     }
+
                     public JvmType ifBoolean() {
                         throw new CompilerError("SUB is not applicable to a boolean");
                     }
@@ -99,8 +102,8 @@ public class LessThan extends Primitive2 implements IfAware {
     @Override
     public Optional<OptimizedIfForm> optimizedFormFor(PrimitiveNode ifCondition) {
         var primitive = (Primitive2Node) ifCondition; // cast must succeed
-        if (primitive.argument1().specializationType() == INT
-            && primitive.argument2().specializationType() == INT)
+        if (primitive.argument1().specializedType() == INT
+            && primitive.argument2().specializedType() == INT)
         {
             return Optional.of(new IfFormOptimizedForInts(primitive));
         } else {

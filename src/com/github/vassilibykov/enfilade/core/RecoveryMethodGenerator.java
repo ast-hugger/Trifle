@@ -66,8 +66,8 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        if (call.function() instanceof ConstantFunctionNode) {
-            return generateConstantFunctionCall0(call, (ConstantFunctionNode) call.function());
+        if (call.function() instanceof FunctionConstantNode) {
+            return generateConstantFunctionCall0(call, (FunctionConstantNode) call.function());
         }
         call.function().accept(this); // puts a value on the stack that must be a closure
         var type = MethodType.genericMethodType(1); // Closure is the argument
@@ -78,7 +78,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         return REFERENCE;
     }
 
-    private JvmType generateConstantFunctionCall0(CallNode.Call0 call, ConstantFunctionNode function) {
+    private JvmType generateConstantFunctionCall0(CallNode.Call0 call, FunctionConstantNode constFunction) {
         // For a constant call, the closure is not pushed on the stack.
         // Its ID is instead encoded in the invokedynamic instruction.
         var type = MethodType.genericMethodType(0);
@@ -86,14 +86,14 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call0",
             type,
-            function.id());
+            constFunction.id());
         return REFERENCE;
     }
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        if (call.function() instanceof ConstantFunctionNode) {
-            return generateConstantFunctionCall1(call, (ConstantFunctionNode) call.function());
+        if (call.function() instanceof FunctionConstantNode) {
+            return generateConstantFunctionCall1(call, (FunctionConstantNode) call.function());
         }
         call.function().accept(this); // puts a value on the stack which must be a closure
         var argType = call.arg().accept(this);
@@ -106,7 +106,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         return REFERENCE;
     }
 
-    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, ConstantFunctionNode function) {
+    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, FunctionConstantNode constFunction) {
         var type = MethodType.genericMethodType(1);
         var argType = call.arg().accept(this);
         writer.adaptValue(argType, REFERENCE);
@@ -114,14 +114,14 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call1",
             type,
-            function.id());
+            constFunction.id());
         return REFERENCE;
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        if (call.function() instanceof ConstantFunctionNode) {
-            return generateConstantFunctionCall2(call, (ConstantFunctionNode) call.function());
+        if (call.function() instanceof FunctionConstantNode) {
+            return generateConstantFunctionCall2(call, (FunctionConstantNode) call.function());
         }
         call.function().accept(this); // puts a value on the stack that must be a closure
         var arg1Type = call.arg1().accept(this);
@@ -136,7 +136,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         return REFERENCE;
     }
 
-    private JvmType generateConstantFunctionCall2(CallNode.Call2 call, ConstantFunctionNode function) {
+    private JvmType generateConstantFunctionCall2(CallNode.Call2 call, FunctionConstantNode constFunction) {
         var type = MethodType.genericMethodType(1);
         var arg1Type = call.arg1().accept(this);
         writer.adaptValue(arg1Type, REFERENCE);
@@ -146,7 +146,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             ConstantFunctionInvokeDynamic.BOOTSTRAP,
             "call1",
             type,
-            function.id());
+            constFunction.id());
         return REFERENCE;
     }
 
@@ -168,7 +168,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitConst(ConstNode aConst) {
+    public JvmType visitConstant(ConstantNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -299,12 +299,11 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitConstantFunction(ConstantFunctionNode constFunction) {
-        var closure = constFunction.closure();
-        int id = ConstantFunctionNode.lookup(closure);
+    public JvmType visitConstantFunction(FunctionConstantNode constFunction) {
+        int id = constFunction.id();
         writer
             .loadInt(id)
-            .invokeStatic(ConstantFunctionNode.class, "lookup", Closure.class, int.class);
+            .invokeStatic(FunctionRegistry.class, "findAsClosure", Closure.class, int.class);
         return REFERENCE;
     }
 

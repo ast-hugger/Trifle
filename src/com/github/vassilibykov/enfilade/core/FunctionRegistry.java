@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Maintains mapping between {@link Lambda}s and {@link FunctionImplementation}s they have been
@@ -16,6 +17,13 @@ import java.util.Map;
  */
 public class FunctionRegistry {
     public static final FunctionRegistry INSTANCE = new FunctionRegistry();
+
+    @SuppressWarnings("unused") // called by generated code
+    public static Closure findAsClosure(int functionId) {
+        var function = Objects.requireNonNull(INSTANCE.lookup(functionId));
+        if (!function.isTopLevel()) throw new AssertionError();
+        return new Closure(function, new Object[0]);
+    }
 
     /*
         Instance
@@ -25,10 +33,6 @@ public class FunctionRegistry {
     private final Map<Lambda, FunctionImplementation> functionsByDefinition = new HashMap<>();
 
     private FunctionRegistry() {}
-
-    public void compile(List<Lambda> functions) {
-        functions.forEach(FunctionTranslator::translate);
-    }
 
     public synchronized FunctionImplementation lookup(Lambda source) {
         return functionsByDefinition.get(source);

@@ -54,7 +54,11 @@ import java.util.stream.Collectors;
 public class FunctionTranslator {
 
     public static Closure translate(Lambda lambda) {
-        var implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda, null);
+        var implementation = FunctionRegistry.INSTANCE.lookup(lambda);
+        if (implementation != null) {
+            return new Closure(implementation, new Object[0]);
+        }
+        implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda, null);
         var translator = new FunctionTranslator(lambda, implementation);
         translator.translate();
         implementation.addClosureImplementations(translator.nestedFunctions);
@@ -84,7 +88,6 @@ public class FunctionTranslator {
     private class LambdaTranslator implements Visitor<EvaluatorNode> {
         private final Lambda thisLambda;
         private final FunctionImplementation thisFunction;
-        private List<VariableDefinition> arguments;
         private List<RecoverySite> recoverySites = new ArrayList<>();
 
         private LambdaTranslator(Lambda thisLambda, int depth, FunctionImplementation thisFunction) {
@@ -94,12 +97,14 @@ public class FunctionTranslator {
         }
 
         void translate() {
-            arguments = thisLambda.arguments().stream()
-                .map(each -> variableDefinitions.computeIfAbsent(each,
-                    definition -> new ParameterDefinition(definition, thisFunction)))
-                .collect(Collectors.toList());
+            var parameters = new ArrayList<VariableDefinition>();
+            for (var each : thisLambda.arguments()) {
+                var definition = new VariableDefinition(each, thisFunction);
+                parameters.add(definition);
+                variableDefinitions.put(each, definition);
+            }
             var body = thisLambda.body().accept(this);
-            thisFunction.partiallyInitialize(arguments, body);
+            thisFunction.partiallyInitialize(parameters, body);
         }
 
         private VariableDefinition defineVariable(Variable variable) {
@@ -143,7 +148,7 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitConst(Const aConst) {
-            return new ConstNode(aConst.value());
+            return new ConstantNode(aConst.value());
         }
 
         @Override
@@ -180,7 +185,7 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitPrimitiveCall(PrimitiveCall primitiveCall) {
-            Primitive primitive = null;
+            Primitive primitive;
             try {
                 primitive = primitiveCall.target().getDeclaredConstructor().newInstance();
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
@@ -214,7 +219,8 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitTopLevelBinding(TopLevel.Binding binding) {
-            return new ConstantFunctionNode(binding);
+            var tentativeImpl = FunctionRegistry.INSTANCE.lookup(binding.value());
+            return new FunctionConstantNode(tentativeImpl);
         }
 
         @Override

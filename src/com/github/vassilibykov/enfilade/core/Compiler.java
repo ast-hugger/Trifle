@@ -12,8 +12,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.invoke.MethodType;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -27,11 +29,11 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
  */
 public class Compiler {
 
-    public static final MethodType RECOVERY_METHOD_TYPE = MethodType.methodType(
+    static final MethodType RECOVERY_METHOD_TYPE = MethodType.methodType(
         Object.class, Object.class, int.class, Object[].class);
 
-    private static final String GENERIC_METHOD_PREFIX = "generic";
-    private static final String SPECIALIZED_METHOD_PREFIX = "specialized";
+    private static final String GENERIC_METHOD_PREFIX = "closure";
+    private static final String SPECIALIZED_METHOD_PREFIX = "specialized$";
     private static final String RECOVERY_METHOD_PREFIX = "recovery$";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
     private static final String GENERATED_CODE_PACKAGE = "com.github.vassilibykov.enfilade.core";
@@ -40,11 +42,11 @@ public class Compiler {
     /**
      * The access point: compile a function.
      */
-    public static BatchResult compile(FunctionImplementation topLevelFunction) {
+    public static Result compile(FunctionImplementation topLevelFunction) {
         Compiler compiler = new Compiler(topLevelFunction);
-        BatchResult batchResult = compiler.compile();
-        dumpClassFile("generated", batchResult.bytecode());
-        return batchResult;
+        Result result = compiler.compile();
+        dumpClassFile("generated", result.bytecode());
+        return result;
     }
 
     private static void dumpClassFile(String name, byte[] bytecode) {
@@ -58,18 +60,13 @@ public class Compiler {
         }
     }
 
-    static class BatchResult {
+    static class Result {
         private final String className;
-        private final byte[] bytecode;
-        private final Map<FunctionImplementation, FunctionCompilationResult> results;
+        private byte[] bytecode;
+        private final Map<FunctionImplementation, FunctionResult> results = new HashMap<>();
 
-        private BatchResult(String className,
-                            byte[] bytecode,
-                            Map<FunctionImplementation, FunctionCompilationResult> results)
-        {
+        private Result(String className) {
             this.className = className;
-            this.bytecode = bytecode;
-            this.results = results;
         }
 
         String className() {
@@ -80,26 +77,32 @@ public class Compiler {
             return bytecode;
         }
 
-        Map<FunctionImplementation, FunctionCompilationResult> results() {
-            return results;
+        FunctionResult functionResultFor(FunctionImplementation function) {
+            return Objects.requireNonNull(results.get(function));
+        }
+
+        Map<FunctionImplementation, FunctionResult> results() {
+            return Collections.unmodifiableMap(results);
+        }
+
+        private void addFunctionResult(FunctionImplementation function, FunctionResult result) {
+            results.put(function, result);
+        }
+
+        private void setBytecode(byte[] bytecode) {
+            this.bytecode = bytecode;
         }
     }
 
-    static class FunctionCompilationResult {
+    static class FunctionResult {
         @NotNull private final String genericMethodName;
-        @Nullable private final String specializedMethodName;
-        @Nullable private final String recoveryMethodName;
-        @Nullable private final MethodType specializedMethodType;
+        @Nullable private String specializedMethodName;
+        @Nullable private String recoveryMethodName;
+        @Nullable private MethodType specializedMethodType;
 
-        FunctionCompilationResult(@NotNull String genericMethodName,
-                                  @Nullable String specializedMethodName,
-                                  @Nullable String recoveryMethodName,
-                                  @Nullable MethodType specializedMethodType)
+        FunctionResult(@NotNull String genericMethodName)
         {
             this.genericMethodName = genericMethodName;
-            this.specializedMethodName = specializedMethodName;
-            this.recoveryMethodName = recoveryMethodName;
-            this.specializedMethodType = specializedMethodType;
         }
 
         String genericMethodName() {
@@ -119,6 +122,8 @@ public class Compiler {
         }
     }
 
+    private static long serial = 0;
+
     static String internalClassName(Class<?> klass) {
         return internalClassName(klass.getName());
     }
@@ -131,55 +136,35 @@ public class Compiler {
         return GENERATED_CLASS_NAME_PREFIX + serial++;
     }
 
-    private static long serial = 0;
-
     /*
         Instance
      */
 
     private final FunctionImplementation topLevelFunction;
     private final String className;
+    private final Result result;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-    @Nullable private String specializedMethodName = null;
-    @Nullable private MethodType specializationType = null;
     private int generatedMethodSerial = 0;
-    private final Map<FunctionImplementation, FunctionCompilationResult> individualResults = new HashMap<>();
 
     private Compiler(FunctionImplementation topLevelFunction) {
         this.topLevelFunction = topLevelFunction;
         this.className = allocateClassName();
+        this.result = new Result(this.className);
     }
 
-    public BatchResult compile() {
+    public Result compile() {
+        inferTypes();
+        setupClassWriter();
+        generateGenericAndRecoveryMethods();
+        generateSpecializedMethods();
+        classWriter.visitEnd();
+        result.setBytecode(classWriter.toByteArray());
+        return result;
+    }
+
+    private void inferTypes() {
         ExpressionTypeInferencer.inferTypesIn(topLevelFunction);
         topLevelFunction.closureImplementations().forEach(ExpressionTypeInferencer::inferTypesIn);
-        ExpressionTypeObserver.analyze(topLevelFunction);
-        topLevelFunction.closureImplementations().forEach(ExpressionTypeObserver::analyze);
-//        NodePrettyPrinter.print(function.body());
-        setupClassWriter();
-        generateMethodsFor(topLevelFunction);
-        for (FunctionImplementation each : topLevelFunction.closureImplementations()) {
-            generateMethodsFor(each);
-        }
-        classWriter.visitEnd();
-        return new BatchResult(className, classWriter.toByteArray(), individualResults);
-    }
-
-    private void generateMethodsFor(FunctionImplementation function) {
-        var methodName = generateGenericMethod(function);
-        specializedMethodName = null;
-        specializationType = null;
-        String recoveryMethodName = null;
-        if (function.profile.canBeSpecialized()) {
-            generateSpecializedMethod(function); // sets 'specializedMethodName' and 'specializationType'
-            if (!function.recoverySites().isEmpty()) {
-                recoveryMethodName = generateRecoveryMethod(specializedMethodName, function);
-            }
-        }
-        individualResults.put(
-            function,
-            new FunctionCompilationResult(methodName, specializedMethodName, recoveryMethodName, specializationType));
-        generatedMethodSerial++;
     }
 
     private void setupClassWriter() {
@@ -192,6 +177,35 @@ public class Compiler {
             null);
     }
 
+    private void generateGenericAndRecoveryMethods() {
+        SpecializedTypeComputer.process(true, topLevelFunction);
+        generateGenericAndRecoveryMethodFor(topLevelFunction);
+        topLevelFunction.closureImplementations().forEach(this::generateGenericAndRecoveryMethodFor);
+    }
+
+    private void generateGenericAndRecoveryMethodFor(FunctionImplementation function) {
+        var methodName = generateGenericMethod(function);
+        var functionResult = new FunctionResult(methodName);
+        result.addFunctionResult(function, functionResult);
+        if (!function.recoverySites().isEmpty()) {
+            generateRecoveryMethod(function, functionResult);
+        }
+        generatedMethodSerial++;
+    }
+
+    private void generateSpecializedMethods() {
+        SpecializedTypeComputer.process(false, topLevelFunction);
+        generateSpecializedMethodFor(topLevelFunction, result.functionResultFor(topLevelFunction));
+        topLevelFunction.closureImplementations().forEach(
+            each -> generateSpecializedMethodFor(each, result.functionResultFor(each)));
+    }
+
+    private void generateSpecializedMethodFor(FunctionImplementation function, FunctionResult functionResult) {
+        if (function.profile.canBeSpecialized()) {
+            generateSpecializedMethod(function, functionResult);
+        }
+    }
+
     private String generateGenericMethod(FunctionImplementation closureImpl) {
         var methodName = GENERIC_METHOD_PREFIX + generatedMethodSerial;
         MethodVisitor methodWriter = classWriter.visitMethod(
@@ -200,34 +214,33 @@ public class Compiler {
             MethodType.genericMethodType(closureImpl.implementationArity()).toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        var generator = new CompilerCodeGeneratorGeneric(methodWriter);
-        var resultType = generator.generate(closureImpl);
-        generator.writer.adaptValue(resultType, REFERENCE);
-        methodWriter.visitInsn(Opcodes.ARETURN);
+        var generator = new MethodGenerator(closureImpl, methodWriter);
+        generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
         return methodName;
     }
 
-    private String generateSpecializedMethod(FunctionImplementation closureImpl) {
-        specializedMethodName = SPECIALIZED_METHOD_PREFIX + generatedMethodSerial;
-        specializationType = computeSpecializationType(closureImpl);
-        System.out.println("generating a specialized method of type " + specializationType);
+    private void generateSpecializedMethod(FunctionImplementation closureImpl, FunctionResult functionResult) {
+        var methodName = SPECIALIZED_METHOD_PREFIX + functionResult.genericMethodName;
+        var methodType = computeSpecializationType(closureImpl);
+        System.out.println("generating a specialized method of type " + methodType);
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
-            specializedMethodName,
-            specializationType.toMethodDescriptorString(),
+            methodName,
+            methodType.toMethodDescriptorString(),
             null, null);
         methodWriter.visitCode();
-        var generator = new CompilerCodeGeneratorSpecialized(closureImpl, methodWriter);
+        var generator = new MethodGenerator(closureImpl, methodWriter);
         generator.generate();
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
-        return specializedMethodName;
+        functionResult.specializedMethodName = methodName;
+        functionResult.specializedMethodType = methodType;
     }
 
-    private String generateRecoveryMethod(String originalMethodName, FunctionImplementation closureImpl) {
-        var methodName = RECOVERY_METHOD_PREFIX + originalMethodName;
+    private void generateRecoveryMethod(FunctionImplementation closureImpl, FunctionResult functionResult) {
+        var methodName = RECOVERY_METHOD_PREFIX + functionResult.genericMethodName;
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
             methodName,
@@ -240,26 +253,21 @@ public class Compiler {
         methodWriter.visitInsn(Opcodes.ARETURN);
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
-        return methodName;
+        functionResult.recoveryMethodName = methodName;
     }
 
     @NotNull private MethodType computeSpecializationType(FunctionImplementation closureImpl) {
         // Boxed synthetic parameters are passed in as boxes, so they are reference type no matter the var type.
         Stream<JvmType> syntheticParamTypes = closureImpl.syntheticParameters().stream()
-            .map(each -> each.isBoxed() ? REFERENCE : each.observedType().jvmType().orElse(REFERENCE));
+            .map(each -> each.isBoxed() ? REFERENCE : each.specializedType());
         // Declared parameters follow their observed type.
         Stream<JvmType> declaredParamTypes = closureImpl.declaredParameters().stream()
-            .map(each -> each.observedType().jvmType().orElse(REFERENCE));
+            .map(each -> each.specializedType());
         Class<?>[] argClasses = Stream.concat(syntheticParamTypes, declaredParamTypes)
             .map(each -> each.representativeClass())
             .toArray(Class[]::new);
         return MethodType.methodType(
-            representativeType(closureImpl.body().observedType()),
+            closureImpl.body().specializedType().representativeClass(),
             argClasses);
-    }
-
-    @SuppressWarnings("unchecked")
-    private Class<?> representativeType(ExpressionType observedType) {
-        return observedType.jvmType().orElse(REFERENCE).representativeClass();
     }
 }

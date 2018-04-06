@@ -24,17 +24,19 @@ public class Add extends Primitive2 {
 
     @Override
     public JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category) {
-        return arg1Category.match(new JvmType.Matcher<JvmType>() {
+        return arg1Category.match(new JvmType.Matcher<>() {
             public JvmType ifReference() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (Object, Object)
                         writer.invokeStatic(Add.class, "add", int.class, Object.class, Object.class);
                         return INT;
                     }
+
                     public JvmType ifInt() { // (Object, int)
                         writer.invokeStatic(Add.class, "add", int.class, Object.class, int.class);
                         return INT;
                     }
+
                     public JvmType ifBoolean() { // (Object, boolean)
                         throw new CompilerError("ADD is not applicable to a boolean");
                     }
@@ -42,15 +44,17 @@ public class Add extends Primitive2 {
             }
 
             public JvmType ifInt() {
-                return arg2Category.match(new JvmType.Matcher<JvmType>() {
+                return arg2Category.match(new JvmType.Matcher<>() {
                     public JvmType ifReference() { // (int, Object)
                         writer.invokeStatic(Add.class, "add", int.class, int.class, Object.class);
                         return INT;
                     }
+
                     public JvmType ifInt() { // (int, int)
                         writer.asm().visitInsn(IADD);
                         return INT;
                     }
+
                     public JvmType ifBoolean() {
                         throw new CompilerError("ADD is not applicable to a boolean");
                     }

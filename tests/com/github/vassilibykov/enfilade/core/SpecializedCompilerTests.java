@@ -23,8 +23,10 @@ public class SpecializedCompilerTests extends LanguageFeaturesTest {
     @Override
     protected Object invoke(Lambda definition, Object... args) {
         var function = FunctionTranslator.translate(definition);
-        function.invoke(args);
-        function.implementation.forceCompile();
+        if (!function.implementation.isCompiled()) {
+            function.invoke(args); // to profile
+            function.implementation.forceCompile();
+        }
         return function.invoke(args);
     }
 

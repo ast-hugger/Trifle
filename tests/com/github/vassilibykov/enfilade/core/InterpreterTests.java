@@ -3,11 +3,8 @@
 package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Expression;
-import com.github.vassilibykov.enfilade.expression.ExpressionLanguage;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.TopLevel;
-import com.github.vassilibykov.enfilade.expression.Variable;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;

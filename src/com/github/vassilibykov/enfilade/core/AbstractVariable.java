@@ -44,21 +44,13 @@ abstract class AbstractVariable {
      */
     abstract ValueProfile profile();
 
-    /**
-     * The type the expression should be assumed to produced while
-     * generating specialized code. Because specialized code is opportunistic,
-     * observed type trumps the inferred type because it's potentially more
-     * specific, even if incorrect for the general case.
-     */
-    abstract JvmType specializationType();
-
     /*internal*/ abstract ExpressionType inferredType();
 
-    /*internal*/ abstract ExpressionType observedType();
+    /*internal*/ abstract JvmType specializedType();
 
     /*internal*/ abstract void setInferredType(@NotNull ExpressionType expressionType);
 
-    /*internal*/ abstract void setObservedType(@NotNull ExpressionType type);
+    /*internal*/ abstract void setSpecializedType(@NotNull JvmType type);
 
     /**
      * Replace the inferred type of this annotation with the union of the
@@ -66,13 +58,6 @@ abstract class AbstractVariable {
      * whether the unified inferred type is different from the original.
      */
     /*internal*/ abstract boolean unifyInferredTypeWith(ExpressionType type);
-
-    /**
-     * Replace the observed type of this annotation with the (lower bound) union
-     * of the specified type and the current one. Return a boolean indicating whether
-     * the unified type is different from the original.
-     */
-    /*internal*/ abstract boolean unifyObservedTypeWith(ExpressionType type);
 
     void initValueIn(Object[] frame, Object value) {
         // It's tempting to get rid of the 'if' by adding 'boxed' subclasses of variables

@@ -3,13 +3,9 @@
 package com.github.vassilibykov.enfilade.primitives;
 
 import com.github.vassilibykov.enfilade.core.CompilerError;
-import com.github.vassilibykov.enfilade.core.EvaluatorNode;
 import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
-import com.github.vassilibykov.enfilade.core.Primitive1Node;
 import com.github.vassilibykov.enfilade.core.JvmType;
-import com.github.vassilibykov.enfilade.expression.Expression;
-import org.jetbrains.annotations.NotNull;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -28,7 +24,7 @@ public class Negate extends Primitive1 {
 
     @Override
     public JvmType generate(GhostWriter writer, JvmType argCategory) {
-        return argCategory.match(new JvmType.Matcher<JvmType>() {
+        return argCategory.match(new JvmType.Matcher<>() {
             public JvmType ifReference() {
                 writer
                     .adaptValue(REFERENCE, INT)
@@ -37,6 +33,7 @@ public class Negate extends Primitive1 {
                     .asm().visitInsn(ISUB);
                 return INT;
             }
+
             public JvmType ifInt() {
                 writer
                     .loadInt(0)
@@ -44,6 +41,7 @@ public class Negate extends Primitive1 {
                     .asm().visitInsn(ISUB);
                 return INT;
             }
+
             public JvmType ifBoolean() {
                 throw new CompilerError("NEGATE is not applicable to a boolean");
             }
