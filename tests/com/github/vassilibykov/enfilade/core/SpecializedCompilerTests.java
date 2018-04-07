@@ -14,7 +14,7 @@ public class SpecializedCompilerTests extends LanguageFeaturesTest {
 
     @Override
     protected Object eval(Expression expression) {
-        var function = FunctionTranslator.translate(lambda(() -> expression));
+        var function = Closure.with(FunctionTranslator.translate(lambda(() -> expression)));
         function.invoke();
         function.implementation.forceCompile();
         return function.invoke();
@@ -22,12 +22,11 @@ public class SpecializedCompilerTests extends LanguageFeaturesTest {
 
     @Override
     protected Object invoke(Lambda definition, Object... args) {
-        var function = FunctionTranslator.translate(definition);
+        var function = Closure.with(FunctionTranslator.translate(definition));
         if (!function.implementation.isCompiled()) {
             function.invoke(args); // to profile
             function.implementation.forceCompile();
         }
         return function.invoke(args);
     }
-
 }

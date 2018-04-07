@@ -38,6 +38,27 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
+        public Object visitDirectCall0(CallNode.DirectCall0 call) {
+            var result = super.visitDirectCall0(call);
+            call.profile.recordValue(result);
+            return result;
+        }
+
+        @Override
+        public Object visitDirectCall1(CallNode.DirectCall1 call) {
+            var result = super.visitDirectCall1(call);
+            call.profile.recordValue(result);
+            return result;
+        }
+
+        @Override
+        public Object visitDirectCall2(CallNode.DirectCall2 call) {
+            var result = super.visitDirectCall2(call);
+            call.profile.recordValue(result);
+            return result;
+        }
+
+        @Override
         public Object visitIf(IfNode anIf) {
             Object testValue = anIf.condition().accept(this);
             if ((Boolean) testValue) {

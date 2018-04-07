@@ -5,51 +5,39 @@ package com.github.vassilibykov.enfilade.expression;
 import com.github.vassilibykov.enfilade.core.Closure;
 import com.github.vassilibykov.enfilade.core.FunctionTranslator;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
- * A trial implementation of a mechanism to allow inexpensive direct references to
- * top-level functions with recursion. For now, this allows defining only one recursive
- * top-level function.
+ * A collection of user-defined "global" functions.
  */
 public class TopLevel {
-    public static Closure define(Function<Binding, Lambda> definition) {
-        var toplevel = new TopLevel();
-        toplevel.defineFunction(definition);
-        return toplevel.translate();
+    private Map<String, TopLevelFunction> topLevelFunctionsByName = new HashMap<>();
+
+    public void define(String name, Function<TopLevelFunction, Lambda> definer) {
+        var topItem = new TopLevelFunction();
+        topLevelFunctionsByName.put(name, topItem);
+        var definition = definer.apply(topItem);
+        topItem.setImplementation(FunctionTranslator.translate(definition));
     }
 
-    public static class Binding extends AtomicExpression {
-        private final Lambda value;
-        private Closure closure;
-
-        private Binding(Function<Binding, Lambda> initializer) {
-            this.value = initializer.apply(this);
-        }
-
-        public Lambda value() {
-            return value;
-        }
-
-        public Closure closure() {
-            return closure;
-        }
-
-        @Override
-        public <T> T accept(Visitor<T> visitor) {
-            return visitor.visitTopLevelBinding(this);
-        }
+    public void define(String name, Lambda definition) {
+        var topItem = new TopLevelFunction();
+        topLevelFunctionsByName.put(name, topItem);
+        topItem.setImplementation(FunctionTranslator.translate(definition));
     }
 
-    private Binding binding;
-
-    private void defineFunction(Function<Binding, Lambda> initializer) {
-        if (binding != null) throw new AssertionError();
-        binding = new Binding(initializer);
+    public TopLevelFunction get(String name) {
+        return topLevelFunctionsByName.get(name);
     }
 
-    private Closure translate() {
-        binding.closure = FunctionTranslator.translate(binding.value());
-        return binding.closure();
+    public FunctionReference at(String name) {
+        return FunctionReference.to(get(name));
+    }
+
+    public Closure getClosure(String name) { // FIXME for now, should not return closure
+        var top =  topLevelFunctionsByName.get(name);
+        return Closure.with(top.implementation());
     }
 }

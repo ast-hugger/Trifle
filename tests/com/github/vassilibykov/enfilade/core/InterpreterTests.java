@@ -26,11 +26,11 @@ public class InterpreterTests extends LanguageFeaturesTest {
     protected Object invoke(Lambda function, Object... args) {
         switch (args.length) {
             case 0:
-                return FunctionTranslator.translate(function).invoke();
+                return Closure.with(FunctionTranslator.translate(function)).invoke();
             case 1:
-                return FunctionTranslator.translate(function).invoke(args[0]);
+                return Closure.with(FunctionTranslator.translate(function)).invoke(args[0]);
             case 2:
-                return FunctionTranslator.translate(function).invoke(args[0], args[1]);
+                return Closure.with(FunctionTranslator.translate(function)).invoke(args[0], args[1]);
             default:
             throw new IllegalArgumentException();
         }
@@ -65,15 +65,17 @@ public class InterpreterTests extends LanguageFeaturesTest {
      * types, and therefore with the specialized version of code.
      */
     static Closure evilFibonacci() {
-        return TopLevel.define(
+        TopLevel toplevel = new TopLevel();
+        toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 if_(lessThan(n, const_(0)),
                     const_("error"),
                     if_(lessThan(n, const_(2)),
                         const_(1),
-                        bind(call(fibonacci, sub(n, const_(1))), t1 ->
-                            bind(call(fibonacci, sub(n, const_(2))), t2 ->
+                        bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
+                            bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                                 add(t1, t2)))))));
+        return toplevel.getClosure("fibonacci");
     }
 
     /**
@@ -82,16 +84,18 @@ public class InterpreterTests extends LanguageFeaturesTest {
      * value lies within the function.
      */
     static Closure veryEvilFibonacci() {
-        return TopLevel.define(
+        TopLevel toplevel = new TopLevel();
+        toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 bind(
                     if_(lessThan(n, const_(0)),
                         const_("error"),
                         if_(lessThan(n, const_(2)),
                             const_(1),
-                            bind(call(fibonacci, sub(n, const_(1))), t1 ->
-                                bind(call(fibonacci, sub(n, const_(2))), t2 ->
+                            bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
+                                bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                                     add(t1, t2))))),
                     t0 -> t0)));
+        return toplevel.getClosure("fibonacci");
     }
 }

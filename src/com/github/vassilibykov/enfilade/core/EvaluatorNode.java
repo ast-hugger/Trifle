@@ -27,7 +27,10 @@ public abstract class EvaluatorNode {
         T visitCall2(CallNode.Call2 call);
         T visitClosure(ClosureNode closure);
         T visitConstant(ConstantNode aConst);
-        T visitConstantFunction(FunctionConstantNode constFunction);
+        T visitConstantFunction(DirectFunctionNode constFunction);
+        T visitDirectCall0(CallNode.DirectCall0 call);
+        T visitDirectCall1(CallNode.DirectCall1 call);
+        T visitDirectCall2(CallNode.DirectCall2 call);
         T visitGetVar(GetVariableNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
@@ -75,6 +78,21 @@ public abstract class EvaluatorNode {
         public T visitClosure(ClosureNode closure) {
             closure.function().body().accept(this);
             return null;
+        }
+
+        @Override
+        public T visitDirectCall0(CallNode.DirectCall0 call) {
+            return visitCall0(call);
+        }
+
+        @Override
+        public T visitDirectCall1(CallNode.DirectCall1 call) {
+            return visitCall1(call);
+        }
+
+        @Override
+        public T visitDirectCall2(CallNode.DirectCall2 call) {
+            return visitCall2(call);
         }
 
         @Override
@@ -127,7 +145,7 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitConstantFunction(FunctionConstantNode topLevelBinding) {
+        public T visitConstantFunction(DirectFunctionNode topLevelBinding) {
             return null;
         }
 

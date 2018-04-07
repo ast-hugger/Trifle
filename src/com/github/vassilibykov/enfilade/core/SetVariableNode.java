@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 class SetVariableNode extends EvaluatorNode implements RecoverySite {
     @NotNull private AbstractVariable variable;
     @NotNull private final EvaluatorNode value;
-    private int setInstructionAddress;
+    private int recoverySiteIndex;
 
     SetVariableNode(@NotNull VariableDefinition variable, @NotNull EvaluatorNode value) {
         this.variable = variable;
@@ -32,12 +32,12 @@ class SetVariableNode extends EvaluatorNode implements RecoverySite {
 
     @Override
     public int recoverySiteIndex() {
-        return setInstructionAddress;
+        return recoverySiteIndex;
     }
 
     @Override
     public void setRecoverySiteIndex(int recoverySiteIndex) {
-        setInstructionAddress = recoverySiteIndex;
+        this.recoverySiteIndex = recoverySiteIndex;
     }
 
     @Override

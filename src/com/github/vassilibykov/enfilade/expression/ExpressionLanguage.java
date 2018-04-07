@@ -54,6 +54,10 @@ public class ExpressionLanguage {
         return Const.value(value);
     }
 
+    public static FunctionReference direct(DirectlyCallable target) {
+        return FunctionReference.to(target);
+    }
+
     public static If if_(AtomicExpression condition, Expression trueBranch, Expression falseBranch) {
         return If.with(condition, trueBranch, falseBranch);
     }

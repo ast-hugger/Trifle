@@ -17,12 +17,18 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
  * Generates the "main" executable representation of a function.
+ *
+ * @see RecoveryMethodGenerator
  */
 class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     private static final MethodType RECOVERY_METHOD_CALL_SITE_TYPE = MethodType.methodType(
         Object.class, SquarePegException.class, int.class, Object[].class);
 
+    /**
+     * Captures the information about an SPE handler that needs to be generated
+     * once we are done with the method proper.
+     */
     private static class SquarePegHandler {
         private final Label handlerStart;
         private final List<AbstractVariable> liveLocals;
@@ -119,9 +125,6 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        if (call.function() instanceof FunctionConstantNode) {
-            return generateConstantFunctionCall1(call, (FunctionConstantNode) call.function());
-        }
         var functionType = call.function().accept(this);
         writer.ensureValue(functionType, REFERENCE);
         var argType = call.arg().accept(this);
@@ -131,16 +134,6 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             Object.class, // the closure being called
             argType.representativeClass());
         writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature);
-        return returnType;
-    }
-
-    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, FunctionConstantNode constFunction) {
-        var argType = call.arg().accept(this);
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(
-            returnType.representativeClass(),
-            argType.representativeClass());
-        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, constFunction.id());
         return returnType;
     }
 
@@ -180,7 +173,7 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             writer.asm().visitInsn(Opcodes.AASTORE);
         }
         writer
-            .loadInt(FunctionRegistry.INSTANCE.lookup(closure.function()))
+            .loadInt(closure.function().id())
             .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
         return REFERENCE;
     }
@@ -200,6 +193,39 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             throw new CompilerError("unexpected const value: " + value);
         }
         return aConst.specializedType();
+    }
+
+    @Override
+    public JvmType visitDirectCall0(CallNode.DirectCall0 call) {
+        var returnType = call.specializedType();
+        var callSiteSignature = MethodType.methodType(
+            returnType.representativeClass());
+        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call0", callSiteSignature, call.target().id());
+        return returnType;
+    }
+
+    @Override
+    public JvmType visitDirectCall1(CallNode.DirectCall1 call) {
+        var argType = call.arg().accept(this);
+        var returnType = call.specializedType();
+        var callSiteSignature = MethodType.methodType(
+            returnType.representativeClass(),
+            argType.representativeClass());
+        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, call.target().id());
+        return returnType;
+    }
+
+    @Override
+    public JvmType visitDirectCall2(CallNode.DirectCall2 call) {
+        var arg1Type = call.arg1().accept(this);
+        var arg2Type = call.arg2().accept(this);
+        var returnType = call.specializedType();
+        var callSiteSignature = MethodType.methodType(
+            returnType.representativeClass(),
+            arg1Type.representativeClass(),
+            arg2Type.representativeClass());
+        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call2", callSiteSignature, call.target().id());
+        return returnType;
     }
 
     @Override
@@ -365,11 +391,11 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitConstantFunction(FunctionConstantNode constFunction) {
+    public JvmType visitConstantFunction(DirectFunctionNode constFunction) {
         int id = constFunction.id();
         writer
             .loadInt(id)
-            .invokeStatic(FunctionRegistry.class, "findAsClosure", Closure.class, int.class);
+            .invokeStatic(CallableRegistry.class, "lookupAndMakeClosure", Closure.class, int.class);
         return REFERENCE;
     }
 
@@ -495,7 +521,7 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         // stack: SPE, int recoverySiteId, Object[] frame
         writer.asm().visitLabel(epilogueStart);
         function.declaredParameters().forEach(this::storeInFrameReplica);
-        var functionId = FunctionRegistry.INSTANCE.lookup(function);
+        var functionId = function.id();
         writer.invokeDynamic(RecoveryCallInvokeDynamic.BOOTSTRAP, "recover", RECOVERY_METHOD_CALL_SITE_TYPE, functionId);
         bridgeValue(REFERENCE, function.specializedReturnType);
         writer.ret(function.specializedReturnType);

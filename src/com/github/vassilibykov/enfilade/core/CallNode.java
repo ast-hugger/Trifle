@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.expression.DirectlyCallable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -33,7 +34,6 @@ abstract class CallNode extends EvaluatorNode {
      */
 
     static class Call0 extends CallNode {
-
         Call0(EvaluatorNode function) {
             super(function);
         }
@@ -46,6 +46,21 @@ abstract class CallNode extends EvaluatorNode {
         @Override
         protected int arity() {
             return 0;
+        }
+    }
+
+    static class DirectCall0 extends Call0 {
+        DirectCall0(EvaluatorNode function) {
+            super(function);
+        }
+
+        DirectlyCallable target() {
+            return ((DirectFunctionNode) function()).target();
+        }
+
+        @Override
+        public <T> T accept(Visitor<T> visitor) {
+            return visitor.visitDirectCall0(this);
         }
     }
 
@@ -69,6 +84,21 @@ abstract class CallNode extends EvaluatorNode {
         @Override
         public <T> T accept(Visitor<T> visitor) {
             return visitor.visitCall1(this);
+        }
+    }
+
+    static class DirectCall1 extends Call1 {
+        DirectCall1(EvaluatorNode function, @NotNull EvaluatorNode arg) {
+            super(function, arg);
+        }
+
+        DirectlyCallable target() {
+            return ((DirectFunctionNode) function()).target();
+        }
+
+        @Override
+        public <T> T accept(Visitor<T> visitor) {
+            return visitor.visitDirectCall1(this);
         }
     }
 
@@ -98,6 +128,21 @@ abstract class CallNode extends EvaluatorNode {
         @Override
         public <T> T accept(Visitor<T> visitor) {
             return visitor.visitCall2(this);
+        }
+    }
+
+    static class DirectCall2 extends Call2 {
+        DirectCall2(EvaluatorNode function, @NotNull EvaluatorNode arg1, @NotNull EvaluatorNode arg2) {
+            super(function, arg1, arg2);
+        }
+
+        DirectlyCallable target() {
+            return ((DirectFunctionNode) function()).target();
+        }
+
+        @Override
+        public <T> T accept(Visitor<T> visitor) {
+            return visitor.visitDirectCall2(this);
         }
     }
 }

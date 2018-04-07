@@ -11,7 +11,7 @@ class LetNode extends EvaluatorNode implements RecoverySite {
     @NotNull private final VariableDefinition variable;
     @NotNull private final EvaluatorNode initializer;
     @NotNull private final EvaluatorNode body;
-    private int setInstructionAddress;
+    private int recoverySiteIndex;
 
     LetNode(@NotNull VariableDefinition variable, @NotNull EvaluatorNode initializer, @NotNull EvaluatorNode body) {
         this.variable = variable;
@@ -33,12 +33,12 @@ class LetNode extends EvaluatorNode implements RecoverySite {
 
     @Override
     public int recoverySiteIndex() {
-        return setInstructionAddress;
+        return recoverySiteIndex;
     }
 
     @Override
     public void setRecoverySiteIndex(int recoverySiteIndex) {
-        this.setInstructionAddress = recoverySiteIndex;
+        this.recoverySiteIndex = recoverySiteIndex;
     }
 
     @Override

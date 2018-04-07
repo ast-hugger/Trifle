@@ -103,6 +103,21 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
+    public Void visitDirectCall0(CallNode.DirectCall0 call) {
+        return visitCall0(call);
+    }
+
+    @Override
+    public Void visitDirectCall1(CallNode.DirectCall1 call) {
+        return visitCall1(call);
+    }
+
+    @Override
+    public Void visitDirectCall2(CallNode.DirectCall2 call) {
+        return visitCall2(call);
+    }
+
+    @Override
     public Void visitIf(IfNode anIf) {
         printLine(() -> {
             output.append("if ");
@@ -177,7 +192,7 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitConstantFunction(FunctionConstantNode topLevelBinding) {
+    public Void visitConstantFunction(DirectFunctionNode topLevelBinding) {
         throw new UnsupportedOperationException("not implemented yet"); // TODO implement
     }
 

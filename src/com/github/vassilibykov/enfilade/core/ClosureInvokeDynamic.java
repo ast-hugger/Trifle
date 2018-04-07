@@ -62,7 +62,7 @@ public final class ClosureInvokeDynamic {
         } else {
             /* If the implementation function has not been compiled yet, it doesn't
                make sense to install inline cache because we can do better later. */
-            target = closure.defaultInvoker();
+            target = closure.genericInvoker();
         }
         switch (args.length) {
             case 0:

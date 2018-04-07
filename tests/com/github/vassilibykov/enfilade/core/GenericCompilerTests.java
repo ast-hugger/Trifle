@@ -4,6 +4,8 @@ package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Expression;
 import com.github.vassilibykov.enfilade.expression.Lambda;
+import com.github.vassilibykov.enfilade.expression.TopLevel;
+import org.junit.Before;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 
@@ -12,16 +14,25 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lam
  */
 public class GenericCompilerTests extends LanguageFeaturesTest {
 
+    private TopLevel topLevel;
+
+    @Before
+    public void setUp() throws Exception {
+        topLevel = new TopLevel();
+    }
+
     @Override
     protected Object eval(Expression expression) {
-        var function = FunctionTranslator.translate(lambda(() -> expression));
+        topLevel.define("test", lambda(() -> expression));
+        var function = topLevel.getClosure("test");
         function.implementation.forceCompile();
         return function.invoke();
     }
 
     @Override
     protected Object invoke(Lambda definition, Object... args) {
-        var function = FunctionTranslator.translate(definition);
+        topLevel.define("test", definition);
+        var function = topLevel.getClosure("test");
         function.implementation.forceCompile();
         return function.invoke(args);
     }

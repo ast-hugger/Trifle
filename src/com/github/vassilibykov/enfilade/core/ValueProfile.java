@@ -6,6 +6,10 @@ import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 
+/**
+ * Accepts values associated with a variable or an expression and
+ * aggregates that data.
+ */
 class ValueProfile {
     private long referenceCases = 0;
     private long intCases = 0;
@@ -42,7 +46,7 @@ class ValueProfile {
         return intCases;
     }
 
-    public long boolCases() {
+    public synchronized long boolCases() {
         return boolCases;
     }
 

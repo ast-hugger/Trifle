@@ -24,9 +24,13 @@ public class Interpreter {
         public Object visitBlock(BlockNode block) {
             EvaluatorNode[] expressions = block.expressions();
             int bodySize = expressions.length - 1;
-            int i;
-            for (i = 0; i < bodySize; i++) expressions[i].accept(this);
-            return expressions[i].accept(this);
+            if (bodySize > 0) {
+                int i;
+                for (i = 0; i < bodySize; i++) expressions[i].accept(this);
+                return expressions[i].accept(this);
+            } else {
+                return null;
+            }
         }
 
         @Override
@@ -62,6 +66,24 @@ public class Interpreter {
         @Override
         public Object visitConstant(ConstantNode aConst) {
             return aConst.value();
+        }
+
+        @Override
+        public Object visitDirectCall0(CallNode.DirectCall0 call) {
+            return call.target().asCallable().call();
+        }
+
+        @Override
+        public Object visitDirectCall1(CallNode.DirectCall1 call) {
+            var arg = call.arg().accept(this);
+            return call.target().asCallable().call(arg);
+        }
+
+        @Override
+        public Object visitDirectCall2(CallNode.DirectCall2 call) {
+            var arg1 = call.arg1().accept(this);
+            var arg2 = call.arg2().accept(this);
+            return call.target().asCallable().call(arg1, arg2);
         }
 
         @Override
@@ -121,8 +143,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitConstantFunction(FunctionConstantNode constFunction) {
-            return new Closure(constFunction.function(), new Object[0]);
+        public Object visitConstantFunction(DirectFunctionNode constFunction) {
+            return CallableRegistry.INSTANCE.lookupClosure(constFunction.id());
         }
     }
 

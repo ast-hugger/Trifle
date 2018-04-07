@@ -12,7 +12,7 @@ import java.lang.invoke.MethodType;
 
 /**
  * An invokedynamic instruction for a call expression whose function is a constant managed
- * by {@link FunctionConstantNode}. The call target is identified by an integer ID
+ * by {@link DirectFunctionNode}. The call target is identified by an integer ID
  * attached to the instruction as an extra parameter. The call target is nominally a closure,
  * however the whole mechanism is intended for top-level functions, so it is a closure which
  * closes over nothing and therefore the implementation function's parameter list is identical
@@ -31,7 +31,7 @@ public final class ConstantFunctionInvokeDynamic {
 
     @SuppressWarnings("unused") // called by generated code
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
-        var closure = FunctionRegistry.findAsClosure(targetId);
-        return new ConstantCallSite(closure.optimalInvoker(callSiteType));
+        var callable = CallableRegistry.INSTANCE.lookup(targetId);
+        return new ConstantCallSite(callable.invoker(callSiteType));
     }
 }

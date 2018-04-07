@@ -5,6 +5,7 @@ package com.github.vassilibykov.enfilade.core;
 import com.github.vassilibykov.enfilade.expression.Block;
 import com.github.vassilibykov.enfilade.expression.Call;
 import com.github.vassilibykov.enfilade.expression.Const;
+import com.github.vassilibykov.enfilade.expression.FunctionReference;
 import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Let;
@@ -13,7 +14,6 @@ import com.github.vassilibykov.enfilade.expression.Primitive;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
 import com.github.vassilibykov.enfilade.expression.Return;
 import com.github.vassilibykov.enfilade.expression.SetVariable;
-import com.github.vassilibykov.enfilade.expression.TopLevel;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
 import com.github.vassilibykov.enfilade.primitives.Primitive1;
@@ -53,17 +53,13 @@ import java.util.stream.Collectors;
  */
 public class FunctionTranslator {
 
-    public static Closure translate(Lambda lambda) {
-        var implementation = FunctionRegistry.INSTANCE.lookup(lambda);
-        if (implementation != null) {
-            return new Closure(implementation, new Object[0]);
-        }
-        implementation = FunctionRegistry.INSTANCE.lookupOrMake(lambda, null);
-        var translator = new FunctionTranslator(lambda, implementation);
+    public static FunctionImplementation translate(Lambda lambda) {
+        var implementation = new FunctionImplementation(lambda, null);
+        var translator = new FunctionTranslator(implementation);
         translator.translate();
         implementation.addClosureImplementations(translator.nestedFunctions);
         FunctionAnalyzer.analyze(implementation); // finishesInitialization
-        return new Closure(implementation, new Object[0]);
+        return implementation;
     }
 
     /*
@@ -75,8 +71,8 @@ public class FunctionTranslator {
     private final Map<Variable, VariableDefinition> variableDefinitions = new HashMap<>();
     private final List<FunctionImplementation> nestedFunctions = new ArrayList<>();
 
-    private FunctionTranslator(Lambda lambda, FunctionImplementation topFunctionImplementation) {
-        this.topLambda = lambda;
+    private FunctionTranslator(FunctionImplementation topFunctionImplementation) {
+        this.topLambda = topFunctionImplementation.definition();
         this.topFunctionImplementation = topFunctionImplementation;
     }
 
@@ -130,19 +126,37 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitCall(Call call) {
-            var target = call.target().accept(this);
-            switch (call.arguments().size()) {
-                case 0:
-                    return new CallNode.Call0(target);
-                case 1:
-                    var arg = call.arguments().get(0).accept(this);
-                    return new CallNode.Call1(target, arg);
-                case 2:
-                    var arg1 = call.arguments().get(0).accept(this);
-                    var arg2 = call.arguments().get(1).accept(this);
-                    return new CallNode.Call2(target, arg1, arg2);
-                default:
-                    throw new UnsupportedOperationException("not yet implemented");
+            if (call.target() instanceof FunctionReference) {
+                var callable = ((FunctionReference) call.target()).target();
+                var target = new DirectFunctionNode(callable);
+                switch (call.arguments().size()) {
+                    case 0:
+                        return new CallNode.DirectCall0(target);
+                    case 1:
+                        var arg = call.arguments().get(0).accept(this);
+                        return new CallNode.DirectCall1(target, arg);
+                    case 2:
+                        var arg1 = call.arguments().get(0).accept(this);
+                        var arg2 = call.arguments().get(1).accept(this);
+                        return new CallNode.DirectCall2(target, arg1, arg2);
+                    default:
+                        throw new UnsupportedOperationException("not yet implemented");
+                }
+            } else {
+                var target = call.target().accept(this);
+                switch (call.arguments().size()) {
+                    case 0:
+                        return new CallNode.Call0(target);
+                    case 1:
+                        var arg = call.arguments().get(0).accept(this);
+                        return new CallNode.Call1(target, arg);
+                    case 2:
+                        var arg1 = call.arguments().get(0).accept(this);
+                        var arg2 = call.arguments().get(1).accept(this);
+                        return new CallNode.Call2(target, arg1, arg2);
+                    default:
+                        throw new UnsupportedOperationException("not yet implemented");
+                }
             }
         }
 
@@ -161,7 +175,7 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitLambda(Lambda lambda) {
-            var nestedFunction = FunctionRegistry.INSTANCE.lookupOrMake(lambda, topFunctionImplementation);
+            var nestedFunction = new FunctionImplementation(lambda, topFunctionImplementation);
             nestedFunctions.add(nestedFunction);
             var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
             nestedTranslator.translate();
@@ -218,9 +232,8 @@ public class FunctionTranslator {
         }
 
         @Override
-        public EvaluatorNode visitTopLevelBinding(TopLevel.Binding binding) {
-            var tentativeImpl = FunctionRegistry.INSTANCE.lookup(binding.value());
-            return new FunctionConstantNode(tentativeImpl);
+        public EvaluatorNode visitFunctionReference(FunctionReference functionReference) {
+            return new DirectFunctionNode(functionReference.target());
         }
 
         @Override

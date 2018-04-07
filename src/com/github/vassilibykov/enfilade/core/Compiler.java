@@ -25,7 +25,9 @@ import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
- * Compiles a {@link FunctionImplementation} into a class with a single static method.
+ * Compiles a {@link FunctionImplementation} of a top-level function into a
+ * class with methods implementing all forms of the top-level function and
+ * its nested functions.
  */
 public class Compiler {
 
@@ -256,18 +258,18 @@ public class Compiler {
         functionResult.recoveryMethodName = methodName;
     }
 
-    @NotNull private MethodType computeSpecializationType(FunctionImplementation closureImpl) {
+    @NotNull private MethodType computeSpecializationType(FunctionImplementation function) {
         // Boxed synthetic parameters are passed in as boxes, so they are reference type no matter the var type.
-        Stream<JvmType> syntheticParamTypes = closureImpl.syntheticParameters().stream()
+        Stream<JvmType> syntheticParamTypes = function.syntheticParameters().stream()
             .map(each -> each.isBoxed() ? REFERENCE : each.specializedType());
         // Declared parameters follow their observed type.
-        Stream<JvmType> declaredParamTypes = closureImpl.declaredParameters().stream()
+        Stream<JvmType> declaredParamTypes = function.declaredParameters().stream()
             .map(each -> each.specializedType());
         Class<?>[] argClasses = Stream.concat(syntheticParamTypes, declaredParamTypes)
             .map(each -> each.representativeClass())
             .toArray(Class[]::new);
         return MethodType.methodType(
-            closureImpl.body().specializedType().representativeClass(),
+            function.specializedReturnType.representativeClass(),
             argClasses);
     }
 }

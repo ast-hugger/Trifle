@@ -8,7 +8,7 @@ import java.util.List;
  * Counts function invocations and records observed types of function
  * arguments and other locals.
  */
-public class FunctionProfile {
+class FunctionProfile {
     private final List<VariableDefinition> methodParameters;
     private long invocationCount = 0;
     private final ValueProfile resultProfile = new ValueProfile();

@@ -47,8 +47,7 @@ class RecoveryCallInvokeDynamic {
             MethodType callSiteType,
             Integer targetId)
     {
-        var function = Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(targetId),
-            "internal error: function ID not found");
+        var function = CallableRegistry.INSTANCE.lookupFunctionImplementation(targetId);
         var recoveryMethod = Objects.requireNonNull(function.recoveryImplementation,
             "internal error: function has no recovery method");
         var handler = MethodHandles.filterArguments(recoveryMethod, 0, SPE_EXTRACTOR);

@@ -8,7 +8,6 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.Objects;
 
 /**
  * A function value in a program. Produced by evaluating a lambda expression or
@@ -20,22 +19,26 @@ public class Closure {
     @SuppressWarnings("unused") // called by generated code
     public static Closure create(Object[] copiedValues, int functionId) {
         return new Closure(
-            Objects.requireNonNull(FunctionRegistry.INSTANCE.lookup(functionId)),
+            CallableRegistry.INSTANCE.lookupFunctionImplementation(functionId),
             copiedValues);
+    }
+
+    public static Closure with(FunctionImplementation topLevelFunctionImplementation) {
+        return new Closure(topLevelFunctionImplementation, new Object[0]);
     }
 
     @NotNull /*internal*/ final FunctionImplementation implementation;
     private final Object[] copiedValues;
-    private final MethodHandle defaultInvoker;
-    @Nullable private MethodType optimalInvokerType;
-    @Nullable private MethodHandle optimalInvoker;
+    private final MethodHandle genericInvoker;
+    @Nullable private MethodType specializedInvokerType;
+    @Nullable private MethodHandle specializedInvoker;
 
     Closure(@NotNull FunctionImplementation implementation, @NotNull Object[] copiedValues) {
         this.implementation = implementation;
         this.copiedValues = copiedValues;
         // callSiteInvoker type: (synthetic:Object* declared:Object*) -> Object
         // invoker type: (declared:Object*) -> Object
-        this.defaultInvoker = MethodHandles.insertArguments(implementation.callSiteInvoker, 0, copiedValues);
+        this.genericInvoker = MethodHandles.insertArguments(implementation.callSiteInvoker, 0, copiedValues);
     }
 
     boolean hasCopiedValues() {
@@ -49,8 +52,8 @@ public class Closure {
      * #optimalInvoker(MethodType)} instead because that will result in a
      * more efficient call pipeline, both for specialized and generic forms.
      */
-    MethodHandle defaultInvoker() {
-        return defaultInvoker;
+    MethodHandle genericInvoker() {
+        return genericInvoker;
     }
 
     /**
@@ -67,7 +70,7 @@ public class Closure {
      * might later be doing a specialization check on every call.
      */
     MethodHandle optimalInvoker(MethodType requiredType) {
-        if (optimalInvokerType == requiredType) return optimalInvoker;
+        if (specializedInvokerType == requiredType) return specializedInvoker;
         if (requiredType.parameterCount() != implementation.declarationArity()) {
             throw new IllegalArgumentException();
         }
@@ -78,20 +81,20 @@ public class Closure {
                 var cleanType = specializedForm.type().dropParameterTypes(0, copiedValues.length);
                 if (cleanType.equals(requiredType)) {
                     var specializedInvoker = MethodHandles.insertArguments(specializedForm, 0, copiedValues);
-                    optimalInvoker = specializedInvoker.asType(requiredType);
-                    optimalInvokerType = requiredType;
-                    return optimalInvoker;
+                    this.specializedInvoker = specializedInvoker.asType(requiredType);
+                    specializedInvokerType = requiredType;
+                    return this.specializedInvoker;
                 }
             }
         }
         var genericForm = implementation.genericImplementation;
         if (genericForm != null) {
             var genericInvoker = MethodHandles.insertArguments(genericForm, 0, copiedValues);
-            optimalInvoker = genericInvoker.asType(requiredType);
-            optimalInvokerType = requiredType;
-            return optimalInvoker;
+            specializedInvoker = genericInvoker.asType(requiredType);
+            specializedInvokerType = requiredType;
+            return specializedInvoker;
         }
-        return defaultInvoker.asType(requiredType);
+        return genericInvoker.asType(requiredType);
     }
 
     /**
@@ -109,7 +112,7 @@ public class Closure {
 
     public Object invoke() {
         try {
-            return defaultInvoker.invokeExact();
+            return genericInvoker.invokeExact();
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -117,7 +120,7 @@ public class Closure {
 
     public Object invoke(Object arg) {
         try {
-            return defaultInvoker.invokeExact(arg);
+            return genericInvoker.invokeExact(arg);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -125,7 +128,7 @@ public class Closure {
 
     public Object invoke(Object arg1, Object arg2) {
         try {
-            return defaultInvoker.invokeExact(arg1, arg2);
+            return genericInvoker.invokeExact(arg1, arg2);
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }

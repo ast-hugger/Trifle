@@ -66,9 +66,6 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        if (call.function() instanceof FunctionConstantNode) {
-            return generateConstantFunctionCall0(call, (FunctionConstantNode) call.function());
-        }
         call.function().accept(this); // puts a value on the stack that must be a closure
         var type = MethodType.genericMethodType(1); // Closure is the argument
         writer.invokeDynamic(
@@ -78,23 +75,8 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         return REFERENCE;
     }
 
-    private JvmType generateConstantFunctionCall0(CallNode.Call0 call, FunctionConstantNode constFunction) {
-        // For a constant call, the closure is not pushed on the stack.
-        // Its ID is instead encoded in the invokedynamic instruction.
-        var type = MethodType.genericMethodType(0);
-        writer.invokeDynamic(
-            ConstantFunctionInvokeDynamic.BOOTSTRAP,
-            "call0",
-            type,
-            constFunction.id());
-        return REFERENCE;
-    }
-
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        if (call.function() instanceof FunctionConstantNode) {
-            return generateConstantFunctionCall1(call, (FunctionConstantNode) call.function());
-        }
         call.function().accept(this); // puts a value on the stack which must be a closure
         var argType = call.arg().accept(this);
         var type = MethodType.genericMethodType(2);
@@ -106,23 +88,8 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         return REFERENCE;
     }
 
-    private JvmType generateConstantFunctionCall1(CallNode.Call1 call, FunctionConstantNode constFunction) {
-        var type = MethodType.genericMethodType(1);
-        var argType = call.arg().accept(this);
-        writer.adaptValue(argType, REFERENCE);
-        writer.invokeDynamic(
-            ConstantFunctionInvokeDynamic.BOOTSTRAP,
-            "call1",
-            type,
-            constFunction.id());
-        return REFERENCE;
-    }
-
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        if (call.function() instanceof FunctionConstantNode) {
-            return generateConstantFunctionCall2(call, (FunctionConstantNode) call.function());
-        }
         call.function().accept(this); // puts a value on the stack that must be a closure
         var arg1Type = call.arg1().accept(this);
         var type = MethodType.genericMethodType(3);
@@ -133,20 +100,6 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             ClosureInvokeDynamic.BOOTSTRAP,
             "call2",
             type);
-        return REFERENCE;
-    }
-
-    private JvmType generateConstantFunctionCall2(CallNode.Call2 call, FunctionConstantNode constFunction) {
-        var type = MethodType.genericMethodType(1);
-        var arg1Type = call.arg1().accept(this);
-        writer.adaptValue(arg1Type, REFERENCE);
-        var arg2Type = call.arg2().accept(this);
-        writer.adaptValue(arg2Type, REFERENCE);
-        writer.invokeDynamic(
-            ConstantFunctionInvokeDynamic.BOOTSTRAP,
-            "call1",
-            type,
-            constFunction.id());
         return REFERENCE;
     }
 
@@ -162,7 +115,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             writer.asm().visitInsn(Opcodes.AASTORE);
         }
         writer
-            .loadInt(FunctionRegistry.INSTANCE.lookup(closure.function()))
+            .loadInt(closure.function().id())
             .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
         return REFERENCE;
     }
@@ -185,6 +138,45 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
+    }
+
+    @Override
+    public JvmType visitDirectCall0(CallNode.DirectCall0 call) {
+        var type = MethodType.genericMethodType(0);
+        writer.invokeDynamic(
+            ConstantFunctionInvokeDynamic.BOOTSTRAP,
+            "call0",
+            type,
+            call.target().id());
+        return REFERENCE;
+    }
+
+    @Override
+    public JvmType visitDirectCall1(CallNode.DirectCall1 call) {
+        var type = MethodType.genericMethodType(1);
+        var argType = call.arg().accept(this);
+        writer.adaptValue(argType, REFERENCE);
+        writer.invokeDynamic(
+            ConstantFunctionInvokeDynamic.BOOTSTRAP,
+            "call1",
+            type,
+            call.target().id());
+        return REFERENCE;
+    }
+
+    @Override
+    public JvmType visitDirectCall2(CallNode.DirectCall2 call) {
+        var type = MethodType.genericMethodType(2);
+        var arg1Type = call.arg1().accept(this);
+        writer.adaptValue(arg1Type, REFERENCE);
+        var arg2Type = call.arg2().accept(this);
+        writer.adaptValue(arg2Type, REFERENCE);
+        writer.invokeDynamic(
+            ConstantFunctionInvokeDynamic.BOOTSTRAP,
+            "call2",
+            type,
+            call.target().id());
+        return REFERENCE;
     }
 
     @Override
@@ -299,11 +291,11 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitConstantFunction(FunctionConstantNode constFunction) {
+    public JvmType visitConstantFunction(DirectFunctionNode constFunction) {
         int id = constFunction.id();
         writer
             .loadInt(id)
-            .invokeStatic(FunctionRegistry.class, "findAsClosure", Closure.class, int.class);
+            .invokeStatic(CallableRegistry.class, "lookupAndMakeClosure", Closure.class, int.class);
         return REFERENCE;
     }
 

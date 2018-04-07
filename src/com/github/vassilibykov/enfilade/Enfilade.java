@@ -2,20 +2,25 @@
 
 package com.github.vassilibykov.enfilade;
 
-import com.github.vassilibykov.enfilade.core.FunctionRegistry;
-import com.github.vassilibykov.enfilade.core.FunctionImplementation;
-import com.github.vassilibykov.enfilade.core.FunctionTranslator;
-import com.github.vassilibykov.enfilade.expression.Lambda;
-
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class Enfilade {
-    public static void add(List<Lambda> functions) {
-        functions.forEach(FunctionTranslator::translate);
-    }
+    public static final Enfilade INSTANCE = new Enfilade();
 
-    public static Optional<FunctionImplementation> find(Lambda sourceFunction) {
-        return Optional.ofNullable(FunctionRegistry.INSTANCE.lookup(sourceFunction));
-    }
+    private final List<Callable> callables = new ArrayList<>();
+
+//    public Callable findCallable(int id) {
+//        synchronized (callables) {
+//            return callables.get(id);
+//        }
+//    }
+//
+//    public int addCallable(Callable callable) {
+//        synchronized (callables) {
+//            var id = callables.size();
+//            callables.add(callable);
+//            return callables.size() - 1;
+//        }
+//    }
 }

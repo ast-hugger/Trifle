@@ -8,6 +8,7 @@ import com.github.vassilibykov.enfilade.expression.TopLevel;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.direct;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
@@ -32,13 +33,15 @@ public class TimeFib {
     }
 
     private static Closure fibonacci() {
-        return TopLevel.define(
+        TopLevel toplevel = new TopLevel();
+        toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 if_(lessThan(n, const_(2)),
                     const_(1),
-                    bind(call(fibonacci, sub(n, const_(1))), t1 ->
-                        bind(call(fibonacci, sub(n, const_(2))), t2 ->
+                    bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
+                        bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                             add(t1, t2))))));
+        return toplevel.getClosure("fibonacci");
     }
 
 //    private static Closure altFib() {

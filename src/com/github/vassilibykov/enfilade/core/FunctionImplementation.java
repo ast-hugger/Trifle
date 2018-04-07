@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.Callable;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,7 +70,7 @@ import java.util.stream.Stream;
  *
  * <p>Note the extra leading argument. It contains the closure being called, but
  * is formally typed as {@code Object} rather than closure. Internally a closure
- * maintains an {@link Closure#defaultInvoker} method handle which calls its
+ * maintains an {@link Closure#genericInvoker} method handle which calls its
  * function implementation's {@link #callSiteInvoker} after inserting copied
  * values, if any, to be received by the synthetic parameters prepended by the
  * closure converter.
@@ -105,7 +106,7 @@ import java.util.stream.Stream;
  * <p>--TBD-- I need to better think through how {@link Closure} and {@link
  * ClosureInvokeDynamic} efficiently can bind to specialized forms.
  */
-public class FunctionImplementation {
+public class FunctionImplementation implements Callable {
 
     /** The number of times a function is profiled before it's queued for compilation. */
     private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
@@ -179,11 +180,12 @@ public class FunctionImplementation {
     /*internal*/ MethodHandle recoveryImplementation;
     private volatile State state;
 
-    FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topImplOrNull) {
+    FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topFunction) {
         this.definition = definition;
-        this.topImplementation = topImplOrNull != null ? topImplOrNull : this;
+        this.topImplementation = topFunction != null ? topFunction : this;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
+        this.id = CallableRegistry.INSTANCE.register(this);
     }
 
     /** RESTRICTED. Intended for {@link FunctionTranslator}. */
@@ -211,13 +213,9 @@ public class FunctionImplementation {
         return definition;
     }
 
+    @Override
     public int id() {
         return id;
-    }
-
-    /** RESTRICTED. Intended for {@link FunctionRegistry#lookup(FunctionImplementation)}. */
-    void setId(int id) {
-        this.id = id;
     }
 
     public List<VariableDefinition> declaredParameters() {
@@ -280,6 +278,17 @@ public class FunctionImplementation {
 
     public boolean isCompiled() {
         return state == State.COMPILED;
+    }
+
+    @Override
+    public MethodHandle invoker(MethodType callSiteType) {
+        if (specializedImplementation != null && callSiteType == specializedImplementation.type()) {
+            return specializedImplementation;
+        }
+        if (genericImplementation != null) {
+            return genericImplementation.asType(callSiteType);
+        }
+        return callSiteInvoker.asType(callSiteType);
     }
 
     private MethodHandle profilingInterpreterInvoker() {

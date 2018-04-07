@@ -59,6 +59,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall0(CallNode.Call0 call) {
+        call.function().accept(this);
         if (call.profile.hasProfileData()) {
             return setSpecializedType(call, call.profile.jvmType());
         } else {
@@ -68,6 +69,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
+        call.function().accept(this);
         call.arg().accept(this);
         if (call.profile.hasProfileData()) {
             return setSpecializedType(call, call.profile.jvmType());
@@ -78,6 +80,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
+        call.function().accept(this);
         call.arg1().accept(this);
         call.arg2().accept(this);
         if (call.profile.hasProfileData()) {
@@ -107,6 +110,21 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitConstant(ConstantNode aConst) {
         return setSpecializedType(aConst, aConst.inferredType().jvmType().orElse(REFERENCE));
+    }
+
+    @Override
+    public JvmType visitDirectCall0(CallNode.DirectCall0 call) {
+        return visitCall0(call);
+    }
+
+    @Override
+    public JvmType visitDirectCall1(CallNode.DirectCall1 call) {
+        return visitCall1(call);
+    }
+
+    @Override
+    public JvmType visitDirectCall2(CallNode.DirectCall2 call) {
+        return visitCall2(call);
     }
 
     /**
@@ -222,7 +240,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitConstantFunction(FunctionConstantNode constFunction) {
+    public JvmType visitConstantFunction(DirectFunctionNode constFunction) {
         return setSpecializedType(constFunction, REFERENCE);
     }
 
