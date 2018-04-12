@@ -25,7 +25,7 @@ public enum JvmType {
     public static JvmType ofObject(Object value) {
         if (value instanceof Integer) {
             return INT;
-        } if (value instanceof Boolean) {
+        } else if (value instanceof Boolean) {
             return BOOL;
         } else {
             return REFERENCE;
@@ -85,26 +85,27 @@ public enum JvmType {
     public static MethodHandle guardReturnValue(Class<?> expectedReturnType, MethodHandle producer) {
         if (expectedReturnType.isPrimitive()) {
             return MethodHandles.filterReturnValue(
-                producer, NARROW_RETURN_VALUE.bindTo(primitiveToWrapper(expectedReturnType)));
+                producer,
+                ENSURE_UNBOXABLE_VALUE.bindTo(primitiveToWrapper(expectedReturnType)));
         } else {
             return producer;
         }
     }
 
-    private static final MethodHandle NARROW_RETURN_VALUE;
+    private static final MethodHandle ENSURE_UNBOXABLE_VALUE;
     static {
         try {
-            NARROW_RETURN_VALUE = MethodHandles.lookup()
+            ENSURE_UNBOXABLE_VALUE = MethodHandles.lookup()
                 .findStatic(
                     JvmType.class,
-                    "narrowReturnValue",
+                    "ensureUnboxableValue",
                     MethodType.methodType(Object.class, Class.class, Object.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError();
         }
     }
 
-    private static Object narrowReturnValue(Class<?> expectedType, Object value) {
+    private static Object ensureUnboxableValue(Class<?> expectedType, Object value) {
         if (expectedType.isInstance(value)) return value;
         throw SquarePegException.with(value);
     }

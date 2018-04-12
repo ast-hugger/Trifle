@@ -4,7 +4,7 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
-public class LetrecNode extends LetNode {
+class LetrecNode extends LetNode {
     LetrecNode(@NotNull VariableDefinition variable, @NotNull EvaluatorNode initializer, @NotNull EvaluatorNode body) {
         super(variable, initializer, body);
     }

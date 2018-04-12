@@ -313,6 +313,10 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             writer
                 .loadDefaultValue(varType)
                 .initBoxedVariable(varType, variable.index());
+        } else {
+            writer
+                .loadDefaultValue(varType)
+                .storeLocal(varType, variable.index());
         }
         liveLocals.add(variable);
         withSquarePegRecovery(letrec, () -> {
