@@ -6,6 +6,7 @@ import com.github.vassilibykov.enfilade.Callable;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -16,6 +17,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
+
+import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 
 /**
  * An object holding together all executable representations of a function
@@ -245,6 +248,10 @@ public class FunctionImplementation implements Callable {
             .toArray(AbstractVariable[]::new);
     }
 
+    /*internal*/ boolean canBeSpecialized() {
+        return Stream.of(allParameters).anyMatch(some -> some.specializedType() != REFERENCE);
+    }
+
     public EvaluatorNode body() {
         return body;
     }
@@ -286,9 +293,9 @@ public class FunctionImplementation implements Callable {
             return specializedImplementation;
         }
         if (genericImplementation != null) {
-            return genericImplementation.asType(callSiteType);
+            return JvmType.adaptToCallSite(callSiteType, genericImplementation);
         }
-        return callSiteInvoker.asType(callSiteType);
+        return JvmType.adaptToCallSite(callSiteType, callSiteInvoker);
     }
 
     private MethodHandle profilingInterpreterInvoker() {
@@ -361,6 +368,11 @@ public class FunctionImplementation implements Callable {
         callSite.setTarget(simpleInterpreterInvoker());
     }
 
+    @TestOnly
+    void useSimpleInterpreter() {
+        markAsBeingCompiled();
+    }
+
     void forceCompile() {
         if (this != topImplementation) throw new AssertionError("must be invoked on a top function implementation");
         var result = Compiler.compile(this);
@@ -394,7 +406,6 @@ public class FunctionImplementation implements Callable {
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
-        state = State.COMPILED;
         if (specializedMethod == null) {
             callSite.setTarget(genericImplementation);
             specializedImplementation = null;
@@ -404,6 +415,7 @@ public class FunctionImplementation implements Callable {
                     makeSpecializationGuard(genericImplementation, specializedMethod, result.specializedMethodType()));
             specializedImplementation = specializedMethod;
         }
+        state = State.COMPILED;
     }
 
     private MethodHandle makeSpecializationGuard(MethodHandle generic, MethodHandle specialized, MethodType type) {

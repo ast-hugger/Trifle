@@ -41,7 +41,7 @@ public class TimeFib {
                     bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
                         bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                             add(t1, t2))))));
-        return toplevel.getClosure("fibonacci");
+        return toplevel.getAsClosure("fibonacci");
     }
 
 //    private static Closure altFib() {

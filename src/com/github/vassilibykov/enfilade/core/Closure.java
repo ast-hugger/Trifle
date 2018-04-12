@@ -80,17 +80,23 @@ public class Closure {
                 // The type of specializedForm includes the leading parameters for copied values
                 var cleanType = specializedForm.type().dropParameterTypes(0, copiedValues.length);
                 if (cleanType.equals(requiredType)) {
-                    var specializedInvoker = MethodHandles.insertArguments(specializedForm, 0, copiedValues);
-                    this.specializedInvoker = specializedInvoker.asType(requiredType);
-                    specializedInvokerType = requiredType;
-                    return this.specializedInvoker;
+                    try {
+                        var specializedInvoker = MethodHandles.insertArguments(specializedForm, 0, copiedValues);
+                        this.specializedInvoker = specializedInvoker.asType(requiredType);
+                        specializedInvokerType = requiredType;
+                        return this.specializedInvoker;
+                    } catch (ClassCastException e) {
+                        // A copied value is incompatible with a specialized parameter for that value;
+                        // can't use the specialized form after all--fall through to below.
+                    }
                 }
             }
         }
         var genericForm = implementation.genericImplementation;
         if (genericForm != null) {
             var genericInvoker = MethodHandles.insertArguments(genericForm, 0, copiedValues);
-            specializedInvoker = genericInvoker.asType(requiredType);
+            specializedInvoker = JvmType.guardReturnValue(requiredType.returnType(), genericInvoker);
+            specializedInvoker = specializedInvoker.asType(requiredType);
             specializedInvokerType = requiredType;
             return specializedInvoker;
         }
@@ -113,6 +119,8 @@ public class Closure {
     public Object invoke() {
         try {
             return genericInvoker.invokeExact();
+        } catch (SquarePegException e) {
+            return e.value;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -121,6 +129,8 @@ public class Closure {
     public Object invoke(Object arg) {
         try {
             return genericInvoker.invokeExact(arg);
+        } catch (SquarePegException e) {
+            return e.value;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -129,6 +139,8 @@ public class Closure {
     public Object invoke(Object arg1, Object arg2) {
         try {
             return genericInvoker.invokeExact(arg1, arg2);
+        } catch (SquarePegException e) {
+            return e.value;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }

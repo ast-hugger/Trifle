@@ -52,33 +52,45 @@ public final class ClosureInvokeDynamic {
         var closure = (Closure) closureArg;
         MethodHandle target;
         if (closure.implementation.isCompiled()) {
+            /* If the implementation function has not been compiled yet, it doesn't
+               make sense to install an inline cache because we can do better later. */
             target = closure.optimalCallSiteInvoker(thisSite.type());
             if (!thisSite.isMegamorphic() && !closure.hasCopiedValues()) {
                 thisSite.addCacheEntry(
                     IS_SAME_FUNCTION.bindTo(closure.implementation),
                     MethodHandles.dropArguments(target, 0, Object.class));
             }
-            target = target.asType(target.type().generic()); // so we can use it in the switch below
-        } else {
-            /* If the implementation function has not been compiled yet, it doesn't
-               make sense to install inline cache because we can do better later. */
-            target = closure.genericInvoker();
+            // but don't use the cached invoker it in the switch below; there we need a generic signature
         }
+        target = closure.genericInvoker();
+        Object result;
         switch (args.length) {
             case 0:
-                return target.invokeExact();
+                result = target.invokeExact();
+                break;
             case 1:
-                return target.invokeExact(args[0]);
+                result = target.invokeExact(args[0]);
+                break;
             case 2:
-                return target.invokeExact(args[0], args[1]);
+                result = target.invokeExact(args[0], args[1]);
+                break;
             case 3:
-                return target.invokeExact(args[0], args[1], args[2]);
+                result = target.invokeExact(args[0], args[1], args[2]);
+                break;
             case 4:
-                return target.invokeExact(args[0], args[1], args[2], args[3]);
+                result = target.invokeExact(args[0], args[1], args[2], args[3]);
+                break;
             default:
-                return target.invokeWithArguments(args);
+                result = target.invokeWithArguments(args);
+        }
+        if (JvmType.isCompatibleValue(thisSite.type().returnType(), result)) {
+            return result;
+        } else {
+            throw SquarePegException.with(result);
         }
     }
+
+
 
     public static boolean isSameFunction(FunctionImplementation expected, Object closureArg) {
         return closureArg instanceof Closure && ((Closure) closureArg).implementation == expected;

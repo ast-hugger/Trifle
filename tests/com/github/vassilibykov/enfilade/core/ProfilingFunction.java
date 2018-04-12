@@ -16,8 +16,10 @@ import static org.junit.Assert.assertTrue;
 
 public class ProfilingFunction {
     private Closure function;
+    private FunctionImplementation callee;
     private FunctionProfile calleeProfile;
     private ValueProfile calleeParamProfile;
+    private FunctionImplementation caller;
     private FunctionProfile callerProfile;
     private ValueProfile callerParamProfile;
 
@@ -29,9 +31,9 @@ public class ProfilingFunction {
             block(
                 call(topLevel.at("callee"), arg),
                 call(topLevel.at("callee"), const_("hello")))));
-        function = topLevel.getClosure("caller");
-        var callee = topLevel.getClosure("callee").implementation;
-        var caller = topLevel.getClosure("caller").implementation;
+        function = topLevel.getAsClosure("caller");
+        callee = topLevel.getAsClosure("callee").implementation;
+        caller = topLevel.getAsClosure("caller").implementation;
         calleeProfile = callee.profile;
         calleeParamProfile = callee.declaredParameters().get(0).profile;
         callerProfile = caller.profile;
@@ -52,23 +54,27 @@ public class ProfilingFunction {
     public void callWithInt() {
         function.invoke(3);
         function.invoke(4);
+        caller.forceCompile();
+        callee.forceCompile();
         assertEquals(2, callerProfile.invocationCount());
         assertEquals(4, calleeProfile.invocationCount());
         assertEquals(2, callerParamProfile.intCases());
         assertEquals(2, calleeParamProfile.intCases());
         assertEquals(2, calleeParamProfile.referenceCases());
-        assertTrue(callerProfile.canBeSpecialized());
-        assertFalse(calleeProfile.canBeSpecialized());
+        assertTrue(caller.canBeSpecialized());
+        assertFalse(callee.canBeSpecialized());
     }
 
     @Test
     public void callWithReference() {
         function.invoke("hello");
         function.invoke("bye");
+        caller.forceCompile();
+        callee.forceCompile();
         assertEquals(0, callerParamProfile.intCases());
         assertEquals(2, callerParamProfile.referenceCases());
         assertEquals(4, calleeParamProfile.referenceCases());
-        assertFalse(callerProfile.canBeSpecialized());
-        assertFalse(calleeProfile.canBeSpecialized());
+        assertFalse(caller.canBeSpecialized());
+        assertFalse(callee.canBeSpecialized());
     }
 }

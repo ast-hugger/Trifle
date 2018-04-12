@@ -8,14 +8,8 @@ import org.junit.Test;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.block;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.direct;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -33,7 +27,7 @@ public class ProfilingCall {
             lambda(arg -> arg));
         topLevel.define("caller",
             lambda(arg -> call(topLevel.at("callee"), arg))); // the return value of the call is the arg
-        function = topLevel.getClosure("caller");
+        function = topLevel.getAsClosure("caller");
         var call = (CallNode) function.implementation.body();
         profile = call.profile;
     }

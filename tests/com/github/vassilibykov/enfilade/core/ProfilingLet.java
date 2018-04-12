@@ -30,7 +30,7 @@ public class ProfilingLet {
                     if_(shouldSet,
                         set(t, setValue),
                         block()))));
-        function = topLevel.getClosure("test");
+        function = topLevel.getAsClosure("test");
         var let = (LetNode) function.implementation.body();
         var tDef = let.variable();
         profile = tDef.profile;

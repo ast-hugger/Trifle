@@ -12,8 +12,8 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
  * processing a {@code SetVariableNode} expression, the entire expression tree needs to
  * be revisited as this may have changed the type of other expressions.
  *
- <p>An expression's inferred type, not to be confused with <em>observed
- * type</em> as recorded by the profiling interpreter, indicates what we know
+ * <p>An expression's inferred type (not to be confused with <em>observed
+ * type</em> as recorded by the profiling interpreter) indicates what we know
  * about the value of the expression from static analysis of the expression
  * itself. For example, the inferred type of {@code (const 1)} is {@code int}
  * and the inferred type of {@code (const "foo")} is {@code reference}. Here, as

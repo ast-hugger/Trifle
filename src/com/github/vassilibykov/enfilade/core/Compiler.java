@@ -203,7 +203,7 @@ public class Compiler {
     }
 
     private void generateSpecializedMethodFor(FunctionImplementation function, FunctionResult functionResult) {
-        if (function.profile.canBeSpecialized()) {
+        if (function.canBeSpecialized()) {
             generateSpecializedMethod(function, functionResult);
         }
     }

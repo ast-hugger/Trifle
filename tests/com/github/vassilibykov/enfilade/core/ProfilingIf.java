@@ -6,8 +6,6 @@ import com.github.vassilibykov.enfilade.expression.TopLevel;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.github.vassilibykov.enfilade.core.JvmType.INT;
-import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
@@ -31,7 +29,7 @@ public class ProfilingIf {
                 if_(arg,
                     const_("hello"),
                     const_("bye"))));
-        function = topLevel.getClosure("test");
+        function = topLevel.getAsClosure("test");
         ifNode = (IfNode) function.implementation.body();
     }
 

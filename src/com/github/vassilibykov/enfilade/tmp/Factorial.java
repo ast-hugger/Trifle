@@ -12,7 +12,6 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.con
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.direct;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
 
@@ -41,6 +40,6 @@ public class Factorial {
                     const_(1),
                     bind(call(direct(factorial), sub(n, const_(1))), t ->
                         call(direct(Multiply.INSTANCE), t, n)))));
-        return toplevel.getClosure("factorial");
+        return toplevel.getAsClosure("factorial");
     }
 }

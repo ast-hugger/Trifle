@@ -22,7 +22,7 @@ class VariableDefinition extends AbstractVariable {
     private boolean isMutable = false;
     /*internal*/ final ValueProfile profile = new ValueProfile();
     private ExpressionType inferredType = KNOWN_VOID;
-    private JvmType specializedType = JvmType.VOID;
+    private JvmType specializedType;
 
     VariableDefinition(@NotNull Variable definition, FunctionImplementation hostFunction) {
         super(hostFunction);

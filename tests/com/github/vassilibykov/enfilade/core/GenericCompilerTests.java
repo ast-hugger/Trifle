@@ -24,7 +24,7 @@ public class GenericCompilerTests extends LanguageFeaturesTest {
     @Override
     protected Object eval(Expression expression) {
         topLevel.define("test", lambda(() -> expression));
-        var function = topLevel.getClosure("test");
+        var function = topLevel.getAsClosure("test");
         function.implementation.forceCompile();
         return function.invoke();
     }
@@ -32,7 +32,7 @@ public class GenericCompilerTests extends LanguageFeaturesTest {
     @Override
     protected Object invoke(Lambda definition, Object... args) {
         topLevel.define("test", definition);
-        var function = topLevel.getClosure("test");
+        var function = topLevel.getAsClosure("test");
         function.implementation.forceCompile();
         return function.invoke(args);
     }

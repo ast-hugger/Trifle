@@ -75,7 +75,7 @@ public class InterpreterTests extends LanguageFeaturesTest {
                         bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
                             bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                                 add(t1, t2)))))));
-        return toplevel.getClosure("fibonacci");
+        return toplevel.getAsClosure("fibonacci");
     }
 
     /**
@@ -96,6 +96,6 @@ public class InterpreterTests extends LanguageFeaturesTest {
                                 bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                                     add(t1, t2))))),
                     t0 -> t0)));
-        return toplevel.getClosure("fibonacci");
+        return toplevel.getAsClosure("fibonacci");
     }
 }

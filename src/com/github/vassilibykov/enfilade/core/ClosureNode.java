@@ -12,13 +12,6 @@ import java.util.List;
  * A node evaluating which creates a closure.
  */
 class ClosureNode extends EvaluatorNode {
-    @TestOnly
-    static ClosureNode withNoCopiedValues(FunctionImplementation function) {
-        var node = new ClosureNode(function);
-        node.copiedOuterVariables = List.of();
-        node.copiedVariableIndices = new int[0];
-        return node;
-    }
 
     /**
      * The function implementing this closure.
@@ -46,7 +39,7 @@ class ClosureNode extends EvaluatorNode {
         return function.definition();
     }
 
-    public FunctionImplementation function() {
+    FunctionImplementation function() {
         return function;
     }
 

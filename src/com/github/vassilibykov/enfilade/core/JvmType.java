@@ -2,6 +2,10 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+
 /**
  * A broad category of types as seen by the JVM, i.e. reference types vs.
  * primitive {@code int}s, vs other primitive types.
@@ -28,12 +32,12 @@ public enum JvmType {
         }
     }
 
-    public static boolean isCompatibleValue(Class<?> primitiveClass, Object value) {
+    public static boolean isCompatibleValue(Class<?> typeToken, Object value) {
         /* This method has nothing to do with JvmType directly, but its logic depends on
            the set of primitive types enumerated by JvmType and it needs to be updated if
            those ever change. So, it's better to keep it here. */
-        if (primitiveClass == int.class && !(value instanceof Integer)) return false;
-        if (primitiveClass == boolean.class && !(value instanceof Boolean)) return false;
+        if (typeToken == int.class && !(value instanceof Integer)) return false;
+        if (typeToken == boolean.class && !(value instanceof Boolean)) return false;
         return true;
     }
 
@@ -60,6 +64,58 @@ public enum JvmType {
             throw new AssertionError("a VOID type is not expected here");
         }
     }
+
+    public static MethodHandle adaptToCallSite(MethodType callSiteType, MethodHandle original) {
+        if (original.type().equals(callSiteType)) return original;
+        if (!original.type().returnType().isPrimitive() && callSiteType.returnType().isPrimitive()) {
+            var genericReturn = callSiteType.changeReturnType(Object.class);
+            var invoker = original.asType(genericReturn);
+            MethodHandle filtered = guardReturnValue(callSiteType.returnType(), invoker);
+            return filtered.asType(callSiteType);
+        } else {
+            return original.asType(callSiteType);
+        }
+    }
+
+    /**
+     * Wrap a method handle so that its return value is checked for definite
+     * ability to be converted to the expected type, throwing an SPE if the
+     * value is incompatible.
+     */
+    public static MethodHandle guardReturnValue(Class<?> expectedReturnType, MethodHandle producer) {
+        if (expectedReturnType.isPrimitive()) {
+            return MethodHandles.filterReturnValue(
+                producer, NARROW_RETURN_VALUE.bindTo(primitiveToWrapper(expectedReturnType)));
+        } else {
+            return producer;
+        }
+    }
+
+    private static final MethodHandle NARROW_RETURN_VALUE;
+    static {
+        try {
+            NARROW_RETURN_VALUE = MethodHandles.lookup()
+                .findStatic(
+                    JvmType.class,
+                    "narrowReturnValue",
+                    MethodType.methodType(Object.class, Class.class, Object.class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new AssertionError();
+        }
+    }
+
+    private static Object narrowReturnValue(Class<?> expectedType, Object value) {
+        if (expectedType.isInstance(value)) return value;
+        throw SquarePegException.with(value);
+    }
+
+    private static Class<?> primitiveToWrapper(Class<?> primitiveType) {
+        if (primitiveType == int.class) return Integer.class;
+        if (primitiveType == boolean.class) return Boolean.class;
+        throw new AssertionError("unsupported primitive type");
+    }
+
+
 
     /*
         Instance

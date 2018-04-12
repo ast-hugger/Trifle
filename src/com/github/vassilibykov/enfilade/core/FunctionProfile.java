@@ -35,9 +35,4 @@ class FunctionProfile {
     public void recordResult(Object result) {
         resultProfile.recordValue(result);
     }
-
-    public boolean canBeSpecialized() {
-        return methodParameters.stream()
-            .anyMatch(some -> some.profile.jvmType() != JvmType.REFERENCE);
-    }
 }

@@ -13,9 +13,7 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.con
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.direct;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
 
 /**
  * Same as {@code TimeFib}, but using unlimited size integers.
@@ -51,6 +49,6 @@ public class TimeBigFib {
                             bind(call(direct(Subtract.INSTANCE), n, const_(2)), n2 ->
                                 bind(call(direct(fibonacci), n2), t2 ->
                                     call(direct(Add.INSTANCE), t1, t2))))))));
-        return toplevel.getClosure("fibonacci");
+        return toplevel.getAsClosure("fibonacci");
     }
 }

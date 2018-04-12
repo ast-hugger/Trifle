@@ -36,7 +36,7 @@ public class TopLevel {
         return FunctionReference.to(get(name));
     }
 
-    public Closure getClosure(String name) { // FIXME for now, should not return closure
+    public Closure getAsClosure(String name) { // FIXME for now, should not return closure
         var top =  topLevelFunctionsByName.get(name);
         return Closure.with(top.implementation());
     }
