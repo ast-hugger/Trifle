@@ -61,7 +61,13 @@ public class ProfilingInterpreter extends Interpreter {
         @Override
         public Object visitIf(IfNode anIf) {
             Object testValue = anIf.condition().accept(this);
-            if ((Boolean) testValue) {
+            boolean test;
+            try {
+                test = (boolean) testValue;
+            } catch (ClassCastException e) {
+                throw RuntimeError.booleanExpected();
+            }
+            if (test) {
                 Object result = anIf.trueBranch().accept(this);
                 // The count must be incremented after the branch. Counts logically track the cases
                 // when a value has been produced by a branch, not when it has been invoked.

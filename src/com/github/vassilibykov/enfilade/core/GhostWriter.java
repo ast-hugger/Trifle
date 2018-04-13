@@ -371,20 +371,20 @@ public class GhostWriter {
     }
 
     public GhostWriter throwBooleanExpected() {
-        invokeStatic(Error.class, "booleanExpected", Error.class);
+        invokeStatic(RuntimeError.class, "booleanExpected", RuntimeError.class);
         asmWriter.visitInsn(ATHROW);
         return this;
     }
 
     public GhostWriter throwError(String message) {
         loadString(message);
-        invokeStatic(Error.class, "message", Error.class, String.class);
+        invokeStatic(RuntimeError.class, "message", RuntimeError.class, String.class);
         asmWriter.visitInsn(ATHROW);
         return this;
     }
 
     public GhostWriter throwIntegerExpected() {
-        invokeStatic(Error.class, "integerExpected", Error.class);
+        invokeStatic(RuntimeError.class, "integerExpected", RuntimeError.class);
         asmWriter.visitInsn(ATHROW);
         return this;
     }

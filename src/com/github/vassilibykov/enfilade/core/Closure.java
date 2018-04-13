@@ -121,6 +121,8 @@ public class Closure {
             return genericInvoker.invokeExact();
         } catch (SquarePegException e) {
             return e.value;
+        } catch (RuntimeError e) {
+            throw e;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -131,6 +133,8 @@ public class Closure {
             return genericInvoker.invokeExact(arg);
         } catch (SquarePegException e) {
             return e.value;
+        } catch (RuntimeError e) {
+            throw e;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -141,6 +145,8 @@ public class Closure {
             return genericInvoker.invokeExact(arg1, arg2);
         } catch (SquarePegException e) {
             return e.value;
+        } catch (RuntimeError e) {
+            throw e;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }

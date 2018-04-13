@@ -9,6 +9,7 @@ import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.JvmType;
 import com.github.vassilibykov.enfilade.core.Primitive2Node;
 import com.github.vassilibykov.enfilade.core.PrimitiveNode;
+import com.github.vassilibykov.enfilade.core.RuntimeError;
 import org.objectweb.asm.Opcodes;
 
 import java.util.Optional;
@@ -26,7 +27,11 @@ public class LessThan extends Primitive2 implements IfAware {
 
     @Override
     public Object apply(Object arg1, Object arg2) {
-        return (Integer) arg1 < (Integer) arg2;
+        try {
+            return (Integer) arg1 < (Integer) arg2;
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 
     @SuppressWarnings("unused") // called by generated code

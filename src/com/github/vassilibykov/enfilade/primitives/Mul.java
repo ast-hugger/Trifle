@@ -6,6 +6,7 @@ import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.JvmType;
+import com.github.vassilibykov.enfilade.core.RuntimeError;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -19,7 +20,11 @@ public class Mul extends Primitive2 {
 
     @Override
     public Object apply(Object arg1, Object arg2) {
-        return (Integer) arg1 * (Integer) arg2;
+        try {
+            return (Integer) arg1 * (Integer) arg2;
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 
     @Override

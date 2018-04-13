@@ -94,7 +94,13 @@ public class Interpreter {
         @Override
         public Object visitIf(IfNode anIf) {
             Object testValue = anIf.condition().accept(this);
-            if ((Boolean) testValue) {
+            boolean test;
+            try {
+                test = (boolean) testValue;
+            } catch (ClassCastException e) {
+                throw RuntimeError.booleanExpected();
+            }
+            if (test) {
                 return anIf.trueBranch().accept(this);
             } else {
                 return anIf.falseBranch().accept(this);

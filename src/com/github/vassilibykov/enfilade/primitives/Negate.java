@@ -6,6 +6,7 @@ import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.JvmType;
+import com.github.vassilibykov.enfilade.core.RuntimeError;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -19,7 +20,11 @@ public class Negate extends Primitive1 {
 
     @Override
     public Object apply(Object arg) {
-        return -((Integer) arg);
+        try {
+            return -((Integer) arg);
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 
     @Override

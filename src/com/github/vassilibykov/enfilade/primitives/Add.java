@@ -6,6 +6,7 @@ import com.github.vassilibykov.enfilade.core.CompilerError;
 import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;
 import com.github.vassilibykov.enfilade.core.JvmType;
+import com.github.vassilibykov.enfilade.core.RuntimeError;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
 import static org.objectweb.asm.Opcodes.IADD;
@@ -19,7 +20,11 @@ public class Add extends Primitive2 {
 
     @Override
     public Object apply(Object arg1, Object arg2) {
-        return (Integer) arg1 + (Integer) arg2;
+        try {
+            return (Integer) arg1 + (Integer) arg2;
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 
     @Override
@@ -69,16 +74,28 @@ public class Add extends Primitive2 {
 
     @SuppressWarnings("unused") // called by generated code
     public static int add(Object arg1, Object arg2) {
-        return (Integer) arg1 + (Integer) arg2;
+        try {
+            return (Integer) arg1 + (Integer) arg2;
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 
     @SuppressWarnings("unused") // called by generated code
     public static int add(Object arg1, int arg2) {
-        return (Integer) arg1 + arg2;
+        try {
+            return (Integer) arg1 + arg2;
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 
     @SuppressWarnings("unused") // called by generated code
     public static int add(int arg1, Object arg2) {
-        return arg1 + (Integer) arg2;
+        try {
+            return arg1 + (Integer) arg2;
+        } catch (ClassCastException e) {
+            throw RuntimeError.integerExpected();
+        }
     }
 }
