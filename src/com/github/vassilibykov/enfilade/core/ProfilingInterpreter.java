@@ -118,13 +118,14 @@ public class ProfilingInterpreter extends Interpreter {
     public Object interpret(FunctionImplementation implementation) {
         var frame = new Object[implementation.frameSize()];
         implementation.profile.recordInvocation(frame);
+        Object result;
         try {
-            Object result = implementation.body().accept(new ProfilingEvaluator(frame));
-            implementation.profile.recordResult(result);
-            return result;
+            result = implementation.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
-            return e.value;
+            result = e.value;
         }
+        implementation.profile.recordResult(result);
+        return result;
     }
 
     @Override
@@ -132,13 +133,14 @@ public class ProfilingInterpreter extends Interpreter {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg);
         implFunction.profile.recordInvocation(frame);
+        Object result;
         try {
-            Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
-            implFunction.profile.recordResult(result);
-            return result;
+            result = implFunction.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
-            return e.value;
+            result = e.value;
         }
+        implFunction.profile.recordResult(result);
+        return result;
     }
 
     @Override
@@ -147,13 +149,14 @@ public class ProfilingInterpreter extends Interpreter {
         implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
         implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
         implFunction.profile.recordInvocation(frame);
+        Object result;
         try {
-            Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
-            implFunction.profile.recordResult(result);
-            return result;
+            result = implFunction.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
-            return e.value;
+            result = e.value;
         }
+        implFunction.profile.recordResult(result);
+        return result;
     }
 
     @Override
@@ -163,12 +166,13 @@ public class ProfilingInterpreter extends Interpreter {
         implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
         implFunction.allParameters()[2].setupArgumentIn(frame, arg3);
         implFunction.profile.recordInvocation(frame);
+        Object result;
         try {
-            Object result = implFunction.body().accept(new ProfilingEvaluator(frame));
-            implFunction.profile.recordResult(result);
-            return result;
+            result = implFunction.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
-            return e.value;
+            result = e.value;
         }
+        implFunction.profile.recordResult(result);
+        return result;
     }
 }

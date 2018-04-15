@@ -268,10 +268,10 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitReturn(ReturnNode ret) {
-        var valueType = ret.accept(this);
+        var valueType = ret.value().accept(this);
         writer.adaptValue(valueType, REFERENCE);
         setRecoveryLabelHere(ret);
-        writer.ret(valueType);
+        writer.ret(REFERENCE);
         return VOID;
     }
 
