@@ -300,18 +300,12 @@ public class GhostWriter {
         return this;
     }
 
-    public GhostWriter ret(JvmType category) {
-        // FIXME: 3/23/18 change to pattern matching style
-        switch (category) {
-            case REFERENCE:
-                asmWriter.visitInsn(ARETURN);
-                break;
-            case INT:
-                asmWriter.visitInsn(IRETURN);
-                break;
-            default:
-                throw new IllegalArgumentException("unrecognized type category");
-        }
+    public GhostWriter ret(JvmType type) {
+        type.match(new JvmType.VoidMatcher() {
+            public void ifReference() { asmWriter.visitInsn(ARETURN); }
+            public void ifInt() { asmWriter.visitInsn(IRETURN); }
+            public void ifBoolean() { asmWriter.visitInsn(IRETURN); }
+        });
         return this;
     }
 

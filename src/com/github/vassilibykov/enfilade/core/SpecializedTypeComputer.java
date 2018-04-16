@@ -225,18 +225,10 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
         return setSpecializedType(varRef, observed);
     }
 
-    /**
-     * The observed value of the new value expression does not need to be
-     * iteratively unified with the current observed type of the variable the
-     * way the inferencer does it in {@link
-     * ExpressionTypeInferencer#visitSetVar(SetVariableNode)}. The observed type of
-     * a variable by definition already includes everything the value
-     * expression has been known to produce.
-     */
     @Override
     public JvmType visitSetVar(SetVariableNode set) {
-        set.value().accept(this);
-        return setSpecializedType(set, set.variable().specializedType());
+        var valueType = set.value().accept(this);
+        return setSpecializedType(set, valueType);
     }
 
     @Override
