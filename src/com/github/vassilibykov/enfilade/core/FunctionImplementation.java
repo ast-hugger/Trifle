@@ -14,7 +14,6 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.MutableCallSite;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -157,7 +156,6 @@ public class FunctionImplementation implements Callable {
     private final int arity;
     private EvaluatorNode body;
     private int frameSize = -1;
-    private List<RecoverySite> recoverySites;
     /*internal*/ FunctionProfile profile;
     /*internal*/ JvmType specializedReturnType;
     /**
@@ -203,12 +201,11 @@ public class FunctionImplementation implements Callable {
     }
 
     /** RESTRICTED. Intended for {@link FunctionAnalyzer.Indexer}. */
-    void finishInitialization(int frameSize, List<RecoverySite> recoverySites) {
+    void finishInitialization(int frameSize) {
         this.callSite = new MutableCallSite(profilingInterpreterInvoker());
 //        this.callSite = new MutableCallSite(simpleInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
         this.frameSize = frameSize;
-        this.recoverySites = Collections.unmodifiableList(recoverySites);
         this.state = State.PROFILING;
     }
 
@@ -277,10 +274,6 @@ public class FunctionImplementation implements Callable {
 
     public boolean isTopLevel() {
         return topImplementation == this;
-    }
-
-    public List<RecoverySite> recoverySites() {
-        return recoverySites;
     }
 
     public boolean isCompiled() {

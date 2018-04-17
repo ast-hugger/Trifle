@@ -3,7 +3,6 @@
 package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.TopLevel;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

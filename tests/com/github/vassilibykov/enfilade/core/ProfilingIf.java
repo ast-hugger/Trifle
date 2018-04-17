@@ -6,12 +6,10 @@ import com.github.vassilibykov.enfilade.expression.TopLevel;
 import org.junit.Before;
 import org.junit.Test;
 
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test {@link IfNode}'s profiling, which tracks not the types but branch

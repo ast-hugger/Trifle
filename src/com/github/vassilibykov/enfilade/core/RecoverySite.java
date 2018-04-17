@@ -2,11 +2,13 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import org.objectweb.asm.Label;
+
 /**
  * Implemented by {@link EvaluatorNode}s which may require switching execution
  * to recovery mode when their compiled representation is running.
  */
 interface RecoverySite {
-    int recoverySiteIndex();
-    void setRecoverySiteIndex(int recoverySiteIndex);
+    Label recoverySiteLabel();
+    void setRecoverySiteLabel(Label recoverySiteLabel);
 }

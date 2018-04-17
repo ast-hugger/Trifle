@@ -2,13 +2,9 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
@@ -16,52 +12,19 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
- * A code generator producing code for the recovery method of a function.
+ * A code generator producing recovery code of a function implementation.
  */
-class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
-    private final static int VALUE_ARG = 0;
-    private final static int RECOVERY_ADDRESS_ARG = 1;
-    private final static int FRAME_ARG = 2;
-    private final static int LOCAL_VAR_BASE = 3;
-
+class RecoveryCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     private final FunctionImplementation function;
     protected final GhostWriter writer;
-    private Map<RecoverySite, Label> recoverySiteLabels = new HashMap<>();
 
-    RecoveryMethodGenerator(FunctionImplementation function, MethodVisitor visitor) {
+    RecoveryCodeGenerator(FunctionImplementation function, GhostWriter writer) {
         this.function = function;
-        this.writer = new GhostWriter(visitor);
+        this.writer = writer;
     }
 
     JvmType generate() {
-        generatePrologue(function);
         return function.body().accept(this);
-    }
-
-    private void generatePrologue(FunctionImplementation function) {
-        writer.loadLocal(REFERENCE, FRAME_ARG);
-        for (int i = 0; i < function.frameSize(); i++) {
-            writer
-                .dup()
-                .loadInt(i);
-            writer.asm().visitInsn(Opcodes.AALOAD);
-            writer.storeLocal(REFERENCE, i + LOCAL_VAR_BASE);
-        }
-        writer
-            .pop()
-            .loadLocal(REFERENCE, VALUE_ARG)
-            .loadLocal(INT, RECOVERY_ADDRESS_ARG);
-        var recoverySites = function.recoverySites();
-        var labels = new Label[recoverySites.size()];
-        for (int i = 0; i < recoverySites.size(); i++) {
-            RecoverySite site = recoverySites.get(i);
-            var label = new Label();
-            recoverySiteLabels.put(site, label);
-            labels[i] = label;
-        }
-        writer.withLabelAtEnd(methodStart ->
-            writer.asm().visitTableSwitchInsn(0, recoverySites.size() - 1, methodStart, labels));
-        writer.pop();
     }
 
     @Override
@@ -111,7 +74,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
             writer
                 .dup()
                 .loadInt(i)
-                .loadLocal(REFERENCE, indicesToCopy[i] + LOCAL_VAR_BASE);
+                .loadLocal(REFERENCE, indicesToCopy[i]);
             writer.asm().visitInsn(Opcodes.AASTORE);
         }
         writer
@@ -182,7 +145,7 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitGetVar(GetVariableNode getVar) {
         var variable = getVar.variable();
-        writer.loadLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
+        writer.loadLocal(REFERENCE, variable.index());
         if (variable.isBoxed()) writer.extractBoxedVariable();
         return REFERENCE;
     }
@@ -211,9 +174,9 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         writer.adaptValue(initType, REFERENCE);
         setRecoveryLabelHere(let);
         if (variable.isBoxed()) {
-            writer.initBoxedReference(variable.index() + LOCAL_VAR_BASE);
+            writer.initBoxedReference(variable.index());
         } else {
-            writer.storeLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
+            writer.storeLocal(REFERENCE, variable.index());
         }
         return let.body().accept(this);
     }
@@ -224,15 +187,15 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         if (variable.isBoxed()) {
             writer
                 .loadNull()
-                .initBoxedReference(variable.index() + LOCAL_VAR_BASE);
+                .initBoxedReference(variable.index());
         }
         var initType = letrec.initializer().accept(this);
         writer.adaptValue(initType, REFERENCE);
         setRecoveryLabelHere(letrec);
         if (variable.isBoxed()) {
-            writer.storeBoxedReference(variable.index() + LOCAL_VAR_BASE);
+            writer.storeBoxedReference(variable.index());
         } else {
-            writer.storeLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
+            writer.storeLocal(REFERENCE, variable.index());
         }
         return letrec.body().accept(this);
     }
@@ -283,9 +246,9 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         setRecoveryLabelHere(setVar);
         writer.dup();
         if (variable.isBoxed()) {
-            writer.storeBoxedReference(variable.index() + LOCAL_VAR_BASE);
+            writer.storeBoxedReference(variable.index());
         } else {
-            writer.storeLocal(REFERENCE, variable.index() + LOCAL_VAR_BASE);
+            writer.storeLocal(REFERENCE, variable.index());
         }
         return REFERENCE;
     }
@@ -300,6 +263,6 @@ class RecoveryMethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     private void setRecoveryLabelHere(RecoverySite site) {
-        writer.asm().visitLabel(recoverySiteLabels.get(site));
+        writer.asm().visitLabel(site.recoverySiteLabel());
     }
 }

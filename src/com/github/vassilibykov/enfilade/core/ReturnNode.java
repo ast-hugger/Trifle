@@ -3,13 +3,14 @@
 package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
+import org.objectweb.asm.Label;
 
 /**
  * An explicit return (a bypass in the normal chain of continuations).
  */
 class ReturnNode extends EvaluatorNode implements RecoverySite {
     @NotNull private final EvaluatorNode value;
-    private int returnInstructionAddress;
+    private Label recoverySiteLabel;
 
     ReturnNode(@NotNull EvaluatorNode value) {
         this.value = value;
@@ -20,13 +21,12 @@ class ReturnNode extends EvaluatorNode implements RecoverySite {
     }
 
     @Override
-    public int recoverySiteIndex() {
-        return returnInstructionAddress;
+    public Label recoverySiteLabel() {
+        return recoverySiteLabel;
     }
 
-    @Override
-    public void setRecoverySiteIndex(int recoverySiteIndex) {
-        returnInstructionAddress = recoverySiteIndex;
+    public void setRecoverySiteLabel(Label recoverySiteLabel) {
+        this.recoverySiteLabel = recoverySiteLabel;
     }
 
     @Override

@@ -4,10 +4,8 @@ package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -179,7 +177,6 @@ class FunctionAnalyzer {
         private final FunctionImplementation thisFunction;
         private int nextIndex;
         private int frameSize;
-        private List<RecoverySite> recoverySites = new ArrayList<>();
 
         private Indexer(FunctionImplementation function) {
             thisFunction = function;
@@ -194,7 +191,7 @@ class FunctionAnalyzer {
 
         public void apply() {
             thisFunction.body().accept(this);
-            thisFunction.finishInitialization(frameSize, recoverySites);
+            thisFunction.finishInitialization(frameSize);
         }
 
         @Override
@@ -212,7 +209,6 @@ class FunctionAnalyzer {
 
         @Override
         public Void visitLet(LetNode let) {
-            addRecoverySite(let);
             let.initializer().accept(this);
             let.variable().index = allocateLocalIndex();
             let.body().accept(this);
@@ -222,29 +218,11 @@ class FunctionAnalyzer {
 
         @Override
         public Void visitLetrec(LetrecNode letrec) {
-            addRecoverySite(letrec);
             letrec.variable().index = allocateLocalIndex();
             letrec.initializer().accept(this);
             letrec.body().accept(this);
             releaseLocalIndex();
             return null;
-        }
-
-        @Override
-        public Void visitReturn(ReturnNode ret) {
-            addRecoverySite(ret);
-            return super.visitReturn(ret);
-        }
-
-        @Override
-        public Void visitSetVar(SetVariableNode setVar) {
-            addRecoverySite(setVar);
-            return super.visitSetVar(setVar);
-        }
-
-        private void addRecoverySite(RecoverySite site) {
-            site.setRecoverySiteIndex(recoverySites.size());
-            recoverySites.add(site);
         }
 
         private int allocateLocalIndex() {

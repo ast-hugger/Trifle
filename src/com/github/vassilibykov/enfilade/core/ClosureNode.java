@@ -4,7 +4,6 @@ package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.TestOnly;
 
 import java.util.List;
 

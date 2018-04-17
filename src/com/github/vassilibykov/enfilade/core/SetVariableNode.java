@@ -3,6 +3,7 @@
 package com.github.vassilibykov.enfilade.core;
 
 import org.jetbrains.annotations.NotNull;
+import org.objectweb.asm.Label;
 
 /**
  * An expression mutating a variable to have a new value. The new value, which
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 class SetVariableNode extends EvaluatorNode implements RecoverySite {
     @NotNull private AbstractVariable variable;
     @NotNull private final EvaluatorNode value;
-    private int recoverySiteIndex;
+    private Label recoverySiteLabel;
 
     SetVariableNode(@NotNull VariableDefinition variable, @NotNull EvaluatorNode value) {
         this.variable = variable;
@@ -31,13 +32,13 @@ class SetVariableNode extends EvaluatorNode implements RecoverySite {
     }
 
     @Override
-    public int recoverySiteIndex() {
-        return recoverySiteIndex;
+    public Label recoverySiteLabel() {
+        return recoverySiteLabel;
     }
 
     @Override
-    public void setRecoverySiteIndex(int recoverySiteIndex) {
-        this.recoverySiteIndex = recoverySiteIndex;
+    public void setRecoverySiteLabel(Label recoverySiteLabel) {
+        this.recoverySiteLabel = recoverySiteLabel;
     }
 
     @Override

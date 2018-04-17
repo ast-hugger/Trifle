@@ -10,6 +10,7 @@ import org.objectweb.asm.Opcodes;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -18,26 +19,30 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 /**
  * Generates the "main" executable representation of a function.
  *
- * @see RecoveryMethodGenerator
+ * @see RecoveryCodeGenerator
  */
-class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
-
-    private static final MethodType RECOVERY_METHOD_CALL_SITE_TYPE = MethodType.methodType(
-        Object.class, SquarePegException.class, int.class, Object[].class);
+class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     /**
      * Captures the information about an SPE handler that needs to be generated
      * once we are done with the method proper.
      */
     private static class SquarePegHandler {
+        /**
+         * The label to be positioned at the entry into the handler code.
+         */
         private final Label handlerStart;
+        /**
+         * Local variables which are live upon firing the handler. The list does
+         * NOT include any parameters, since they are by definition always live.
+         */
         private final List<AbstractVariable> liveLocals;
-        private final int recoverySiteId;
+        private final Label recoverySiteLabel;
 
-        private SquarePegHandler(Label handlerStart, List<AbstractVariable> liveLocals, int recoverySiteId) {
+        private SquarePegHandler(Label handlerStart, List<AbstractVariable> liveLocals) {
             this.handlerStart = handlerStart;
             this.liveLocals = liveLocals;
-            this.recoverySiteId = recoverySiteId;
+            this.recoverySiteLabel = new Label();
         }
     }
 
@@ -50,7 +55,7 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     private final List<AbstractVariable> liveLocals = new ArrayList<>();
     private final List<SquarePegHandler> squarePegHandlers = new ArrayList<>();
 
-    MethodGenerator(FunctionImplementation function, MethodVisitor writer) {
+    MethodCodeGenerator(FunctionImplementation function, MethodVisitor writer) {
         this.function = function;
         this.writer = new GhostWriter(writer);
     }
@@ -65,15 +70,16 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         bridgeValue(expressionType, function.specializedReturnType);
         writer.ret(function.specializedReturnType);
         if (!squarePegHandlers.isEmpty()) {
-            Label epilogue = new Label();
-            for (int i = 0; i < squarePegHandlers.size(); i++) {
-                boolean isLastHandler = i == squarePegHandlers.size() - 1;
-                generateSquarePegHandler(squarePegHandlers.get(i), isLastHandler, epilogue);
-            }
-            generateEpilogue(epilogue);
+            generateRecoveryHandlers();
+            generateRecoveryCode();
         }
     }
 
+    /**
+     * For any function parameter which is boxed, replace the value passed in
+     * with a box containing that value. This only concerns declared parameters;
+     * any copied outer context values have already been boxed by the caller.
+     */
     private void generatePrologue() {
         for (var each : function.declaredParameters()) {
             if (each.isBoxed()) {
@@ -86,6 +92,17 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         }
     }
 
+    private void generateRecoveryHandlers() {
+        squarePegHandlers.forEach(this::generateSquarePegHandler);
+    }
+
+    private void generateRecoveryCode() {
+        var generator = new RecoveryCodeGenerator(function, writer);
+        var resultType = generator.generate();
+        bridgeValue(resultType, function.specializedReturnType);
+        writer.ret(function.specializedReturnType);
+    }
+
     /*
         An overview of how values produced by visitor methods are handled.
 
@@ -93,8 +110,8 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         doesn't do they say it should, or does something they say it doesn't
         have to, the method is probably wrong.
 
-        An visitor method always returns the JvmType its generated code left on
-        the stack.
+        A visitor method always returns the JvmType left on the stack by the
+        code the method generated.
 
         A visitor is free to generate a value of any type it wants; it is the
         visitor caller's (the parent expression visitor's) responsibility to
@@ -409,9 +426,9 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
      * the continuation will successfully receive the value.
      *
      * <p>If the from/to pair of types is such that a value of 'from' cannot in
-     * the general case be converted to a value of 'to', for example {@code
-     * reference -> int}, the generated code will throw an exception to complete
-     * the evaluation in emergency mode.
+     * the be converted to a value of 'to', for example {@code reference -> int}
+     * when the reference is not to an {@code Integer}, the generated code will
+     * throw an exception to complete the evaluation in recovery mode.
      *
      * <p>If the 'to' type is VOID, that means the value will be discarded by
      * the continuation, so it doesn't matter what it is.
@@ -466,8 +483,8 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
         Label handlerStart = new Label();
         SquarePegHandler handler = new SquarePegHandler(
             handlerStart,
-            new ArrayList<>(liveLocals),
-            requestor.recoverySiteIndex());
+            new ArrayList<>(liveLocals));
+        requestor.setRecoverySiteLabel(handler.recoverySiteLabel);
         squarePegHandlers.add(handler);
         writer.withLabelsAround((begin, end) -> {
             generate.run();
@@ -476,58 +493,26 @@ class MethodGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     /**
-     * Generate code that loads onto the stack the state to be passed to the recovery
-     * method. Note that the stack already contains an exception with the value to
-     * recover. Once the handler and the epilogue has ran and are ready to call the
-     * recovery method, the stack contains (bottom to top):
-     * <ul>
-     *     <li>SquarePegException exception
-     *     <li>int recoverySiteId
-     *     <li>Object[] frameReplica
-     *     <li>int functionID
-     * </ul>
+     * Generate the code of an exception handler for recovering from an SPE. The
+     * handler should unwrap the SPE currently on the stack and unspecialize any
+     * specialized live locals, then jump to the continuation location in the
+     * generic code. The unwrapped value of the SPE should be the only value on
+     * the stack when jumping.
      */
-    private void generateSquarePegHandler(SquarePegHandler handler, boolean isLastHandler, Label epilogueStart) {
-        // TODO: 3/23/18 an optimization opportunity
-        // Each handler is currently loading the entire set of its live locals, as
-        // generated by generateFrameReplicator(). These sets often have common subsets.
-        // For example, each of them includes the function arguments. A smarter approach
-        // would be to detect these commonalities and factor them out similarly to how the
-        // function epilogue is factored out.
+    private void generateSquarePegHandler(SquarePegHandler handler) {
         writer.asm().visitLabel(handler.handlerStart);
         // stack: SquarePegException
-        writer.loadInt(handler.recoverySiteId);
-        generateFrameReplicator(handler);
-        // stack: SPE, int, Object[]
-        if (!isLastHandler) writer.jump(epilogueStart);
-    }
-
-    /**
-     * Generate a code fragment creating an object array of size equal to the
-     * function's locals count and populating it with the values of currently
-     * live local variables. The array is left on the stack.
-     */
-    private void generateFrameReplicator(SquarePegHandler handler) {
-        int size = function.frameSize();
-        writer.newObjectArray(size);
-        handler.liveLocals.forEach(this::storeInFrameReplica);
-    }
-
-    private void storeInFrameReplica(AbstractVariable local) {
-        JvmType localType = local.isBoxed() ? REFERENCE : local.specializedType();
-        writer.storeArray(local.index(), () -> {
-            writer.loadLocal(localType, local.index());
-            writer.adaptValue(localType, REFERENCE);
+        writer.unwrapSPE();
+        // stack: continuation value
+        Stream.concat(Stream.of(function.allParameters()), handler.liveLocals.stream()).forEach(var -> {
+            var varType = var.specializedType();
+            if (!var.isBoxed() && varType != REFERENCE) {
+                writer
+                    .loadLocal(varType, var.index())
+                    .adaptValue(varType, REFERENCE)
+                    .storeLocal(REFERENCE, var.index());
+            }
         });
-    }
-
-    private void generateEpilogue(Label epilogueStart) {
-        // stack: SPE, int recoverySiteId, Object[] frame
-        writer.asm().visitLabel(epilogueStart);
-        function.declaredParameters().forEach(this::storeInFrameReplica);
-        var functionId = function.id();
-        writer.invokeDynamic(RecoveryCallInvokeDynamic.BOOTSTRAP, "recover", RECOVERY_METHOD_CALL_SITE_TYPE, functionId);
-        bridgeValue(REFERENCE, function.specializedReturnType);
-        writer.ret(function.specializedReturnType);
+        writer.jump(handler.recoverySiteLabel);
     }
 }

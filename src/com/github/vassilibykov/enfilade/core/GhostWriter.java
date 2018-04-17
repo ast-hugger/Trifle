@@ -30,11 +30,6 @@ public class GhostWriter {
     }
 
     private static final String OBJECT_DESC = "Ljava/lang/Object;";
-    private static final String BOOL_DESC = "Z";
-    private static final String INT_DESC = "I";
-    private static final String BOXED_REFERENCE_ICN = internalClassName(BoxedReference.class);
-    private static final String BOXED_BOOL_ICN = internalClassName(BoxedBool.class);
-    private static final String BOXED_INT_ICN = internalClassName(BoxedInt.class);
     private static final String INTEGER_ICN = internalClassName(Integer.class);
     private static final String BOOLEAN_ICN = internalClassName(Boolean.class);
 
@@ -148,8 +143,8 @@ public class GhostWriter {
     }
 
     public GhostWriter extractBoxedVariable() {
-        asmWriter.visitTypeInsn(CHECKCAST, BOXED_REFERENCE_ICN);
-        asmWriter.visitFieldInsn(GETFIELD, BOXED_REFERENCE_ICN, "value", OBJECT_DESC);
+        checkCast(Box.class);
+        invokeVirtual(Box.class, "valueAsReference", Object.class);
         return this;
     }
 
@@ -184,19 +179,20 @@ public class GhostWriter {
     }
 
     public GhostWriter initBoxedReference(int index) {
-        invokeStatic(BoxedReference.class, "with", BoxedReference.class, Object.class);
+        invokeStatic(Box.class, "with", Box.class, Object.class);
         asmWriter.visitVarInsn(ASTORE, index);
         return this;
     }
 
     public GhostWriter initBoxedBool(int index) {
-        invokeStatic(BoxedBool.class, "with", BoxedBool.class, boolean.class);
+        wrapBoolean();
+        invokeStatic(Box.class, "with", Box.class, Object.class);
         asmWriter.visitVarInsn(ASTORE, index);
         return this;
     }
 
     public GhostWriter initBoxedInt(int index) {
-        invokeStatic(BoxedInt.class, "with", BoxedInt.class, int.class);
+        invokeStatic(Box.class, "with", Box.class, int.class);
         asmWriter.visitVarInsn(ASTORE, index);
         return this;
     }
@@ -337,25 +333,41 @@ public class GhostWriter {
 
     public GhostWriter storeBoxedReference(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, BOXED_REFERENCE_ICN);
+        asmWriter.visitTypeInsn(CHECKCAST, Box.INTERNAL_CLASS_NAME);
         swap();
-        asmWriter.visitFieldInsn(PUTFIELD, BOXED_REFERENCE_ICN, "value", OBJECT_DESC);
+        asmWriter.visitMethodInsn(
+            INVOKEVIRTUAL,
+            Box.INTERNAL_CLASS_NAME,
+            Box.SET_VALUE_NAME,
+            Box.SET_VALUE_REFERENCE_DESC,
+            false);
         return this;
     }
 
     public GhostWriter storeBoxedBool(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, BOXED_BOOL_ICN);
+        asmWriter.visitTypeInsn(CHECKCAST, Box.INTERNAL_CLASS_NAME);
         swap();
-        asmWriter.visitFieldInsn(PUTFIELD, BOXED_BOOL_ICN, "value", BOOL_DESC);
+        wrapBoolean();
+        asmWriter.visitMethodInsn(
+            INVOKEVIRTUAL,
+            Box.INTERNAL_CLASS_NAME,
+            Box.SET_VALUE_NAME,
+            Box.SET_VALUE_REFERENCE_DESC,
+            false);
         return this;
     }
 
     public GhostWriter storeBoxedInt(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, BOXED_INT_ICN);
+        asmWriter.visitTypeInsn(CHECKCAST, Box.INTERNAL_CLASS_NAME);
         swap();
-        asmWriter.visitFieldInsn(PUTFIELD, BOXED_INT_ICN, "value", INT_DESC);
+        asmWriter.visitMethodInsn(
+            INVOKEVIRTUAL,
+            Box.INTERNAL_CLASS_NAME,
+            Box.SET_VALUE_NAME,
+            Box.SET_VALUE_INT_DESC,
+            false);
         return this;
     }
 
@@ -396,18 +408,17 @@ public class GhostWriter {
      * the latter as <em>unwrapping</em>.
      */
     public GhostWriter unboxValue(JvmType type) {
+        checkCast(Box.class);
         type.match(new JvmType.VoidMatcher() {
             public void ifReference() {
-                checkCast(BoxedReference.class);
-                asmWriter.visitFieldInsn(GETFIELD, BOXED_REFERENCE_ICN, "value", OBJECT_DESC);
+                invokeVirtual(Box.class, "valueAsReference", Object.class);
             }
             public void ifInt() {
-                checkCast(BoxedInt.class);
-                asmWriter.visitFieldInsn(GETFIELD, BOXED_INT_ICN, "value", INT_DESC);
+                invokeVirtual(Box.class, "valueAsInt", int.class);
             }
             public void ifBoolean() {
-                checkCast(BoxedBool.class);
-                asmWriter.visitFieldInsn(GETFIELD, BOXED_BOOL_ICN, "value", BOOL_DESC);
+                invokeVirtual(Box.class, "valueAsReference", Object.class);
+                unwrapBoolean();
             }
         });
         return this;
@@ -448,6 +459,11 @@ public class GhostWriter {
             },
             failureCodeGenerator
         );
+        return this;
+    }
+
+    public GhostWriter unwrapSPE() {
+        asmWriter.visitFieldInsn(GETFIELD, internalClassName(SquarePegException.class), "value", OBJECT_DESC);
         return this;
     }
 
