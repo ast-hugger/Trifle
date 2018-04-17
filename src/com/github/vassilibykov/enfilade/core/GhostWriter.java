@@ -7,6 +7,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
 import java.lang.invoke.MethodType;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -22,12 +24,31 @@ public class GhostWriter {
         ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5 };
 
     public static String internalClassName(Class<?> klass) {
-        return internalClassName(klass.getName());
+        return internalClassNameCache.computeIfAbsent(klass, k -> internalClassName(k.getName()));
     }
+    private static final Map<Class<?>, String> internalClassNameCache = new ConcurrentHashMap<>();
 
     public static String internalClassName(String fqnName) {
         return fqnName.replace('.', '/');
     }
+
+    public static String methodDescriptor(Class<?> returnType, Class<?>... argTypes) {
+        switch (argTypes.length) {
+            case 0:
+                return nullaryMethodDescriptorCache.computeIfAbsent(returnType,
+                    c -> MethodType.methodType(returnType).toMethodDescriptorString());
+            case 1:
+                var argType = argTypes[0];
+                var mapByArg = unaryMethodDescriptorCache.computeIfAbsent(returnType,
+                    c -> new ConcurrentHashMap<>());
+                return mapByArg.computeIfAbsent(argType,
+                    c -> MethodType.methodType(returnType, argType).toMethodDescriptorString());
+            default:
+                return MethodType.methodType(returnType, argTypes).toMethodDescriptorString();
+        }
+    }
+    private static final Map<Class<?>, String> nullaryMethodDescriptorCache = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<Class<?>, String>> unaryMethodDescriptorCache = new ConcurrentHashMap<>();
 
     private static final String OBJECT_DESC = "Ljava/lang/Object;";
     private static final String INTEGER_ICN = internalClassName(Integer.class);
@@ -144,7 +165,7 @@ public class GhostWriter {
 
     public GhostWriter extractBoxedVariable() {
         checkCast(Box.class);
-        invokeVirtual(Box.class, "valueAsReference", Object.class);
+        invokeVirtual(Box.class, Box.VALUE_AS_REFERENCE, Object.class);
         return this;
     }
 
@@ -221,7 +242,7 @@ public class GhostWriter {
             INVOKESTATIC,
             internalClassName(owner),
             methodName,
-            MethodType.methodType(returnType, argTypes).toMethodDescriptorString(),
+            methodDescriptor(returnType, argTypes),
             false);
         return this;
     }
@@ -236,7 +257,7 @@ public class GhostWriter {
             INVOKEVIRTUAL,
             ownerClassName,
             methodName,
-            MethodType.methodType(returnType, argTypes).toMethodDescriptorString(),
+            methodDescriptor(returnType, argTypes),
             false);
         return this;
     }
@@ -333,41 +354,26 @@ public class GhostWriter {
 
     public GhostWriter storeBoxedReference(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, Box.INTERNAL_CLASS_NAME);
+        checkCast(Box.class);
         swap();
-        asmWriter.visitMethodInsn(
-            INVOKEVIRTUAL,
-            Box.INTERNAL_CLASS_NAME,
-            Box.SET_VALUE_NAME,
-            Box.SET_VALUE_REFERENCE_DESC,
-            false);
+        invokeVirtual(Box.class, Box.SET_VALUE, void.class, Object.class);
         return this;
     }
 
     public GhostWriter storeBoxedBool(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, Box.INTERNAL_CLASS_NAME);
+        checkCast(Box.class);
         swap();
         wrapBoolean();
-        asmWriter.visitMethodInsn(
-            INVOKEVIRTUAL,
-            Box.INTERNAL_CLASS_NAME,
-            Box.SET_VALUE_NAME,
-            Box.SET_VALUE_REFERENCE_DESC,
-            false);
+        invokeVirtual(Box.class, Box.SET_VALUE, void.class, Object.class);
         return this;
     }
 
     public GhostWriter storeBoxedInt(int index) {
         asmWriter.visitVarInsn(ALOAD, index);
-        asmWriter.visitTypeInsn(CHECKCAST, Box.INTERNAL_CLASS_NAME);
+        checkCast(Box.class);
         swap();
-        asmWriter.visitMethodInsn(
-            INVOKEVIRTUAL,
-            Box.INTERNAL_CLASS_NAME,
-            Box.SET_VALUE_NAME,
-            Box.SET_VALUE_INT_DESC,
-            false);
+        invokeVirtual(Box.class, Box.SET_VALUE, void.class, int.class);
         return this;
     }
 
@@ -411,13 +417,13 @@ public class GhostWriter {
         checkCast(Box.class);
         type.match(new JvmType.VoidMatcher() {
             public void ifReference() {
-                invokeVirtual(Box.class, "valueAsReference", Object.class);
+                invokeVirtual(Box.class, Box.VALUE_AS_REFERENCE, Object.class);
             }
             public void ifInt() {
-                invokeVirtual(Box.class, "valueAsInt", int.class);
+                invokeVirtual(Box.class, Box.VALUE_AS_INT, int.class);
             }
             public void ifBoolean() {
-                invokeVirtual(Box.class, "valueAsReference", Object.class);
+                invokeVirtual(Box.class, Box.VALUE_AS_REFERENCE, Object.class);
                 unwrapBoolean();
             }
         });

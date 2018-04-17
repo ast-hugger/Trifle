@@ -2,17 +2,14 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import java.lang.invoke.MethodType;
-
 /**
- * Part of the closures implementation. Hold the value of a variable (local or
+ * Part of the closures implementation. Holds the value of a variable (local or
  * a function parameter) which is mutable and has non-local references.
  */
 class Box {
-    static final String INTERNAL_CLASS_NAME = GhostWriter.internalClassName(Box.class);
-    static final String SET_VALUE_NAME = "setValue";
-    static final String SET_VALUE_REFERENCE_DESC = MethodType.methodType(void.class, Object.class).toMethodDescriptorString();
-    static final String SET_VALUE_INT_DESC = MethodType.methodType(void.class, int.class).toMethodDescriptorString();
+    static final String SET_VALUE = "setValue";
+    static final String VALUE_AS_REFERENCE = "valueAsReference";
+    static final String VALUE_AS_INT = "valueAsInt";
 
     private static final Object NO_VALUE = new Object();
 
@@ -34,19 +31,19 @@ class Box {
         this.intValue = intValue;
     }
 
-    @SuppressWarnings("unused") // called by generated code
-    Object valueAsReference() {
+    @SuppressWarnings("unused") // called by generated code; see references to VALUE_AS_REFERENCE constant
+    synchronized Object valueAsReference() {
         return referenceValue != NO_VALUE ? referenceValue : intValue;
     }
 
-    @SuppressWarnings("unused") // called by generated code
-    int valueAsInt() {
+    @SuppressWarnings("unused") // called by generated code; see references to VALUE_AS_INT constant
+    synchronized int valueAsInt() {
         if (referenceValue == NO_VALUE) return intValue;
         if (referenceValue instanceof Integer) return (Integer) referenceValue;
         throw SquarePegException.with(referenceValue);
     }
 
-    void setValue(Object value) {
+    synchronized void setValue(Object value) {
         if (value instanceof Integer) {
             referenceValue = NO_VALUE;
             intValue = (Integer) value;
@@ -55,7 +52,7 @@ class Box {
         }
     }
 
-    void setValue(int value) {
+    synchronized void setValue(int value) {
         referenceValue = NO_VALUE;
         intValue = value;
     }
