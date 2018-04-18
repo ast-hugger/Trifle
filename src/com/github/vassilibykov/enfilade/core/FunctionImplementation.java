@@ -178,7 +178,6 @@ public class FunctionImplementation implements Callable {
     /*internal*/ MethodHandle callSiteInvoker;
     /*internal*/ MethodHandle genericImplementation;
     /*internal*/ MethodHandle specializedImplementation;
-    /*internal*/ MethodHandle recoveryImplementation;
     private volatile State state;
 
     FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topFunction) {
@@ -203,7 +202,6 @@ public class FunctionImplementation implements Callable {
     /** RESTRICTED. Intended for {@link FunctionAnalyzer.Indexer}. */
     void finishInitialization(int frameSize) {
         this.callSite = new MutableCallSite(profilingInterpreterInvoker());
-//        this.callSite = new MutableCallSite(simpleInterpreterInvoker());
         this.callSiteInvoker = callSite.dynamicInvoker();
         this.frameSize = frameSize;
         this.state = State.PROFILING;
@@ -391,10 +389,6 @@ public class FunctionImplementation implements Callable {
             if (result.specializedMethodName() != null) {
                 specializedMethod = MethodHandles.lookup()
                     .findStatic(generatedClass, result.specializedMethodName(), result.specializedMethodType());
-            }
-            if (result.recoveryMethodName() != null) {
-                recoveryImplementation = MethodHandles.lookup()
-                    .findStatic(generatedClass, result.recoveryMethodName(), Compiler.RECOVERY_METHOD_TYPE);
             }
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);

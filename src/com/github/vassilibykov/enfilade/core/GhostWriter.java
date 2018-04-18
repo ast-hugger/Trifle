@@ -100,6 +100,67 @@ public class GhostWriter {
         return this;
     }
 
+    /**
+     * Assuming that a value of type 'from' is on the stack in the context whose
+     * continuation expects a value of type 'to', generate code that will ensure
+     * the continuation will successfully receive the value.
+     *
+     * <p>If the from/to pair of types is such that a value of 'from' cannot in
+     * the be converted to a value of 'to', for example {@code reference -> int}
+     * when the reference is not to an {@code Integer}, the generated code will
+     * throw an exception to complete the evaluation in recovery mode.
+     *
+     * <p>If the 'to' type is VOID, that means the value will be discarded by
+     * the continuation, so it doesn't matter what it is.
+     *
+     * <p>This is different from {@link GhostWriter#adaptValue(JvmType,
+     * JvmType)}. The latter performs wrapping and unwrapping of values,
+     * assuming that in a conversion between a primitive and a reference type,
+     * the reference type is a valid wrapper value for the primitive. In a
+     * conversion from a reference to an int, the reference can value never be
+     * anything other than {@code Integer}. This is true no matter if the user
+     * program is correct or not. A violation of this expectation is a sign of
+     * an internal error in the compiler.
+     *
+     * <p>In contrast, in bridging a reference to an int it's normal for the
+     * reference value to not be an {@code Integer}. In that case it should be
+     * packaged up and thrown as a {@link SquarePegException}.
+     *
+     */
+    public GhostWriter bridgeValue(JvmType from, JvmType to) {
+        from.match(new JvmType.VoidMatcher() {
+            public void ifReference() {
+                to.match(new JvmType.VoidMatcher() {
+                    public void ifReference() { }
+                    public void ifInt() { unwrapIntegerOr(GhostWriter.this::throwSquarePegException); }
+                    public void ifBoolean() { unwrapBooleanOr(GhostWriter.this::throwSquarePegException); }
+                    public void ifVoid() { }
+                });
+            }
+            public void ifInt() {
+                to.match(new JvmType.VoidMatcher() {
+                    public void ifReference() { wrapInteger(); }
+                    public void ifInt() { }
+                    public void ifBoolean() { wrapInteger().throwSquarePegException(); }
+                    public void ifVoid() { }
+                });
+            }
+            public void ifBoolean() {
+                to.match(new JvmType.VoidMatcher() {
+                    public void ifReference() { wrapBoolean(); }
+                    public void ifInt() { wrapBoolean().throwSquarePegException(); }
+                    public void ifBoolean() { }
+                    public void ifVoid() { }
+                });
+            }
+            public void ifVoid() {
+                // occurs in the middle of blocks and in return statements; nothing needs to be done
+            }
+        });
+        return this;
+    }
+
+
     public GhostWriter ensureValue(JvmType from, JvmType to) {
         from.match(new JvmType.VoidMatcher() {
             public void ifReference() {
@@ -272,6 +333,11 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter jumpIfNot0(Label label) {
+        asmWriter.visitJumpInsn(IFNE, label);
+        return this;
+    }
+
     /**
      * Load an {@code int} constant on the stack using the best available
      * instruction.
@@ -323,6 +389,11 @@ public class GhostWriter {
             public void ifInt() { asmWriter.visitInsn(IRETURN); }
             public void ifBoolean() { asmWriter.visitInsn(IRETURN); }
         });
+        return this;
+    }
+
+    public GhostWriter setLabelHere(Label label) {
+        asmWriter.visitLabel(label);
         return this;
     }
 

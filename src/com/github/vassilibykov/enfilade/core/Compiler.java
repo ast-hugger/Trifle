@@ -34,7 +34,7 @@ public class Compiler {
     static final MethodType RECOVERY_METHOD_TYPE = MethodType.methodType(
         Object.class, Object.class, int.class, Object[].class);
 
-    private static final String GENERIC_METHOD_PREFIX = "closure";
+    private static final String GENERIC_METHOD_PREFIX = "function";
     private static final String SPECIALIZED_METHOD_PREFIX = "specialized$";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
     private static final String GENERATED_CODE_PACKAGE = "com.github.vassilibykov.enfilade.core";
@@ -98,7 +98,6 @@ public class Compiler {
     static class FunctionResult {
         @NotNull private final String genericMethodName;
         @Nullable private String specializedMethodName;
-        @Nullable private String recoveryMethodName;
         @Nullable private MethodType specializedMethodType;
 
         FunctionResult(@NotNull String genericMethodName)
@@ -112,10 +111,6 @@ public class Compiler {
 
         String specializedMethodName() {
             return specializedMethodName;
-        }
-
-        String recoveryMethodName() {
-            return recoveryMethodName;
         }
 
         MethodType specializedMethodType() {

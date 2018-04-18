@@ -24,8 +24,8 @@ import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     /**
-     * Captures the information about an SPE handler that needs to be generated
-     * once we are done with the method proper.
+     * An SPE handler that needs to be generated once we are done with the
+     * method proper.
      */
     private static class SquarePegHandler {
         /**
@@ -67,7 +67,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     void generate() {
         generatePrologue();
         var expressionType = function.body().accept(this);
-        bridgeValue(expressionType, function.specializedReturnType);
+        writer.bridgeValue(expressionType, function.specializedReturnType);
         writer.ret(function.specializedReturnType);
         if (!squarePegHandlers.isEmpty()) {
             generateRecoveryHandlers();
@@ -98,9 +98,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     private void generateRecoveryCode() {
         var generator = new RecoveryCodeGenerator(function, writer);
-        var resultType = generator.generate();
-        bridgeValue(resultType, function.specializedReturnType);
-        writer.ret(function.specializedReturnType);
+        generator.generate();
     }
 
     /*
@@ -277,11 +275,11 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
                         writer.withLabelAtEnd(elseStart -> {
                             writer.asm().visitJumpInsn(optimized.jumpInstruction(), elseStart);
                             var valueType = trueBranch.accept(this);
-                            bridgeValue(valueType, resultType); // in tail position
+                            writer.bridgeValue(valueType, resultType); // in tail position
                             writer.jump(end);
                         });
                         var valueType = falseBranch.accept(this);
-                        bridgeValue(valueType, resultType); // in tail position
+                        writer.bridgeValue(valueType, resultType); // in tail position
                     });
                     return resultType;
                 }
@@ -293,11 +291,11 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
         writer.ifThenElse(
             () -> {
                 var valueType = trueBranch.accept(this);
-                bridgeValue(valueType, resultType); // in tail position
+                writer.bridgeValue(valueType, resultType); // in tail position
             },
             () -> {
                 var valueType = falseBranch.accept(this);
-                bridgeValue(valueType, resultType); // in tail position
+                writer.bridgeValue(valueType, resultType); // in tail position
             }
         );
         return resultType;
@@ -309,7 +307,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
         JvmType varType = variable.specializedType();
         withSquarePegRecovery(let, () -> {
             var initType = let.initializer().accept(this);
-            bridgeValue(initType, varType);
+            writer.bridgeValue(initType, varType);
         });
         if (variable.isBoxed()) {
             writer.initBoxedVariable(varType, variable.index());
@@ -338,7 +336,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
         liveLocals.add(variable);
         withSquarePegRecovery(letrec, () -> {
             var initType = letrec.initializer().accept(this);
-            bridgeValue(initType, varType);
+            writer.bridgeValue(initType, varType);
         });
         if (variable.isBoxed()) {
             writer.storeBoxedVariable(varType, variable.index());
@@ -388,7 +386,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
            value() as if it were complex already. */
         withSquarePegRecovery(returnNode, () -> {
             var returnType = returnNode.value().accept(this);
-            bridgeValue(returnType, function.specializedReturnType);
+            writer.bridgeValue(returnType, function.specializedReturnType);
         });
         writer.ret(function.specializedReturnType);
         return VOID;
@@ -400,7 +398,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
         var varType = var.specializedType();
         withSquarePegRecovery(set, () -> {
             var valueType = set.value().accept(this);
-            bridgeValue(valueType, varType);
+            writer.bridgeValue(valueType, varType);
         });
         writer.dup(); // the duplicate is left on the stack as the set expression value
         if (var.isBoxed()) {
@@ -418,65 +416,6 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
             .loadInt(id)
             .invokeStatic(CallableRegistry.class, "lookupAndMakeClosure", Closure.class, int.class);
         return REFERENCE;
-    }
-
-    /**
-     * Assuming that a value of type 'from' is on the stack in the context whose
-     * continuation expects a value of type 'to', generate code that will ensure
-     * the continuation will successfully receive the value.
-     *
-     * <p>If the from/to pair of types is such that a value of 'from' cannot in
-     * the be converted to a value of 'to', for example {@code reference -> int}
-     * when the reference is not to an {@code Integer}, the generated code will
-     * throw an exception to complete the evaluation in recovery mode.
-     *
-     * <p>If the 'to' type is VOID, that means the value will be discarded by
-     * the continuation, so it doesn't matter what it is.
-     *
-     * <p>This is different from {@link GhostWriter#adaptValue(JvmType,
-     * JvmType)}. The latter performs wrapping and unwrapping of values,
-     * assuming that in a conversion between a primitive and a reference type,
-     * the reference type is a valid wrapper value for the primitive. In a
-     * conversion from a reference to an int, the reference can value never be
-     * anything other than {@code Integer}. This is true no matter if the user
-     * program is correct or not. A violation of this expectation is a sign of
-     * an internal error in the compiler.
-     *
-     * <p>In contrast, in bridging a reference to an int it's normal for the
-     * reference value to not be an {@code Integer}. In that case it should be
-     * packaged up and thrown as a {@link SquarePegException}.
-     *
-     */
-    private void bridgeValue(JvmType from, JvmType to) {
-        from.match(new JvmType.VoidMatcher() {
-            public void ifReference() {
-                to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { }
-                    public void ifInt() { writer.unwrapIntegerOr(writer::throwSquarePegException); }
-                    public void ifBoolean() { writer.unwrapBooleanOr(writer::throwSquarePegException); }
-                    public void ifVoid() { }
-                });
-            }
-            public void ifInt() {
-                to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { writer.wrapInteger(); }
-                    public void ifInt() { }
-                    public void ifBoolean() { writer.wrapInteger().throwSquarePegException(); }
-                    public void ifVoid() { }
-                });
-            }
-            public void ifBoolean() {
-                to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { writer.wrapBoolean(); }
-                    public void ifInt() { writer.wrapBoolean().throwSquarePegException(); }
-                    public void ifBoolean() { }
-                    public void ifVoid() { }
-                });
-            }
-            public void ifVoid() {
-                // occurs in the middle of blocks and in return statements; nothing needs to be done
-            }
-        });
     }
 
     private void withSquarePegRecovery(RecoverySite requestor, Runnable generate) {
