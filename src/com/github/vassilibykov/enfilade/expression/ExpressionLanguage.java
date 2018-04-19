@@ -33,11 +33,6 @@ public class ExpressionLanguage {
         return Lambda.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
     }
 
-    public static Lambda recursive(Function<Variable, Function<Const, Expression>> bodyBuilderBuilder) {
-        var arg = var("a" + argSerial++);
-        return Lambda.recursive(List.of(arg), bodyBuilderBuilder.apply(arg));
-    }
-
     public static Call call(AtomicExpression function) {
         return Call.with(function);
     }
@@ -64,10 +59,6 @@ public class ExpressionLanguage {
 
     public static Let let(Variable variable, Expression initializer, Expression body) {
         return Let.with(variable, initializer, body);
-    }
-
-    public static Letrec letrec(Variable variable, Expression initializer, Expression body) {
-        return Letrec.with(variable, initializer, body);
     }
 
     public static Block block(Expression... expressions) {

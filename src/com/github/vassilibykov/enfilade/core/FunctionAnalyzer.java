@@ -24,7 +24,7 @@ class FunctionAnalyzer {
      */
     @NotNull private final FunctionImplementation function;
 
-    FunctionAnalyzer(@NotNull FunctionImplementation function) {
+    private FunctionAnalyzer(@NotNull FunctionImplementation function) {
         this.function = function;
     }
 
@@ -79,17 +79,6 @@ class FunctionAnalyzer {
             let.initializer().accept(this);
             scope.add(var);
             let.body().accept(this);
-            scope.remove(var);
-            return null;
-        }
-
-        @Override
-        public Void visitLetrec(LetrecNode letrec) {
-            AbstractVariable var = letrec.variable();
-            if (scope.contains(var)) throw new CompilerError("let variable is already bound: " + var);
-            scope.add(var);
-            letrec.initializer().accept(this);
-            letrec.body().accept(this);
             scope.remove(var);
             return null;
         }
@@ -155,6 +144,7 @@ class FunctionAnalyzer {
 
         @Override
         public Void visitSetVar(SetVariableNode setVar) {
+            setVar.value().accept(this);
             var variable = setVar.variable();
             if (variable.hostFunction() != thisFunction) {
                 var copiedVariable = rewriteFreeVariable(variable);
@@ -212,15 +202,6 @@ class FunctionAnalyzer {
             let.initializer().accept(this);
             let.variable().index = allocateLocalIndex();
             let.body().accept(this);
-            releaseLocalIndex();
-            return null;
-        }
-
-        @Override
-        public Void visitLetrec(LetrecNode letrec) {
-            letrec.variable().index = allocateLocalIndex();
-            letrec.initializer().accept(this);
-            letrec.body().accept(this);
             releaseLocalIndex();
             return null;
         }

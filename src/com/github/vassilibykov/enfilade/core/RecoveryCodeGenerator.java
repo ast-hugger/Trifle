@@ -402,17 +402,6 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public Void visitLetrec(LetrecNode letrec) {
-            emit(new Load(new ConstantNode(null)));
-            emit(new Store(letrec.variable(), null));
-            letrec.initializer().accept(this);
-            entryPoints.add(nextInstructionAddress());
-            emit(new Store(letrec.variable(), letrec));
-            letrec.body().accept(this);
-            return null;
-        }
-
-        @Override
         public Void visitPrimitive1(Primitive1Node primitive) {
             emit(new Load(primitive));
             return null;
@@ -597,11 +586,6 @@ class RecoveryCodeGenerator {
 
         @Override
         public JvmType visitLet(LetNode let) {
-            throw new UnsupportedOperationException("should not be called");
-        }
-
-        @Override
-        public JvmType visitLetrec(LetrecNode letrec) {
             throw new UnsupportedOperationException("should not be called");
         }
 

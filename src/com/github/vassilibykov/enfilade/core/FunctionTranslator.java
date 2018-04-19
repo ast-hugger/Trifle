@@ -9,7 +9,6 @@ import com.github.vassilibykov.enfilade.expression.FunctionReference;
 import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Let;
-import com.github.vassilibykov.enfilade.expression.Letrec;
 import com.github.vassilibykov.enfilade.expression.Primitive;
 import com.github.vassilibykov.enfilade.expression.PrimitiveCall;
 import com.github.vassilibykov.enfilade.expression.Return;
@@ -196,14 +195,6 @@ public class FunctionTranslator {
             var initializer = let.initializer().accept(this);
             var var = defineVariable(let.variable());
             return new LetNode(var, initializer, let.body().accept(this));
-        }
-
-        @Override
-        public EvaluatorNode visitLetrec(Letrec letrec) {
-            var var = defineVariable(letrec.variable());
-            var.markAsMutable(); // even if it's not explicitly mutated!
-            var initializer = letrec.initializer().accept(this);
-            return new LetrecNode(var, initializer, letrec.body().accept(this));
         }
 
         @Override

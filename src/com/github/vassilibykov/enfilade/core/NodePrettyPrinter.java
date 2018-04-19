@@ -138,12 +138,6 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
         return null;
     }
 
-    @Override
-    public Void visitLetrec(LetrecNode letrec) {
-        printLet("letrec", letrec);
-        return null;
-    }
-
     private void printLet(String keyword, LetNode letOrLetrec) {
         printLine(() -> {
             output

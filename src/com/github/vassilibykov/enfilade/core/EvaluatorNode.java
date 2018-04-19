@@ -34,7 +34,6 @@ public abstract class EvaluatorNode {
         T visitGetVar(GetVariableNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
-        T visitLetrec(LetrecNode letrecNode);
         T visitPrimitive1(Primitive1Node primitive);
         T visitPrimitive2(Primitive2Node primitive);
         T visitReturn(ReturnNode ret);
@@ -113,11 +112,6 @@ public abstract class EvaluatorNode {
             let.initializer().accept(this);
             let.body().accept(this);
             return null;
-        }
-
-        @Override
-        public T visitLetrec(LetrecNode letrecNode) {
-            return visitLet(letrecNode);
         }
 
         @Override

@@ -116,15 +116,6 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitLetrec(LetrecNode letrec) {
-            var var = letrec.variable();
-            var.initValueIn(frame, null);
-            var value = letrec.initializer().accept(this);
-            var.setValueIn(frame, value);
-            return letrec.body().accept(this);
-        }
-
-        @Override
         public Object visitPrimitive1(Primitive1Node primitiveNode) {
             return primitiveNode.implementation().apply(primitiveNode.argument().accept(this));
         }

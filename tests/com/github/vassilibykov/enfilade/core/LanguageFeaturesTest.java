@@ -8,13 +8,12 @@ import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.block;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.let;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.letrec;
-import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.block;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.set;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.var;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
@@ -159,12 +158,14 @@ public abstract class LanguageFeaturesTest {
         var factorial = var("factorial");
         var t = var("t");
         return lambda(arg ->
-            letrec(factorial, lambda(n ->
-                    if_(lessThan(n, const_(1)),
-                        const_(1),
-                        let(t, call(factorial, sub(n, const_(1))),
-                            mul(t, n)))),
-                call(factorial, arg)));
+            let(factorial, const_(null),
+                block(
+                    set(factorial, lambda(n ->
+                        if_(lessThan(n, const_(1)),
+                            const_(1),
+                            let(t, call(factorial, sub(n, const_(1))),
+                                mul(t, n))))),
+                    call(factorial, arg))));
     }
 
     static Lambda fibonacci() {
@@ -172,12 +173,14 @@ public abstract class LanguageFeaturesTest {
         var t1 = var("t1");
         var t2 = var("t2");
         return lambda(arg ->
-            letrec(fibonacci, lambda(n ->
-                    if_(lessThan(n, const_(2)),
-                        const_(1),
-                        let(t1, call(fibonacci, sub(n, const_(1))),
-                            let(t2, call(fibonacci, sub(n, const_(2))),
-                                add(t1, t2))))),
-                call(fibonacci, arg)));
+            let(fibonacci, const_(null),
+                block(
+                    set(fibonacci, lambda(n ->
+                        if_(lessThan(n, const_(2)),
+                            const_(1),
+                            let(t1, call(fibonacci, sub(n, const_(1))),
+                                let(t2, call(fibonacci, sub(n, const_(2))),
+                                    add(t1, t2)))))),
+                    call(fibonacci, arg))));
     }
 }

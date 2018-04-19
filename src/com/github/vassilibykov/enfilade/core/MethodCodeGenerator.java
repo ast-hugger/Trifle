@@ -324,34 +324,6 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitLetrec(LetrecNode letrec) {
-        VariableDefinition variable = letrec.variable();
-        JvmType varType = variable.specializedType();
-        if (variable.isBoxed()) {
-            writer
-                .loadDefaultValue(varType)
-                .initBoxedVariable(varType, variable.index());
-        } else {
-            writer
-                .loadDefaultValue(varType)
-                .storeLocal(varType, variable.index());
-        }
-        liveLocals.add(variable);
-        withSquarePegRecovery(letrec, () -> {
-            var initType = letrec.initializer().accept(this);
-            writer.bridgeValue(initType, varType);
-        });
-        if (variable.isBoxed()) {
-            writer.storeBoxedVariable(varType, variable.index());
-        } else {
-            writer.storeLocal(varType, variable.index());
-        }
-        var bodyType = letrec.body().accept(this);
-        liveLocals.remove(variable);
-        return bodyType;
-    }
-
-    @Override
     public JvmType visitPrimitive1(Primitive1Node primitive) {
         var argType = primitive.argument().accept(this);
         return primitive.implementation().generate(writer, argType);

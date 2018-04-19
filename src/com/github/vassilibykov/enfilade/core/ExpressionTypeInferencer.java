@@ -113,13 +113,6 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitLetrec(LetrecNode let) {
-        ExpressionType initType = let.initializer().accept(this);
-        let.variable().unifyInferredTypeWith(initType);
-        return andSetIn(let, let.body().accept(this));
-    }
-
-    @Override
     public ExpressionType visitPrimitive1(Primitive1Node primitive) {
         var argType = primitive.argument().accept(this);
         return andSetIn(primitive, primitive.implementation().inferredType(argType));

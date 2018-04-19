@@ -174,15 +174,6 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
         return setSpecializedType(let, bodyType);
     }
 
-    @Override
-    public JvmType visitLetrec(LetrecNode let) {
-        var var = let.variable();
-        var.setSpecializedType(var.profile.observedType().jvmType().orElse(REFERENCE));
-        let.initializer().accept(this);
-        var bodyType = let.body().accept(this);
-        return setSpecializedType(let, bodyType);
-    }
-
     /**
      * Same as for {@link #visitConstant(ConstantNode)}, we know the type but we can't
      * claim we've observed the primitive produce it.

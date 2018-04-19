@@ -10,7 +10,6 @@ public interface Visitor<T> {
     T visitIf(If anIf);
     T visitLambda(Lambda lambda);
     T visitLet(Let let);
-    T visitLetrec(Letrec letrec);
     T visitPrimitiveCall(PrimitiveCall primitiveCall);
     T visitReturn(Return aReturn);
     T visitSetVariable(SetVariable setVariable);

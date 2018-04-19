@@ -92,17 +92,6 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitLetrec(LetrecNode letrec) {
-            VariableDefinition variable = letrec.variable();
-            Object value;
-            variable.initValueIn(frame, null);
-            value = letrec.initializer().accept(this);
-            variable.setValueIn(frame, value);
-            variable.profile.recordValue(value);
-            return letrec.body().accept(this);
-        }
-
-        @Override
         public Object visitSetVar(SetVariableNode setVar) {
             var value = super.visitSetVar(setVar);
             setVar.variable().profile().recordValue(value);
