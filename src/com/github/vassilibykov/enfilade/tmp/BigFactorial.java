@@ -15,7 +15,7 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lam
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
 
-public class Factorial {
+public class BigFactorial {
 
     public static void main(String[] args) {
         var n = 200;

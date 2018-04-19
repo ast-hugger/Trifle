@@ -24,7 +24,7 @@ import java.lang.invoke.MethodType;
 public final class ClosureInvokeDynamic {
     public static final Handle BOOTSTRAP = new Handle(
         Opcodes.H_INVOKESTATIC,
-        Compiler.internalClassName(ClosureInvokeDynamic.class),
+        GhostWriter.internalClassName(ClosureInvokeDynamic.class),
         "bootstrap",
         MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class).toMethodDescriptorString(),
         false);
@@ -41,6 +41,7 @@ public final class ClosureInvokeDynamic {
      * @param callSiteType The type of the call site as discussed above.
      * @return The call site to use for the instruction.
      */
+    @SuppressWarnings("unused") // called by invokedynamic infrastructure
     public static CallSite bootstrap(Lookup lookupAtCall, String name, MethodType callSiteType) {
         var callArity = callSiteType.parameterCount() - 1; // don't count the closure
         return new InlineCachingCallSite(

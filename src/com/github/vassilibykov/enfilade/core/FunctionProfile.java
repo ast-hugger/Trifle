@@ -17,22 +17,27 @@ class FunctionProfile {
         this.methodParameters = arguments;
     }
 
-    public synchronized long invocationCount() {
+    synchronized long invocationCount() {
         return invocationCount;
     }
 
-    public ValueProfile resultProfile() {
+    ValueProfile resultProfile() {
         return resultProfile;
     }
 
-    public synchronized void recordInvocation(Object[] frame) {
-        invocationCount++;
+    synchronized void recordArguments(Object[] frame) {
         for (var each : methodParameters) {
             each.profile.recordValue(each.getValueIn(frame));
         }
     }
 
-    public void recordResult(Object result) {
+    synchronized void recordResult(Object result) {
+        /* It's important to count invocations here, after the function returns,
+           and not in 'recordArguments' before it's invoked. Counting there may
+           in case of recursive calls trigger compilation too early (on the first
+           return from a recursive call), when profile data has not yet been
+           collected for parts of the function following the recursive return. */
+        invocationCount++;
         resultProfile.recordValue(result);
     }
 }

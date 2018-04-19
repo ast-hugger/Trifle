@@ -33,7 +33,121 @@ method calls of expression node classes.
                             PrimitiveCall.with(Add.class, t1, t2))))));
     }
 
-## Currently generated code
+## Compiled code
+
+The final compilation scheme in which recovery code is embedded in the method,
+with dead code not reachable from recovery entry points eliminated.
+
+    public static final java.lang.Object function0(java.lang.Object);
+    Code:
+       0: aload_0
+       1: iconst_2
+       2: invokestatic  #12                 // Method com/github/vassilibykov/enfilade/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
+       5: ifeq          12
+       8: iconst_1
+       9: goto          37
+      12: aload_0
+      13: iconst_1
+      14: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      17: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
+      22: istore_1
+      23: aload_0
+      24: iconst_2
+      25: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      28: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
+      33: istore_2
+      34: iload_1
+      35: iload_2
+      36: iadd
+      37: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      40: areturn
+      41: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      44: goto          58
+      47: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      50: iload_1
+      51: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      54: astore_1
+      55: goto          72
+      58: astore_1
+      59: aload_0
+      60: iconst_2
+      61: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      64: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      67: invokedynamic #44,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
+      72: astore_2
+      73: aload_1
+      74: aload_2
+      75: invokestatic  #50                 // Method com/github/vassilibykov/enfilade/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
+      78: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      81: areturn
+    Exception table:
+       from    to  target type
+          12    22    41   Class com/github/vassilibykov/enfilade/core/SquarePegException
+          23    33    47   Class com/github/vassilibykov/enfilade/core/SquarePegException
+    
+    public static final int specialized$function0(int);
+    Code:
+       0: iload_0
+       1: iconst_2
+       2: if_icmpge     9
+       5: iconst_1
+       6: goto          30
+       9: iload_0
+      10: iconst_1
+      11: isub
+      12: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
+      17: istore_1
+      18: iload_0
+      19: iconst_2
+      20: isub
+      21: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
+      26: istore_2
+      27: iload_1
+      28: iload_2
+      29: iadd
+      30: ireturn
+      31: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      34: iload_0
+      35: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      38: astore_0
+      39: goto          58
+      42: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      45: iload_0
+      46: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      49: astore_0
+      50: iload_1
+      51: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      54: astore_1
+      55: goto          72
+      58: astore_1
+      59: aload_0
+      60: iconst_2
+      61: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      64: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      67: invokedynamic #44,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
+      72: astore_2
+      73: aload_1
+      74: aload_2
+      75: invokestatic  #50                 // Method com/github/vassilibykov/enfilade/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
+      78: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      81: dup
+      82: instanceof    #34                 // class java/lang/Integer
+      85: ifeq          97
+      88: checkcast     #34                 // class java/lang/Integer
+      91: invokevirtual #55                 // Method java/lang/Integer.intValue:()I
+      94: goto          101
+      97: invokestatic  #59                 // Method com/github/vassilibykov/enfilade/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/enfilade/core/SquarePegException;
+     100: athrow
+     101: ireturn
+    Exception table:
+       from    to  target type
+           9    17    31   Class com/github/vassilibykov/enfilade/core/SquarePegException
+          18    26    42   Class com/github/vassilibykov/enfilade/core/SquarePegException
+
+## Generated code with a separate recovery method
+
+An earlier implementation phase in which recovery already became compiled rather
+than interpreted, but was compiled as a separate method.
 
     public final class com.github.vassilibykov.enfilade.core.$gen$0 {
         public static final java.lang.Object closure0(java.lang.Object);

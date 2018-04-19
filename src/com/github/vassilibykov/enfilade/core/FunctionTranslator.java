@@ -27,27 +27,37 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Translates a pure function definition ({@link Lambda}) into an equivalent executable
- * {@link FunctionImplementation}. A translator is applied to a top-level lambda of function
- * definition. Any nested lambdas are processed by the same translator.
+ * Translates a pure function definition ({@link Lambda}) into an equivalent
+ * executable {@link FunctionImplementation}. A translator is applied to a
+ * top-level lambda of a function definition. Any nested lambdas are processed
+ * by the same translator.
  *
- * <p>The following are translation stages performed by this class and by {@link FunctionAnalyzer}:
+ * <p>The following are translation stages performed by this class and by {@link
+ * FunctionAnalyzer}:
+ *
  * <ol>
- *     <li>For the top-level and all nested lambda expressions, a {@link FunctionImplementation}
- *     instance is created. {@link LambdaTranslator} in this class creates a tree of
- *     {@link EvaluatorNode}s equivalent to the original expressions. {@link VariableDefinition}s
- *     have their {@link VariableDefinition#isReferencedNonlocally} and
- *     {@link VariableDefinition#isMutable} properties set according to the structure of the source.</li>
- *     <li>Scope structure is validated by {@link FunctionAnalyzer.ScopeValidator} to ensure
- *     any variable references are in lexical scope of their variable definitions, and
- *     that variable definitions are not multiply bound in the original expression.</li>
- *     <li>Closure conversion is performed by {@link FunctionAnalyzer.ClosureConverter}, rewriting
- *     any free variable reference in a closure with a reference to a local synthetic parameter added
- *     to the closure. This step creates a number of {@link CopiedVariable} instances to represent
- *     the synthetic parameters, and replaces with them any references to {@link VariableDefinition}s
- *     from outer scopes.</li>
- *     <li>Variable indices are allocated to all variables of all functions, and frame sizes of all
- *     function are computed.</li>
+ *     <li>For the top-level and all nested lambda expressions, a {@link
+ *     FunctionImplementation} instance is created. {@link LambdaTranslator} in
+ *     this class creates a tree of {@link EvaluatorNode}s equivalent to the
+ *     original expressions. {@link VariableDefinition}s have their {@link
+ *     VariableDefinition#isReferencedNonlocally} and {@link
+ *     VariableDefinition#isMutable} properties set according to the structure
+ *     of the source.</li>
+ *
+ *     <li>Scope structure is validated by {@link
+ *     FunctionAnalyzer.ScopeValidator} to ensure any variable references are in
+ *     lexical scope of their variable definitions, and that variable
+ *     definitions are not multiply bound in the original expression.</li>
+ *
+ *     <li>Closure conversion is performed by {@link
+ *     FunctionAnalyzer.ClosureConverter}, rewriting any free variable reference
+ *     in a closure with a reference to a local synthetic parameter added to the
+ *     closure. This step creates a number of {@link CopiedVariable} instances
+ *     to represent the synthetic parameters, and replaces with them any
+ *     references to {@link VariableDefinition}s from outer scopes.</li>
+ *
+ *     <li>Variable indices are allocated to all variables of all functions, and
+ *     frame sizes of all function are computed.</li>
  * </ol>
  *
  */
@@ -84,7 +94,6 @@ public class FunctionTranslator {
     private class LambdaTranslator implements Visitor<EvaluatorNode> {
         private final Lambda thisLambda;
         private final FunctionImplementation thisFunction;
-        private List<RecoverySite> recoverySites = new ArrayList<>();
 
         private LambdaTranslator(Lambda thisLambda, int depth, FunctionImplementation thisFunction) {
             this.thisLambda = thisLambda;

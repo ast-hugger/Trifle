@@ -24,7 +24,7 @@ public final class ConstantFunctionInvokeDynamic {
 
     public static final Handle BOOTSTRAP = new Handle(
         Opcodes.H_INVOKESTATIC,
-        Compiler.internalClassName(ConstantFunctionInvokeDynamic.class),
+        GhostWriter.internalClassName(ConstantFunctionInvokeDynamic.class),
         "bootstrap",
         MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class, Integer.class).toMethodDescriptorString(),
         false);

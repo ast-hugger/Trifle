@@ -117,7 +117,7 @@ public class ProfilingInterpreter extends Interpreter {
     @Override
     public Object interpret(FunctionImplementation implementation) {
         var frame = new Object[implementation.frameSize()];
-        implementation.profile.recordInvocation(frame);
+        implementation.profile.recordArguments(frame);
         Object result;
         try {
             result = implementation.body().accept(new ProfilingEvaluator(frame));
@@ -132,7 +132,7 @@ public class ProfilingInterpreter extends Interpreter {
     public Object interpret(FunctionImplementation implFunction, Object arg) {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg);
-        implFunction.profile.recordInvocation(frame);
+        implFunction.profile.recordArguments(frame);
         Object result;
         try {
             result = implFunction.body().accept(new ProfilingEvaluator(frame));
@@ -148,7 +148,7 @@ public class ProfilingInterpreter extends Interpreter {
         var frame = new Object[implFunction.frameSize()];
         implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
         implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
-        implFunction.profile.recordInvocation(frame);
+        implFunction.profile.recordArguments(frame);
         Object result;
         try {
             result = implFunction.body().accept(new ProfilingEvaluator(frame));
@@ -165,7 +165,7 @@ public class ProfilingInterpreter extends Interpreter {
         implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
         implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
         implFunction.allParameters()[2].setupArgumentIn(frame, arg3);
-        implFunction.profile.recordInvocation(frame);
+        implFunction.profile.recordArguments(frame);
         Object result;
         try {
             result = implFunction.body().accept(new ProfilingEvaluator(frame));

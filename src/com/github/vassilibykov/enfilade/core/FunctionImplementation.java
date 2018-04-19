@@ -22,16 +22,17 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 /**
  * An object holding together all executable representations of a function
  * (though not necessarily all of them are available at any given time). The
- * representations are: a tree of {@link EvaluatorNode}s, a list of recovery
- * interpreter instructions, method handles to invoke generic and specialized
- * compiled representations. This is <em>not</em> a function value in the
- * implemented language. For that, see {@link Closure}.
+ * representations are: a tree of {@link EvaluatorNode}s (the definitive
+ * executable form), a method handle of the compiled representation with generic
+ * signature (if exists), and a method handle of the compiled representation
+ * with specialized signature (if exists). This is <em>not</em> a function value
+ * in the implemented language. For that, see {@link Closure}.
  *
  * <p>Each function implementation object corresponds to a lambda expression in
- * the source language. Thus, a top-level function with two nested closures
- * would map onto three {@link FunctionImplementation}s. A {@link Closure}
- * instance created when a lambda expression is evaluated references the
- * corresponding function implementation.
+ * the source language. A top-level function with two nested closures would map
+ * onto three {@link FunctionImplementation}s. A {@link Closure} instance
+ * created when a lambda expression is evaluated references the corresponding
+ * function implementation.
  *
  * <p>At the core of a function implementation's invocation mechanism is its
  * {@link #callSite}, referred to as "the core call site", and an invoker of
@@ -58,7 +59,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
  * (Object{k} Object{n}) -> Object
  * }</pre>
  *
- * <p>When invoked by a standard {@code call} expression with a closure as the
+ * <p>When invoked by the {@code call} expression with a closure as the
  * function argument, executed by the interpreter, invocation is kicked off by
  * one of the {@link Closure#invoke} methods, receiving the call arguments
  * ({@code n} Objects).
@@ -70,21 +71,21 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
  * (Object Object{n}) -> Object
  * }</pre>
  *
- * <p>Note the extra leading argument. It contains the closure being called, but
- * is formally typed as {@code Object} rather than closure. Internally a closure
- * maintains an {@link Closure#genericInvoker} method handle which calls its
- * function implementation's {@link #callSiteInvoker} after inserting copied
+ * <p>The extra leading argument is the closure being called. Internally a
+ * closure maintains an {@link Closure#genericInvoker} method handle which calls
+ * its function implementation's {@link #callSiteInvoker} after inserting copied
  * values, if any, to be received by the synthetic parameters prepended by the
  * closure converter.
  *
- * <p>In addition to the generic compiled form bound to the core {@link
+ * <p>In addition to the generically-typed compiled form bound to the core {@link
  * #callSite}, a function implementation may have a specialized compiled form. A
  * specialized form is produced by the compiler if the profiling interpreter
  * observed at least one of the function arguments to always be of a primitive
  * type. In a specialized form is available, the {@link
  * #specializedImplementation} field is not null. It contains a method handle of
- * the specialized compiled form. The method does NOT have the leading closure
- * parameter.
+ * the specialized compiled form. Compared to the signature of the generic method,
+ * the signature of the specialized one has some of the parameters of primitive
+ * types, and may have a primitive return type.
  *
  * <p>There are two mechanisms of how a specialized implementation can be
  * invoked. One is from the "normal" generic invocation pipeline, which includes
@@ -104,14 +105,14 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
  * is again the closure typed as Object). The same function might be called
  * elsewhere from a call site typed as {@code (Object int Object) -> Object} if
  * those were the types observed at that call site.
- *
- * <p>--TBD-- I need to better think through how {@link Closure} and {@link
- * ClosureInvokeDynamic} efficiently can bind to specialized forms.
  */
 public class FunctionImplementation implements Callable {
 
-    /** The number of times a function is profiled before it's queued for compilation. */
-    private static final long PROFILING_TARGET = 100; // Long.MAX_VALUE;
+    /**
+     * The number of times a function is executed as interpreted before it's
+     * queued for compilation. The current value is picked fairly randomly.
+     */
+    private static final long PROFILING_TARGET = 10;
 
     private enum State {
         INVALID,
@@ -178,6 +179,12 @@ public class FunctionImplementation implements Callable {
     /*internal*/ MethodHandle callSiteInvoker;
     /*internal*/ MethodHandle genericImplementation;
     /*internal*/ MethodHandle specializedImplementation;
+    /**
+     * Internal representation of this function's code from which recovery
+     * portion of the bytecode can be generated. It's the same for generic and
+     * specialized forms, so it's cached here. Lazily computed by the getter.
+     */
+    private RecoveryCodeGenerator.Instruction[] recoveryCode;
     private volatile State state;
 
     FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topFunction) {
@@ -278,6 +285,13 @@ public class FunctionImplementation implements Callable {
         return state == State.COMPILED;
     }
 
+    RecoveryCodeGenerator.Instruction[] recoveryCode() {
+        if (recoveryCode == null) {
+            recoveryCode = RecoveryCodeGenerator.EvaluatorNodeToACodeTranslator.translate(body);
+        }
+        return recoveryCode;
+    }
+
     @Override
     public MethodHandle invoker(MethodType callSiteType) {
         if (specializedImplementation != null && callSiteType == specializedImplementation.type()) {
@@ -370,7 +384,7 @@ public class FunctionImplementation implements Callable {
         applyCompilationResult(result);
     }
 
-    private synchronized void applyCompilationResult(Compiler.Result result) {
+    private synchronized void applyCompilationResult(Compiler.UnitResult result) {
         var implClass = GeneratedCode.defineClass(result);
         var callSitesToUpdate = new ArrayList<MutableCallSite>();
         for (var entry : result.results().entrySet()) {

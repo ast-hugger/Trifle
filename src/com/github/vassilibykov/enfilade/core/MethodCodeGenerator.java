@@ -17,19 +17,18 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
 
 /**
- * Generates the "main" executable representation of a function.
+ * Generates the "normal" executable representation of a function.
  *
  * @see RecoveryCodeGenerator
  */
 class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
 
     /**
-     * An SPE handler that needs to be generated once we are done with the
-     * method proper.
+     * An SPE handler to be generated once we are done with the method proper.
      */
     private static class SquarePegHandler {
         /**
-         * The label to be positioned at the entry into the handler code.
+         * The label to be set at the beginning of the handler code.
          */
         private final Label handlerStart;
         /**
@@ -37,6 +36,10 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
          * NOT include any parameters, since they are by definition always live.
          */
         private final List<AbstractVariable> liveLocals;
+        /**
+         * The label set in recovery code at the location where execution should
+         * resume.
+         */
         private final Label recoverySiteLabel;
 
         private SquarePegHandler(Label handlerStart, List<AbstractVariable> liveLocals) {
@@ -93,7 +96,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     private void generateRecoveryHandlers() {
-        squarePegHandlers.forEach(this::generateSquarePegHandler);
+        squarePegHandlers.forEach(this::generateRecoveryHandler);
     }
 
     private void generateRecoveryCode() {
@@ -438,10 +441,11 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
      * generic code. The unwrapped value of the SPE should be the only value on
      * the stack when jumping.
      */
-    private void generateSquarePegHandler(SquarePegHandler handler) {
-        writer.asm().visitLabel(handler.handlerStart);
+    private void generateRecoveryHandler(SquarePegHandler handler) {
         // stack: SquarePegException
-        writer.unwrapSPE();
+        writer
+            .setLabelHere(handler.handlerStart)
+            .unwrapSPE();
         // stack: continuation value
         Stream.concat(Stream.of(function.allParameters()), handler.liveLocals.stream()).forEach(var -> {
             var varType = var.specializedType();

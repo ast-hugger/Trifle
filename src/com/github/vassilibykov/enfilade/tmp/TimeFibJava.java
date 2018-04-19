@@ -5,7 +5,7 @@
 package com.github.vassilibykov.enfilade.tmp;
 
 public class TimeFibJava {
-    private static final int fib(int n) {
+    private static int fib(int n) {
         if (n < 2) {
             return 1;
         } else {

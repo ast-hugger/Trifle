@@ -25,33 +25,81 @@ import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
- * Compiles a {@link FunctionImplementation} of a top-level function into a
- * class with methods implementing all forms of the top-level function and
- * its nested functions.
+ * Compiles a unit consisting of a {@link FunctionImplementation} of a top-level
+ * function and function implementations of all its nested closures into a class
+ * with <em>implementation methods</em> for all representations of these functions.
+ *
+ * <h2>Compilation Scheme Overview</h2>
+ *
+ * <p>A compilation unit consists of a top-level function and functions for each
+ * closure nested in it directly or indirectly. A unit is compiled into a JVM
+ * class with static <em>implementation methods</em>. Each function is compiled
+ * into a minimum of one and a maximum of two implementation methods.
+ *
+ * <p>A function is always compiled into a <em>generic</em> method. A generic
+ * method is a method whose all parameters and return types are Object. The
+ * function will also be compiled into a <em>specialized</em> method if during
+ * profiling all values of some of the function parameters have fit a narrow
+ * primitive type such as {@code int}. A specialized method will have those
+ * parameters of the appropriate narrow type, and might have a narrow return
+ * type as well, depending on the observations of the function's return values.
+ *
+ * <p>Each implementation method includes the "normal" implementation code
+ * generated from the function's body. Operations performed in the
+ * implementation code may be generic (performed on and producing references) or
+ * specialized, depending on the observations of the values involved. Note that
+ * these internal specializations are independent of whether the method itself
+ * is generic or specialized. A generic implementation method may contain
+ * specialized operations - for example, if it contains a loop over integers.
+ *
+ * <p>Specialized operations which implement complex expressions may fail,
+ * throwing {@link SquarePegException}s. All such "fallible" operations are
+ * compiled so that a potential SPE they throw is caught and handled within the
+ * method. Thus, the normal code of a method is in the general case followed
+ * by a series of SPE handlers, one for each potential failure site.
+ *
+ * <p>An SPE handler begins execution with a {@link SquarePegException} instance
+ * on the stack. The exception contains a value produced by the complex
+ * expression which doesn't fit the specialization of the continuation of that
+ * expression. For example, a call to a function from a call site of {@code int}
+ * return type will return by throwing an SPE if the return value is a reference
+ * not representable as an {@code int} value. Our task at this point is to
+ * <em>recover</em> by switching execution to a path which can accept this
+ * more generic value.
+ *
+ * <p>For that, every function implementation method with fallible operations
+ * contains recovery code. Recovery code is essentially a version of normal
+ * function code, but generated so that all its operations are generic. (So
+ * recovery code itself is infallible, that is, can't itself have specialization
+ * failures).
+ *
+ * <p>An SPE handler extracts the continuation value from the exception
+ * instance, converts the values of all live locals of primitive types into the
+ * corresponding wrapper objects, and then jumps to the location in the recovery
+ * code which corresponds to the location in normal code where execution would
+ * have continued were it not for the SPE. As a result, execution proceeds as
+ * if it were running in the recovery code from the beginning.
  */
-public class Compiler {
-
-    static final MethodType RECOVERY_METHOD_TYPE = MethodType.methodType(
-        Object.class, Object.class, int.class, Object[].class);
+class Compiler {
 
     private static final String GENERIC_METHOD_PREFIX = "function";
     private static final String SPECIALIZED_METHOD_PREFIX = "specialized$";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
-    private static final String GENERATED_CODE_PACKAGE = "com.github.vassilibykov.enfilade.core";
+    private static final String GENERATED_CODE_PACKAGE = GeneratedCode.class.getPackageName();
     private static final String GENERATED_CLASS_NAME_PREFIX = GENERATED_CODE_PACKAGE + ".$gen$";
 
     /**
      * The access point: compile a function.
      */
-    public static Result compile(FunctionImplementation topLevelFunction) {
+    static UnitResult compile(FunctionImplementation topLevelFunction) {
         Compiler compiler = new Compiler(topLevelFunction);
-        Result result = compiler.compile();
-        dumpClassFile("generated", result.bytecode());
+        UnitResult result = compiler.compile();
+        dumpClassFile(result.bytecode());
         return result;
     }
 
-    private static void dumpClassFile(String name, byte[] bytecode) {
-        File classFile = new File(name + ".class");
+    private static void dumpClassFile(byte[] bytecode) {
+        File classFile = new File("generated.class");
         try {
             FileOutputStream classStream = new FileOutputStream(classFile);
             classStream.write(bytecode);
@@ -61,17 +109,11 @@ public class Compiler {
         }
     }
 
-    static class Result {
-        private final String className;
+    static class UnitResult {
         private byte[] bytecode;
-        private final Map<FunctionImplementation, FunctionResult> results = new HashMap<>();
+        private final Map<FunctionImplementation, FunctionResult> functionResults = new HashMap<>();
 
-        private Result(String className) {
-            this.className = className;
-        }
-
-        String className() {
-            return className;
+        private UnitResult() {
         }
 
         byte[] bytecode() {
@@ -79,15 +121,15 @@ public class Compiler {
         }
 
         FunctionResult functionResultFor(FunctionImplementation function) {
-            return Objects.requireNonNull(results.get(function));
+            return Objects.requireNonNull(functionResults.get(function));
         }
 
         Map<FunctionImplementation, FunctionResult> results() {
-            return Collections.unmodifiableMap(results);
+            return Collections.unmodifiableMap(functionResults);
         }
 
         private void addFunctionResult(FunctionImplementation function, FunctionResult result) {
-            results.put(function, result);
+            functionResults.put(function, result);
         }
 
         private void setBytecode(byte[] bytecode) {
@@ -120,15 +162,7 @@ public class Compiler {
 
     private static long serial = 0;
 
-    static String internalClassName(Class<?> klass) {
-        return internalClassName(klass.getName());
-    }
-
-    static String internalClassName(String fqnName) {
-        return fqnName.replace('.', '/');
-    }
-
-    static String allocateClassName() {
+    private static String allocateClassName() {
         return GENERATED_CLASS_NAME_PREFIX + serial++;
     }
 
@@ -138,17 +172,18 @@ public class Compiler {
 
     private final FunctionImplementation topLevelFunction;
     private final String className;
-    private final Result result;
+    private final UnitResult result;
     private final ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
     private int generatedMethodSerial = 0;
 
     private Compiler(FunctionImplementation topLevelFunction) {
+        if (!topLevelFunction.isTopLevel()) throw new AssertionError();
         this.topLevelFunction = topLevelFunction;
         this.className = allocateClassName();
-        this.result = new Result(this.className);
+        this.result = new UnitResult();
     }
 
-    public Result compile() {
+    public UnitResult compile() {
         inferTypes();
         setupClassWriter();
         generateGenericMethods();
@@ -167,7 +202,7 @@ public class Compiler {
         classWriter.visit(
             Opcodes.V9,
             ACC_PUBLIC | ACC_SUPER | ACC_FINAL,
-            internalClassName(className),
+            GhostWriter.internalClassName(className),
             null,
             JAVA_LANG_OBJECT,
             null);

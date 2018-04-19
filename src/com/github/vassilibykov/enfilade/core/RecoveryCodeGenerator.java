@@ -9,8 +9,8 @@ import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.INT;
@@ -28,33 +28,59 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
  * all operations being generic. However, because recovery code is only
  * accessible via jumps from SPE handlers, large portions of it end up being
  * dead code and are erased by ASM, replaced with unsightly swathes of {@code
- * nop}s. For more eye-pleasing results, we follow a somewhat more involved
- * approach.
+ * nop}s. To generate a more eye-pleasing and compact result, we follow a
+ * somewhat more involved approach.
  *
- * <p>TODO elaborate
+ * <p>We convert the original tree of {@link EvaluatorNode}s of the function
+ * into an equivalent form called here A-code. A-code is a hybrid representation
+ * of the original A-normal forms, such that atomic expressions retain their
+ * tree form, while complex expressions are translated into a sequence of
+ * instructions. In this representation, we can easily analyze control flow and
+ * eliminate dead code. The actual bytecode of the recovery code is generated
+ * from this representation.
+ *
+ * <p>Execution of A-code can be formalized as a machine consisting of a
+ * sequence of instructions, the current instruction pointer, and a single
+ * register containing either an Object (including null) or being empty (which
+ * is different from containing null). Alternatively, the register could be
+ * regarded as a stack of maximum depth 1. The instructions are:
+ *
+ * <p><b>load EvaluatorNode</b> - The node may be an atomic expression or a call.
+ * Evaluates the expression and stores the result in the register.
+ *
+ * <p><b>store VariableDefinition</b> - Stores the value in the register into
+ * the variable. The register must not be empty, and becomes empty after
+ * executing the instruction.
+ *
+ * <p><b>copy VariableDefinition</b> - Same as <b>store</b>, but the register
+ * is not emptied after executing the instruction.
+ *
+ * <p><b>branch EvaluatorNode int</b> - The node must be an atomic expression.
+ * Evaluates the expression, which must produce a Boolean. If the result is
+ * true, the instruction pointer is set to the {@code int} operand. In other
+ * words, this is a conditional branch on true to an absolute address.
+ * The register is not affected by this instruction.
+ *
+ * <p><b>goto int</b> - Unconditionally set the instruction pointer to the value
+ * of the operand. The register is not affected.
+ *
+ * <p><b>return</b> - Return the value in the register (which must not be
+ * empty) as the result of the function.
+ *
+ * <p>The essence of this transformation is to make explicit the saving of
+ * values the computation of which may have failed in the "normal" code ({@code
+ * store}, {@code copy}, and {@code return} instructions). These save points
+ * are targets of control transfers from normal code. This representation
+ * also linearizes the flow of control in non-atomic code, thus allowing to
+ * detect and eliminate dead code.
+ *
+ * <p>The intermediate representation is lazily computed and cached by
+ * {@link FunctionImplementation#recoveryCode()}, because it is the same for
+ * both generic and specialized forms of a function, and computing it
+ * involves some work.
  */
 class RecoveryCodeGenerator {
 
-    /**
-     * An instruction of A-code.
-     *
-     * <p>A-code is a representation of A-normal forms in a shape resembling a
-     * sequence of instructions. It can be executed by A-machine which consists
-     * of a vector of local variable values, a current instruction pointer,
-     * and a single register.
-     *
-     * <p>There are only six instructions. Instruction arguments, when present,
-     * are actual objects of the specified types.
-     *
-     * <ul>
-     *     <li>load EvaluatorNode (for an atomic expression or a call)/li>
-     *     <li>store VariableDefinition</li>
-     *     <li>copy VariableDefinition</li>
-     *     <li>branch EvaluatorNode int</li>
-     *     <li>goto int</li>
-     *     <li>return</li>
-     * </ul>
-     */
     static abstract class Instruction {
         private boolean isLive;
         @Nullable Label incomingJumpLabel;
@@ -62,9 +88,7 @@ class RecoveryCodeGenerator {
     }
 
     private static abstract class JumpInstruction extends Instruction {
-        /** Jump target address in the originally generated code, invalid after dead code elimination. */
         int address;
-        /** The instruction pointed to by {@link #address}. */
         Instruction target;
 
         private JumpInstruction(int address) {
@@ -200,34 +224,6 @@ class RecoveryCodeGenerator {
             return translator.translate();
         }
 
-        private class LivenessMapper {
-            private final List<Integer> threads = new ArrayList<>(entryPoints);
-
-            void map() {
-                while (!threads.isEmpty()) {
-                    var thread = threads.remove(0);
-                    map(thread);
-                }
-            }
-
-            private void map(int address) {
-                var instruction = code.get(address);
-                while (!instruction.isLive) {
-                    instruction.isLive = true;
-                    if (instruction instanceof Goto) {
-                        address = ((Goto) instruction).address;
-                    } else if (instruction instanceof Branch) {
-                        threads.add(((Branch) instruction).address);
-                        address++;
-                    } else {
-                        address++;
-                    }
-                    if (address >= code.size()) return;
-                    instruction = code.get(address);
-                }
-            }
-        }
-
         /*
             Instance
          */
@@ -240,48 +236,93 @@ class RecoveryCodeGenerator {
             this.functionBody = functionBody;
         }
 
-        Instruction[] translate() {
+        private Instruction[] translate() {
             functionBody.accept(this); // populates 'code' and 'entryPoints'
+            if (entryPoints.isEmpty()) {
+                /* Recovery code generation is only expected after generating normal code
+                   for a function, and is only requested if the function code included SPE
+                   handlers. Thus, the set of entry points should always be non-empty.
+                   If that is not so, these assumptions have been violated and something
+                   is very wrong. */
+                throw new AssertionError();
+            }
             emit(new Return(null));
-            assignJumpLabels();
-            analyzeLiveness();
+            linkJumps();
+            markLiveInstructions();
             removeDeadCode();
+            fixJumpAddresses();
             return code.toArray(new Instruction[0]);
         }
 
-        private void assignJumpLabels() {
+        /**
+         * Set target fields of jump instructions to point at the instruction at
+         * the address of the jump. This is so we can remove dead code by simply
+         * deleting elements of the {@link #code} list.
+         */
+        private void linkJumps() {
             for (var instruction : code) {
                 if (instruction instanceof JumpInstruction) {
                     JumpInstruction jump = (JumpInstruction) instruction;
-                    int targetAddress = jump.address;
-                    var target = code.get(targetAddress);
-                    jump.target = target;
-                    target.incomingJumpLabel = new Label();
+                    jump.target = code.get(jump.address);
                 }
             }
         }
 
-        private void analyzeLiveness() {
-            var mapper = new LivenessMapper();
-            mapper.map();
+        private void markLiveInstructions() {
+            var pathways = new ArrayList<>(entryPoints);
+            while (!pathways.isEmpty()) {
+                var path = pathways.remove(0);
+                walkPath(path, pathways);
+            }
+        }
+
+        private void walkPath(int address, List<Integer> pathways) {
+            var instruction = code.get(address);
+            while (instruction != null && !instruction.isLive) {
+                instruction.isLive = true;
+                if (instruction instanceof Goto) {
+                    address = ((Goto) instruction).address;
+                } else if (instruction instanceof Branch) {
+                    pathways.add(((Branch) instruction).address);
+                    address++;
+                } else {
+                    address++;
+                }
+                instruction = address < code.size() ? code.get(address) : null;
+            }
         }
 
         private void removeDeadCode() {
-            List<Instruction> entries = entryPoints.stream()
-                .map(code::get)
-                .collect(Collectors.toList());
             code.removeIf(instruction -> !instruction.isLive);
-            List<Instruction> redundantGotos = new ArrayList<>();
-            for (int i = 0; i < code.size() - 1; i++) {
+            var redundantGotos = new ArrayList<Instruction>();
+            for (int i = 0; i < code.size() - 1; i++) { // not including the last instruction
                 var instruction = code.get(i);
                 if (instruction instanceof Goto && ((Goto) instruction).target == code.get(i + 1)) {
                     redundantGotos.add(instruction);
                 }
             }
             code.removeAll(redundantGotos);
-            entryPoints = entries.stream()
-                .map(code::indexOf)
-                .collect(Collectors.toList());
+        }
+
+        /**
+         * After dead code has been removed, numeric jump addresses become
+         * invalid. This is not really a problem because in actual code
+         * generation we rely only on direct target pointers established by
+         * {@link #linkJumps()}. However, we still fix the addresses to match
+         * the new reality as a debugging aid (they are included in the
+         * instruction printout).
+         */
+        private void fixJumpAddresses() {
+            var instructionAddresses = new HashMap<Instruction, Integer>();
+            for (int i = 0; i < code.size(); i++) {
+                instructionAddresses.put(code.get(i), i);
+            }
+            for (var instruction : code) {
+                if (instruction instanceof JumpInstruction) {
+                    var jump = (JumpInstruction) instruction;
+                    jump.address = instructionAddresses.get(jump.target);
+                }
+            }
         }
 
         @Override
@@ -340,10 +381,10 @@ class RecoveryCodeGenerator {
 
         @Override
         public Void visitIf(IfNode anIf) {
-            var branch = new Branch(anIf.condition(), Integer.MAX_VALUE);
+            var branch = new Branch(anIf.condition(), -1);
             emit(branch);
             anIf.falseBranch().accept(this);
-            var theGoto = new Goto(Integer.MAX_VALUE);
+            var theGoto = new Goto(-1);
             emit(theGoto);
             branch.address = nextInstructionAddress();
             anIf.trueBranch().accept(this);
@@ -614,17 +655,23 @@ class RecoveryCodeGenerator {
 
     RecoveryCodeGenerator(FunctionImplementation function, GhostWriter writer) {
         this.function = function;
-        /* TODO In principle, acode has the same structure for both generic and specialized
-           forms of a function. However, there are issues with caching and reusing it
-           which appear to have something to do with Labels--even if local labels are reassigned.
-           See why that is and how we can fix the reuse. */
-        this.acode = EvaluatorNodeToACodeTranslator.translate(function.body());
+        this.acode = function.recoveryCode();
+        assignJumpLabels();
         this.writer = writer;
         this.atomicGenerator = new AtomicExpressionCodeGenerator();
     }
 
+    private void assignJumpLabels() {
+        for (var instruction : acode) {
+            if (instruction instanceof JumpInstruction) {
+                var jump = (JumpInstruction) instruction;
+                jump.target.incomingJumpLabel = new Label();
+            }
+        }
+    }
+
     void generate() {
-        for (int i = 0; i < acode.length - 1; i++) {
+        for (int i = 0; i < acode.length - 1; i++) { // not including the final return
             var instruction = acode[i];
             if (instruction.incomingJumpLabel != null) {
                 writer.setLabelHere(instruction.incomingJumpLabel);
@@ -653,12 +700,12 @@ class RecoveryCodeGenerator {
     }
 
     private void visitReturn(Return aReturn) {
-        if (aReturn.recoverySite != null) setRecoveryLabelHere(aReturn.recoverySite);
+        setRecoveryLabelHere(aReturn.recoverySite);
         writer.ret(REFERENCE);
     }
 
     private void visitStore(Store store) {
-        if (store.recoverySite != null) setRecoveryLabelHere(store.recoverySite);
+        setRecoveryLabelHere(store.recoverySite);
         writer.storeLocal(REFERENCE, store.variable.index());
     }
 
@@ -669,8 +716,7 @@ class RecoveryCodeGenerator {
             .storeLocal(REFERENCE, copy.variable.index());
     }
 
-    private void setRecoveryLabelHere(RecoverySite site) {
-        writer.setLabelHere(site.recoverySiteLabel());
+    private void setRecoveryLabelHere(@Nullable RecoverySite site) {
+        if (site != null) writer.setLabelHere(site.recoverySiteLabel());
     }
-
 }

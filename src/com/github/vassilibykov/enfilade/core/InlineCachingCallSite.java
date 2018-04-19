@@ -34,7 +34,7 @@ class InlineCachingCallSite extends MutableCallSite {
         setTarget(dispatch);
     }
 
-    boolean isMegamorphic() {
+    synchronized boolean isMegamorphic() {
         return cacheSize > CACHE_LIMIT;
     }
 
