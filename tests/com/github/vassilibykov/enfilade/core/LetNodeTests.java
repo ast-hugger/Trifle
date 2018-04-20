@@ -70,7 +70,7 @@ public class LetNodeTests {
         profileAndCompile(intSupplier);
         assertEquals(INT, letVariable.specializedType());
         assertEquals(INT, letNode.specializedType());
-        assertEquals(INT, letFunction.specializedReturnType);
+        assertEquals(INT, letFunction.specializedReturnType());
     }
 
     @Test
@@ -78,7 +78,7 @@ public class LetNodeTests {
         profileAndCompile(stringSupplier);
         assertEquals(REFERENCE, letVariable.specializedType());
         assertEquals(REFERENCE, letNode.specializedType());
-        assertEquals(REFERENCE, letFunction.specializedReturnType);
+        assertEquals(REFERENCE, letFunction.specializedReturnType());
     }
 
     @Test

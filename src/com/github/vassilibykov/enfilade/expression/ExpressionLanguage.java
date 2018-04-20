@@ -49,7 +49,7 @@ public class ExpressionLanguage {
         return Const.value(value);
     }
 
-    public static FunctionReference direct(DirectlyCallable target) {
+    public static FunctionReference direct(TopLevelFunction target) {
         return FunctionReference.to(target);
     }
 

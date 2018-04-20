@@ -38,7 +38,7 @@ public class Closure {
         this.copiedValues = copiedValues;
         // callSiteInvoker type: (synthetic:Object* declared:Object*) -> Object
         // invoker type: (declared:Object*) -> Object
-        this.genericInvoker = MethodHandles.insertArguments(implementation.callSiteInvoker, 0, copiedValues);
+        this.genericInvoker = MethodHandles.insertArguments(implementation.callSiteInvoker(), 0, copiedValues);
     }
 
     boolean hasCopiedValues() {
@@ -75,7 +75,7 @@ public class Closure {
             throw new IllegalArgumentException();
         }
         if (requiredType.hasPrimitives()) {
-            var specializedForm = implementation.specializedImplementation;
+            var specializedForm = implementation.specializedImplementation();
             if (specializedForm != null) {
                 // The type of specializedForm includes the leading parameters for copied values
                 var cleanType = specializedForm.type().dropParameterTypes(0, copiedValues.length);
@@ -92,7 +92,7 @@ public class Closure {
                 }
             }
         }
-        var genericForm = implementation.genericImplementation;
+        var genericForm = implementation.genericImplementation();
         if (genericForm != null) {
             var genericInvoker = MethodHandles.insertArguments(genericForm, 0, copiedValues);
             specializedInvoker = JvmType.guardReturnValue(requiredType.returnType(), genericInvoker);

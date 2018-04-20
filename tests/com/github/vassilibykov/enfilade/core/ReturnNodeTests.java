@@ -57,7 +57,7 @@ public class ReturnNodeTests {
     public void specializedType() {
         closure.invoke();
         function.forceCompile();
-        assertEquals(INT, function.specializedReturnType);
+        assertEquals(INT, function.specializedReturnType());
         assertEquals(REFERENCE, function.body().specializedType());
     }
 

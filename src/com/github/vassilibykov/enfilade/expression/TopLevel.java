@@ -13,22 +13,22 @@ import java.util.function.Function;
  * A collection of user-defined "global" functions.
  */
 public class TopLevel {
-    private Map<String, TopLevelFunction> topLevelFunctionsByName = new HashMap<>();
+    private Map<String, UserFunction> topLevelFunctionsByName = new HashMap<>();
 
-    public void define(String name, Function<TopLevelFunction, Lambda> definer) {
-        var topItem = new TopLevelFunction();
+    public void define(String name, Function<UserFunction, Lambda> definer) {
+        var topItem = new UserFunction();
         topLevelFunctionsByName.put(name, topItem);
         var definition = definer.apply(topItem);
         topItem.setImplementation(FunctionTranslator.translate(definition));
     }
 
     public void define(String name, Lambda definition) {
-        var topItem = new TopLevelFunction();
+        var topItem = new UserFunction();
         topLevelFunctionsByName.put(name, topItem);
         topItem.setImplementation(FunctionTranslator.translate(definition));
     }
 
-    public TopLevelFunction get(String name) {
+    public UserFunction get(String name) {
         return topLevelFunctionsByName.get(name);
     }
 

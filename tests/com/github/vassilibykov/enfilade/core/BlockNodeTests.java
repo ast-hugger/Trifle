@@ -75,16 +75,16 @@ public class BlockNodeTests {
     public void specializedType() {
         profileAndCompileAll();
         assertEquals(REFERENCE, emptyBlockNode.specializedType());
-        assertEquals(REFERENCE, emptyBlockFunction.specializedReturnType);
+        assertEquals(REFERENCE, emptyBlockFunction.specializedReturnType());
         assertEquals(INT, blockNode.specializedType());
-        assertEquals(INT, blockFunction.specializedReturnType);
+        assertEquals(INT, blockFunction.specializedReturnType());
     }
 
     @Test
     public void compiledEvaluation() {
         profileAndCompileAll();
-        assertEquals(MethodType.genericMethodType(0), emptyBlockFunction.genericImplementation.type());
-        assertEquals(MethodType.genericMethodType(0), blockFunction.genericImplementation.type());
+        assertEquals(MethodType.genericMethodType(0), emptyBlockFunction.genericImplementation().type());
+        assertEquals(MethodType.genericMethodType(0), blockFunction.genericImplementation().type());
         assertEquals(null, emptyBlockClosure.invoke());
         assertEquals(3, blockClosure.invoke());
     }
@@ -92,7 +92,7 @@ public class BlockNodeTests {
     @Test
     public void noSpecializationPossible() {
         // because there are no parameters to make up a specialized signature
-        assertEquals(null, emptyBlockFunction.specializedImplementation);
-        assertEquals(null, blockFunction.specializedImplementation);
+        assertEquals(null, emptyBlockFunction.specializedImplementation());
+        assertEquals(null, blockFunction.specializedImplementation());
     }
 }

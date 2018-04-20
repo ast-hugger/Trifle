@@ -70,8 +70,8 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     void generate() {
         generatePrologue();
         var expressionType = function.body().accept(this);
-        writer.bridgeValue(expressionType, function.specializedReturnType);
-        writer.ret(function.specializedReturnType);
+        writer.bridgeValue(expressionType, function.specializedReturnType());
+        writer.ret(function.specializedReturnType());
         if (!squarePegHandlers.isEmpty()) {
             generateRecoveryHandlers();
             generateRecoveryCode();
@@ -361,9 +361,9 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
            value() as if it were complex already. */
         withSquarePegRecovery(returnNode, () -> {
             var returnType = returnNode.value().accept(this);
-            writer.bridgeValue(returnType, function.specializedReturnType);
+            writer.bridgeValue(returnType, function.specializedReturnType());
         });
-        writer.ret(function.specializedReturnType);
+        writer.ret(function.specializedReturnType());
         return VOID;
     }
 

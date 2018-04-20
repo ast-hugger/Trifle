@@ -664,8 +664,8 @@ class RecoveryCodeGenerator {
         }
         var finalReturn = acode[acode.length - 1];
         if (finalReturn.incomingJumpLabel != null) writer.setLabelHere(finalReturn.incomingJumpLabel);
-        writer.bridgeValue(REFERENCE, function.specializedReturnType);
-        writer.ret(function.specializedReturnType);
+        writer.bridgeValue(REFERENCE, function.specializedReturnType());
+        writer.ret(function.specializedReturnType());
     }
 
     private void visitBranch(Branch branch) {

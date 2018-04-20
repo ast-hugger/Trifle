@@ -2,10 +2,9 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.Callable;
-import com.github.vassilibykov.enfilade.expression.DirectlyCallable;
+import com.github.vassilibykov.enfilade.expression.TopLevelFunction;
 
-public abstract class BuiltinFunction implements DirectlyCallable, Callable {
+public abstract class BuiltinFunction implements TopLevelFunction, Callable {
     private int id = -1;
 
     @Override

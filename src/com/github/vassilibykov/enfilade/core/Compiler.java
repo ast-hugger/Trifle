@@ -278,7 +278,7 @@ class Compiler {
             .map(each -> each.representativeClass())
             .toArray(Class[]::new);
         return MethodType.methodType(
-            function.specializedReturnType.representativeClass(),
+            function.specializedReturnType().representativeClass(),
             argClasses);
     }
 }

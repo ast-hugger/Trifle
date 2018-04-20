@@ -82,11 +82,11 @@ public class ClosureNodeTests {
     public void specializedType() {
         invokeAndCompileAll();
         assertEquals(REFERENCE, stringReturningClosureNode.specializedType());
-        assertEquals(REFERENCE, stringReturningClosureFunction.specializedReturnType);
+        assertEquals(REFERENCE, stringReturningClosureFunction.specializedReturnType());
         assertEquals(REFERENCE, freeVarReturningClosureNode.specializedType());
-        assertEquals(REFERENCE, freeVarReturningClosureFunction.specializedReturnType);
+        assertEquals(REFERENCE, freeVarReturningClosureFunction.specializedReturnType());
         assertEquals(INT, freeVarReturningClosureImplementation.body().specializedType());
-        assertEquals(INT, freeVarReturningClosureImplementation.specializedReturnType);
+        assertEquals(INT, freeVarReturningClosureImplementation.specializedReturnType());
     }
 
     @Test
@@ -101,15 +101,15 @@ public class ClosureNodeTests {
     @Test
     public void genericImplementation() throws Throwable {
         invokeAndCompileAll();
-        assertEquals(MethodType.genericMethodType(0), stringReturningClosureFunction.genericImplementation.type());
-        var closure = (Closure) stringReturningClosureFunction.genericImplementation.invoke();
+        assertEquals(MethodType.genericMethodType(0), stringReturningClosureFunction.genericImplementation().type());
+        var closure = (Closure) stringReturningClosureFunction.genericImplementation().invoke();
         assertEquals("hello", closure.invoke());
     }
 
     @Test
     public void specializedImplementation() throws Throwable {
         invokeAndCompileAll();
-        MethodHandle implementation = freeVarReturningClosureImplementation.specializedImplementation;
+        MethodHandle implementation = freeVarReturningClosureImplementation.specializedImplementation();
         assertEquals(MethodType.methodType(int.class, int.class), implementation.type());
         // This is a raw invocation; the argument is the copied value of the closed over variable.
         assertEquals(42, implementation.invoke(42));

@@ -100,13 +100,13 @@ public class ConstantNodeTests {
     public void specializedTypes() {
         invokeAndCompileAll();
         assertEquals(INT, intNode.specializedType());
-        assertEquals(INT, intFunction.specializedReturnType);
+        assertEquals(INT, intFunction.specializedReturnType());
         assertEquals(BOOL, boolNode.specializedType());
-        assertEquals(BOOL, boolFunction.specializedReturnType);
+        assertEquals(BOOL, boolFunction.specializedReturnType());
         assertEquals(REFERENCE, stringNode.specializedType());
-        assertEquals(REFERENCE, stringFunction.specializedReturnType);
+        assertEquals(REFERENCE, stringFunction.specializedReturnType());
         assertEquals(REFERENCE, nullNode.specializedType());
-        assertEquals(REFERENCE, nullFunction.specializedReturnType);
+        assertEquals(REFERENCE, nullFunction.specializedReturnType());
     }
 
     @Test
@@ -121,13 +121,13 @@ public class ConstantNodeTests {
     @Test
     public void genericImplementation() throws Throwable {
         invokeAndCompileAll();
-        assertEquals(GENERIC_NULLARY_METHOD_TYPE, intFunction.genericImplementation.type());
-        assertEquals(GENERIC_NULLARY_METHOD_TYPE, boolFunction.genericImplementation.type());
-        assertEquals(GENERIC_NULLARY_METHOD_TYPE, stringFunction.genericImplementation.type());
-        assertEquals(GENERIC_NULLARY_METHOD_TYPE, nullFunction.genericImplementation.type());
-        assertEquals(42, intFunction.genericImplementation.invoke());
-        assertEquals(true, boolFunction.genericImplementation.invoke());
-        assertEquals("hello", stringFunction.genericImplementation.invoke());
-        assertEquals(null, nullFunction.genericImplementation.invoke());
+        assertEquals(GENERIC_NULLARY_METHOD_TYPE, intFunction.genericImplementation().type());
+        assertEquals(GENERIC_NULLARY_METHOD_TYPE, boolFunction.genericImplementation().type());
+        assertEquals(GENERIC_NULLARY_METHOD_TYPE, stringFunction.genericImplementation().type());
+        assertEquals(GENERIC_NULLARY_METHOD_TYPE, nullFunction.genericImplementation().type());
+        assertEquals(42, intFunction.genericImplementation().invoke());
+        assertEquals(true, boolFunction.genericImplementation().invoke());
+        assertEquals("hello", stringFunction.genericImplementation().invoke());
+        assertEquals(null, nullFunction.genericImplementation().invoke());
     }
 }

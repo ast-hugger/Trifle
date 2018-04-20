@@ -2,6 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.expression.AtomicExpression;
 import com.github.vassilibykov.enfilade.expression.Block;
 import com.github.vassilibykov.enfilade.expression.Call;
 import com.github.vassilibykov.enfilade.expression.Const;
@@ -86,7 +87,7 @@ public class FunctionTranslator {
     }
 
     void translate() {
-        var lambdaTranslator = new LambdaTranslator(topLambda, 0, topFunctionImplementation);
+        var lambdaTranslator = new LambdaTranslator(topLambda, topFunctionImplementation);
         lambdaTranslator.translate();
     }
 
@@ -94,10 +95,9 @@ public class FunctionTranslator {
         private final Lambda thisLambda;
         private final FunctionImplementation thisFunction;
 
-        private LambdaTranslator(Lambda thisLambda, int depth, FunctionImplementation thisFunction) {
+        private LambdaTranslator(Lambda thisLambda, FunctionImplementation thisFunction) {
             this.thisLambda = thisLambda;
             this.thisFunction = thisFunction;
-            thisFunction.depth = depth;
         }
 
         void translate() {
@@ -151,7 +151,8 @@ public class FunctionTranslator {
                         throw new UnsupportedOperationException("not yet implemented");
                 }
             } else {
-                var target = call.target().accept(this);
+                // FIXME this will need more work when we generalize call targets
+                var target = ((AtomicExpression) call.target()).accept(this);
                 switch (call.arguments().size()) {
                     case 0:
                         return new CallNode.Call0(target);
@@ -185,7 +186,7 @@ public class FunctionTranslator {
         public EvaluatorNode visitLambda(Lambda lambda) {
             var nestedFunction = new FunctionImplementation(lambda, topFunctionImplementation);
             nestedFunctions.add(nestedFunction);
-            var nestedTranslator = new LambdaTranslator(lambda, thisFunction.depth + 1, nestedFunction);
+            var nestedTranslator = new LambdaTranslator(lambda, nestedFunction);
             nestedTranslator.translate();
             return new ClosureNode(nestedFunction);
         }

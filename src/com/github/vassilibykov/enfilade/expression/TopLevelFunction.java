@@ -2,26 +2,15 @@
 
 package com.github.vassilibykov.enfilade.expression;
 
-import com.github.vassilibykov.enfilade.Callable;
-import com.github.vassilibykov.enfilade.core.FunctionImplementation;
+import com.github.vassilibykov.enfilade.core.Callable;
 
 /**
- * A user-defined function created and managed by {@link TopLevel}.
+ * Implemented by classes whose instances may appear as targets of
+ * {@link FunctionReference}s.
  */
-public class TopLevelFunction implements DirectlyCallable {
-    private FunctionImplementation implementation;
-
-    @Override
-    public Callable asCallable() {
-        return implementation;
+public interface TopLevelFunction {
+    Callable asCallable();
+    default int id() {
+        return asCallable().id();
     }
-
-    FunctionImplementation implementation() {
-        return implementation;
-    }
-
-    void setImplementation(FunctionImplementation implementation) {
-        this.implementation = implementation;
-    }
-
 }

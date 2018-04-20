@@ -2,6 +2,8 @@
 
 package com.github.vassilibykov.enfilade;
 
+import com.github.vassilibykov.enfilade.core.Callable;
+
 import java.util.ArrayList;
 import java.util.List;
 

@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.expression.DirectlyCallable;
+import com.github.vassilibykov.enfilade.expression.TopLevelFunction;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -54,7 +54,7 @@ abstract class CallNode extends EvaluatorNode {
             super(function);
         }
 
-        DirectlyCallable target() {
+        TopLevelFunction target() {
             return ((DirectFunctionNode) function()).target();
         }
 
@@ -92,7 +92,7 @@ abstract class CallNode extends EvaluatorNode {
             super(function, arg);
         }
 
-        DirectlyCallable target() {
+        TopLevelFunction target() {
             return ((DirectFunctionNode) function()).target();
         }
 
@@ -136,7 +136,7 @@ abstract class CallNode extends EvaluatorNode {
             super(function, arg1, arg2);
         }
 
-        DirectlyCallable target() {
+        TopLevelFunction target() {
             return ((DirectFunctionNode) function()).target();
         }
 

@@ -2,5 +2,8 @@
 
 package com.github.vassilibykov.enfilade.expression;
 
-public abstract class AtomicExpression extends Expression implements Callable {
+/**
+ * Something that can appear as the call target of a {@link Call} expression.
+ */
+public interface Callable {
 }

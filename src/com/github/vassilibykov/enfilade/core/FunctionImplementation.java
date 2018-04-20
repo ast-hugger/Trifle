@@ -2,7 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.Callable;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -158,15 +157,11 @@ public class FunctionImplementation implements Callable {
     private EvaluatorNode body;
     private int frameSize = -1;
     /*internal*/ FunctionProfile profile;
-    /*internal*/ JvmType specializedReturnType;
+    private JvmType specializedReturnType;
     /**
      * The unique ID of the function in the function registry.
      */
     private int id = -1;
-    /**
-     * Nesting depth of the function, with the top-level function having the depth of 0.
-     */
-    /*internal*/ int depth = -1;
     /**
      * A call site invoking which will execute the function using the currently
      * appropriate execution mode (profiled vs compiled). The call site has the
@@ -176,9 +171,9 @@ public class FunctionImplementation implements Callable {
     /**
      * The dynamic invoker of {@link #callSite}.
      */
-    /*internal*/ MethodHandle callSiteInvoker;
-    /*internal*/ MethodHandle genericImplementation;
-    /*internal*/ MethodHandle specializedImplementation;
+    private MethodHandle callSiteInvoker;
+    private MethodHandle genericImplementation;
+    private MethodHandle specializedImplementation;
     /**
      * Internal representation of this function's code from which recovery
      * portion of the bytecode can be generated. It's the same for generic and
@@ -195,6 +190,13 @@ public class FunctionImplementation implements Callable {
         this.id = CallableRegistry.INSTANCE.register(this);
     }
 
+    /*
+        Initialization
+
+        Instance initialization is a multi-stage process. The following restricted
+        methods are for the various tools that participate in it.
+     */
+
     /** RESTRICTED. Intended for {@link FunctionTranslator}. */
     void partiallyInitialize(@NotNull List<VariableDefinition> parameters, @NotNull EvaluatorNode body) {
         this.declaredParameters = parameters;
@@ -202,8 +204,16 @@ public class FunctionImplementation implements Callable {
         this.body = body;
     }
 
+    /** RESTRICTED. Intended for {@link FunctionTranslator}. */
     void addClosureImplementations(Collection<FunctionImplementation> functions) {
         closureImplementations.addAll(functions);
+    }
+
+    /** RESTRICTED. Intended for {@link FunctionAnalyzer.ClosureConverter}. */
+    void setSyntheticParameters(Collection<CopiedVariable> variables) {
+        this.syntheticParameters = new ArrayList<>(variables);
+        this.allParameters = Stream.concat(syntheticParameters.stream(), declaredParameters.stream())
+            .toArray(AbstractVariable[]::new);
     }
 
     /** RESTRICTED. Intended for {@link FunctionAnalyzer.Indexer}. */
@@ -214,6 +224,10 @@ public class FunctionImplementation implements Callable {
         this.state = State.PROFILING;
     }
 
+    /*
+        Accessors
+     */
+
     public Lambda definition() {
         return definition;
     }
@@ -223,31 +237,20 @@ public class FunctionImplementation implements Callable {
         return id;
     }
 
-    public List<VariableDefinition> declaredParameters() {
+    List<VariableDefinition> declaredParameters() {
         return declaredParameters;
     }
 
-    public List<CopiedVariable> syntheticParameters() {
+    List<CopiedVariable> syntheticParameters() {
         return syntheticParameters;
     }
 
-    public AbstractVariable[] allParameters() {
+    AbstractVariable[] allParameters() {
         return allParameters;
     }
 
-    public List<FunctionImplementation> closureImplementations() {
+    List<FunctionImplementation> closureImplementations() {
         return closureImplementations;
-    }
-
-    /**
-     * RESTRICTED. Intended for {@link FunctionAnalyzer.ClosureConverter}.
-     * Accept the synthetic variables into which free variable references have been
-     * rewritten in this function.
-     */
-    /*internal*/ void setSyntheticParameters(Collection<CopiedVariable> variables) {
-        this.syntheticParameters = new ArrayList<>(variables);
-        this.allParameters = Stream.concat(syntheticParameters.stream(), declaredParameters.stream())
-            .toArray(AbstractVariable[]::new);
     }
 
     /*internal*/ boolean canBeSpecialized() {
@@ -259,21 +262,21 @@ public class FunctionImplementation implements Callable {
     }
 
     /**
-     * Return the arity of the underlying abstract definition (before closure conversion).
+     * The arity of the underlying abstract definition (before closure conversion).
      */
-    public int declarationArity() {
+    int declarationArity() {
         return arity;
     }
 
     /**
-     * Return the arity of the closure-converted function, which includes both
+     * The arity of the closure-converted function, which includes both
      * synthetic and declared parameters.
      */
-    public int implementationArity() {
+    int implementationArity() {
         return allParameters.length;
     }
 
-    public int frameSize() {
+    int frameSize() {
         return frameSize;
     }
 
@@ -285,12 +288,36 @@ public class FunctionImplementation implements Callable {
         return state == State.COMPILED;
     }
 
+    MethodHandle callSiteInvoker() {
+        return callSiteInvoker;
+    }
+
+    JvmType specializedReturnType() {
+        return specializedReturnType;
+    }
+
+    void setSpecializedReturnType(JvmType specializedReturnType) {
+        this.specializedReturnType = specializedReturnType;
+    }
+
+    MethodHandle genericImplementation() {
+        return genericImplementation;
+    }
+
+    MethodHandle specializedImplementation() {
+        return specializedImplementation;
+    }
+
     RecoveryCodeGenerator.Instruction[] recoveryCode() {
         if (recoveryCode == null) {
             recoveryCode = RecoveryCodeGenerator.EvaluatorNodeToACodeTranslator.translate(body);
         }
         return recoveryCode;
     }
+
+    /*
+        Invocation
+     */
 
     @Override
     public MethodHandle invoker(MethodType callSiteType) {
@@ -355,6 +382,10 @@ public class FunctionImplementation implements Callable {
         }
         return result;
     }
+
+    /*
+        Compilation
+     */
 
     private void scheduleCompilation() {
         topImplementation.scheduleCompilationAtTop();
@@ -477,6 +508,6 @@ public class FunctionImplementation implements Callable {
 
     @Override
     public String toString() {
-        return "[" + depth + "] " + definition.toString();
+        return definition.toString();
     }
 }

@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.expression.DirectlyCallable;
+import com.github.vassilibykov.enfilade.expression.TopLevelFunction;
 import com.github.vassilibykov.enfilade.expression.FunctionReference;
 
 /**
@@ -11,13 +11,13 @@ import com.github.vassilibykov.enfilade.expression.FunctionReference;
  * expression.
  */
 class DirectFunctionNode extends EvaluatorNode {
-    private final DirectlyCallable target;
+    private final TopLevelFunction target;
 
-    DirectFunctionNode(DirectlyCallable target) {
+    DirectFunctionNode(TopLevelFunction target) {
         this.target = target;
     }
 
-    public DirectlyCallable target() {
+    public TopLevelFunction target() {
         return target;
     }
 

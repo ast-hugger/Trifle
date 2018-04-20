@@ -50,7 +50,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
             eachParam.setSpecializedType(effectiveTypeInSignature(eachParam.profile().observedType()));
         }
         function.body().accept(this);
-        function.specializedReturnType = effectiveTypeInSignature(function.profile.resultProfile().observedType());
+        function.setSpecializedReturnType(effectiveTypeInSignature(function.profile.resultProfile().observedType()));
     }
     
     private JvmType effectiveTypeInSignature(ExpressionType type) {
