@@ -36,9 +36,8 @@ final class ClosureCreationInvokeDynamic {
 
     @SuppressWarnings("unused") // called by invokedynamic infrastructure
     public static CallSite bootstrap(MethodHandles.Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
-        var functionImplementation = CallableRegistry.INSTANCE.lookupFunctionImplementation(targetId);
         var handler = CREATE_CLOSURE
-            .bindTo(functionImplementation)
+            .bindTo(FunctionImplementation.withId(targetId))
             .asCollector(Object[].class, callSiteType.parameterCount())
             .asType(callSiteType);
         return new ConstantCallSite(handler);

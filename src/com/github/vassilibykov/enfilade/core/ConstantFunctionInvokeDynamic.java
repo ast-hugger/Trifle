@@ -31,7 +31,7 @@ public final class ConstantFunctionInvokeDynamic {
 
     @SuppressWarnings("unused") // called by invokedynamic infrastructure
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
-        var callable = CallableRegistry.INSTANCE.lookup(targetId);
+        var callable = FunctionImplementation.withId(targetId);
         return new ConstantCallSite(callable.invoker(callSiteType));
     }
 }

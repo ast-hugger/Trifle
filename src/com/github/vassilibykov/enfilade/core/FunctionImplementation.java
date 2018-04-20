@@ -120,6 +120,18 @@ public class FunctionImplementation implements Callable {
         COMPILED
     }
 
+    private static final List<FunctionImplementation> registry = new ArrayList<>(100);
+
+    private static synchronized int register(FunctionImplementation implementation) {
+        var id = registry.size();
+        registry.add(implementation);
+        return id;
+    }
+
+    static synchronized FunctionImplementation withId(int id) {
+        return registry.get(id);
+    }
+
     /*
         Instance
      */
@@ -161,7 +173,7 @@ public class FunctionImplementation implements Callable {
     /**
      * The unique ID of the function in the function registry.
      */
-    private int id = -1;
+    private final int id;
     /**
      * A call site invoking which will execute the function using the currently
      * appropriate execution mode (profiled vs compiled). The call site has the
@@ -184,10 +196,10 @@ public class FunctionImplementation implements Callable {
 
     FunctionImplementation(@NotNull Lambda definition, @Nullable FunctionImplementation topFunction) {
         this.definition = definition;
+        this.id = register(this);
         this.topImplementation = topFunction != null ? topFunction : this;
         this.arity = definition.arguments().size();
         this.state = State.INVALID;
-        this.id = CallableRegistry.INSTANCE.register(this);
     }
 
     /*
@@ -420,20 +432,24 @@ public class FunctionImplementation implements Callable {
         var callSitesToUpdate = new ArrayList<MutableCallSite>();
         for (var entry : result.results().entrySet()) {
             var functionImpl = entry.getKey();
-            functionImpl.updateCompiledForm(implClass, entry.getValue());
+            functionImpl.installCompiledForm(implClass, entry.getValue());
             callSitesToUpdate.add(functionImpl.callSite);
         }
         MutableCallSite.syncAll(callSitesToUpdate.toArray(new MutableCallSite[0]));
     }
 
-    private void updateCompiledForm(Class<?> generatedClass, Compiler.FunctionResult result) {
+    private void installCompiledForm(Class<?> generatedClass, Compiler.FunctionResult result) {
         MethodHandle specializedMethod = null;
         try {
-            genericImplementation = MethodHandles.lookup()
-                .findStatic(generatedClass, result.genericMethodName(), MethodType.genericMethodType(implementationArity()));
+            genericImplementation = MethodHandles.lookup().findStatic(
+                generatedClass,
+                result.genericMethodName(),
+                MethodType.genericMethodType(implementationArity()));
             if (result.specializedMethodName() != null) {
-                specializedMethod = MethodHandles.lookup()
-                    .findStatic(generatedClass, result.specializedMethodName(), result.specializedMethodType());
+                specializedMethod = MethodHandles.lookup().findStatic(
+                    generatedClass,
+                    result.specializedMethodName(),
+                    result.specializedMethodType());
             }
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
@@ -444,7 +460,7 @@ public class FunctionImplementation implements Callable {
             // this will not work if we allow de-specializing
         } else {
             callSite.setTarget(
-                    makeSpecializationGuard(genericImplementation, specializedMethod, result.specializedMethodType()));
+                makeSpecializationGuard(genericImplementation, specializedMethod, result.specializedMethodType()));
             specializedImplementation = specializedMethod;
         }
         state = State.COMPILED;

@@ -385,7 +385,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
         int id = constFunction.id();
         writer
             .loadInt(id)
-            .invokeStatic(CallableRegistry.class, "lookupAndMakeClosure", Closure.class, int.class);
+            .invokeStatic(Closure.class, "ofFunctionWithId", Closure.class, int.class);
         return REFERENCE;
     }
 

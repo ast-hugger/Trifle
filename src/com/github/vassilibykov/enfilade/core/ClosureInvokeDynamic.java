@@ -21,7 +21,7 @@ import java.lang.invoke.MethodType;
  *
  * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
-public final class ClosureInvokeDynamic {
+final class ClosureInvokeDynamic {
     public static final Handle BOOTSTRAP = new Handle(
         Opcodes.H_INVOKESTATIC,
         GhostWriter.internalClassName(ClosureInvokeDynamic.class),

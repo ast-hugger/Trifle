@@ -24,6 +24,11 @@ public class Closure {
         return new Closure(topLevelFunctionImplementation, new Object[0]);
     }
 
+    @SuppressWarnings("unused") // called by generated code
+    static Closure ofFunctionWithId(int id) {
+        return with(FunctionImplementation.withId(id));
+    }
+
     @NotNull /*internal*/ final FunctionImplementation implementation;
     private final Object[] copiedValues;
     private final MethodHandle genericInvoker;

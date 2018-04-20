@@ -141,7 +141,7 @@ public class Interpreter {
 
         @Override
         public Object visitConstantFunction(DirectFunctionNode constFunction) {
-            return CallableRegistry.INSTANCE.lookupClosure(constFunction.id());
+            return Closure.with(FunctionImplementation.withId(constFunction.id()));
         }
     }
 
