@@ -29,7 +29,7 @@ public final class ConstantFunctionInvokeDynamic {
         MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class, Integer.class).toMethodDescriptorString(),
         false);
 
-    @SuppressWarnings("unused") // called by generated code
+    @SuppressWarnings("unused") // called by invokedynamic infrastructure
     public static CallSite bootstrap(Lookup lookupAtCaller, String name, MethodType callSiteType, Integer targetId) {
         var callable = CallableRegistry.INSTANCE.lookup(targetId);
         return new ConstantCallSite(callable.invoker(callSiteType));

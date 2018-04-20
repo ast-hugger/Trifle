@@ -16,11 +16,8 @@ import java.lang.invoke.MethodType;
  * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
 public class Closure {
-    @SuppressWarnings("unused") // called by generated code
-    public static Closure create(Object[] copiedValues, int functionId) {
-        return new Closure(
-            CallableRegistry.INSTANCE.lookupFunctionImplementation(functionId),
-            copiedValues);
+    static Closure create(FunctionImplementation function, Object[] copiedValues) {
+        return new Closure(function, copiedValues);
     }
 
     public static Closure with(FunctionImplementation topLevelFunctionImplementation) {
@@ -33,7 +30,7 @@ public class Closure {
     @Nullable private MethodType specializedInvokerType;
     @Nullable private MethodHandle specializedInvoker;
 
-    Closure(@NotNull FunctionImplementation implementation, @NotNull Object[] copiedValues) {
+    private Closure(FunctionImplementation implementation, Object[] copiedValues) {
         this.implementation = implementation;
         this.copiedValues = copiedValues;
         // callSiteInvoker type: (synthetic:Object* declared:Object*) -> Object

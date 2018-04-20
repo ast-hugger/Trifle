@@ -17,7 +17,7 @@ public class CallableRegistry {
         if (!(callable instanceof FunctionImplementation)) throw new AssertionError();
         var function = (FunctionImplementation) callable;
         if (!function.isTopLevel()) throw new AssertionError();
-        return new Closure(function, new Object[0]);
+        return Closure.create(function, new Object[0]);
     }
 
     /*

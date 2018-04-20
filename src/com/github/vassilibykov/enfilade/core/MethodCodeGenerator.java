@@ -174,25 +174,21 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitClosure(ClosureNode closure) {
         var copiedOuterVariables = closure.copiedOuterVariables;
-        writer.newObjectArray(copiedOuterVariables.size());
-        for (int i = 0; i < copiedOuterVariables.size(); i++) {
-            var variable = copiedOuterVariables.get(i);
-            writer
-                .dup()
-                .loadInt(i);
-            if (variable.isBoxed()) {
-                writer.loadLocal(REFERENCE, variable.index());
+        for (var copiedVar : copiedOuterVariables) {
+            if (copiedVar.isBoxed()) {
+                writer.loadLocal(REFERENCE, copiedVar.index());
             } else {
-                JvmType variableType = variable.specializedType();
+                JvmType variableType = copiedVar.specializedType();
                 writer
-                    .loadLocal(variableType, variable.index())
+                    .loadLocal(variableType, copiedVar.index())
                     .adaptValue(variableType, REFERENCE);
             }
-            writer.asm().visitInsn(Opcodes.AASTORE);
         }
-        writer
-            .loadInt(closure.function().id())
-            .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
+        writer.invokeDynamic(
+            ClosureCreationInvokeDynamic.BOOTSTRAP,
+            "createClosure",
+            MethodType.genericMethodType(copiedOuterVariables.size()),
+            closure.function().id());
         return REFERENCE;
     }
 

@@ -498,17 +498,12 @@ class RecoveryCodeGenerator {
         @Override
         public JvmType visitClosure(ClosureNode closure) {
             var indicesToCopy = closure.copiedVariableIndices;
-            writer.newObjectArray(indicesToCopy.length);
-            for (int i = 0; i < indicesToCopy.length; i++) {
-                writer
-                    .dup()
-                    .loadInt(i)
-                    .loadLocal(REFERENCE, indicesToCopy[i]);
-                writer.asm().visitInsn(Opcodes.AASTORE);
-            }
-            writer
-                .loadInt(closure.function().id())
-                .invokeStatic(Closure.class, "create", Closure.class, Object[].class, int.class);
+            for (var copiedIndex : indicesToCopy) writer.loadLocal(REFERENCE, copiedIndex);
+            writer.invokeDynamic(
+                ClosureCreationInvokeDynamic.BOOTSTRAP,
+                "createClosure",
+                MethodType.genericMethodType(indicesToCopy.length),
+                closure.function().id());
             return REFERENCE;
         }
 
