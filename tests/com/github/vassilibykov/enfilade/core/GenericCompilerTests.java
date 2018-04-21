@@ -4,7 +4,6 @@ package com.github.vassilibykov.enfilade.core;
 
 import com.github.vassilibykov.enfilade.expression.Expression;
 import com.github.vassilibykov.enfilade.expression.Lambda;
-import com.github.vassilibykov.enfilade.expression.TopLevel;
 import org.junit.Before;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;

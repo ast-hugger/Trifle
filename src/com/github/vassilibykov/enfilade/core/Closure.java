@@ -15,7 +15,7 @@ import java.lang.invoke.MethodType;
  *
  * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
-public class Closure {
+public class Closure implements Invocable {
     static Closure create(FunctionImplementation function, Object[] copiedValues) {
         return new Closure(function, copiedValues);
     }

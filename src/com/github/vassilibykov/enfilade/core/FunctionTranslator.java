@@ -2,11 +2,10 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.expression.AtomicExpression;
 import com.github.vassilibykov.enfilade.expression.Block;
 import com.github.vassilibykov.enfilade.expression.Call;
 import com.github.vassilibykov.enfilade.expression.Const;
-import com.github.vassilibykov.enfilade.expression.FunctionReference;
+import com.github.vassilibykov.enfilade.expression.FreeFunctionReference;
 import com.github.vassilibykov.enfilade.expression.If;
 import com.github.vassilibykov.enfilade.expression.Lambda;
 import com.github.vassilibykov.enfilade.expression.Let;
@@ -134,38 +133,19 @@ public class FunctionTranslator {
 
         @Override
         public EvaluatorNode visitCall(Call call) {
-            if (call.target() instanceof FunctionReference) {
-                var callable = ((FunctionReference) call.target()).target();
-                var target = new DirectFunctionNode(callable);
-                switch (call.arguments().size()) {
-                    case 0:
-                        return new CallNode.DirectCall0(target);
-                    case 1:
-                        var arg = call.arguments().get(0).accept(this);
-                        return new CallNode.DirectCall1(target, arg);
-                    case 2:
-                        var arg1 = call.arguments().get(0).accept(this);
-                        var arg2 = call.arguments().get(1).accept(this);
-                        return new CallNode.DirectCall2(target, arg1, arg2);
-                    default:
-                        throw new UnsupportedOperationException("not yet implemented");
-                }
-            } else {
-                // FIXME this will need more work when we generalize call targets
-                var target = ((AtomicExpression) call.target()).accept(this);
-                switch (call.arguments().size()) {
-                    case 0:
-                        return new CallNode.Call0(target);
-                    case 1:
-                        var arg = call.arguments().get(0).accept(this);
-                        return new CallNode.Call1(target, arg);
-                    case 2:
-                        var arg1 = call.arguments().get(0).accept(this);
-                        var arg2 = call.arguments().get(1).accept(this);
-                        return new CallNode.Call2(target, arg1, arg2);
-                    default:
-                        throw new UnsupportedOperationException("not yet implemented");
-                }
+            var dispatcher = call.target().createDispatcher(this);
+            switch (call.arguments().size()) {
+                case 0:
+                    return new CallNode.Call0(dispatcher);
+                case 1:
+                    var arg = call.arguments().get(0).accept(this);
+                    return new CallNode.Call1(dispatcher, arg);
+                case 2:
+                    var arg1 = call.arguments().get(0).accept(this);
+                    var arg2 = call.arguments().get(1).accept(this);
+                    return new CallNode.Call2(dispatcher, arg1, arg2);
+                default:
+                    throw new UnsupportedOperationException("not yet implemented");
             }
         }
 
@@ -233,8 +213,8 @@ public class FunctionTranslator {
         }
 
         @Override
-        public EvaluatorNode visitFunctionReference(FunctionReference functionReference) {
-            return new DirectFunctionNode(functionReference.target());
+        public EvaluatorNode visitFunctionReference(FreeFunctionReference freeFunctionReference) {
+            return new FreeFunctionReferenceNode(freeFunctionReference.target());
         }
 
         @Override

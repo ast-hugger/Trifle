@@ -12,7 +12,12 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 /**
- * An invokedynamic instruction for a closure creation site.
+ * An invokedynamic instruction for a closure creation site. The closure's
+ * copied values are stacked prior to invoking the instruction. The function ID
+ * identifying the closure function is encoded as an additional instruction
+ * parameter. The call site permanently links to
+ * {@link Closure#create(FunctionImplementation, Object[])}, with the function
+ * implementation parameter bound to the proper function.
  */
 final class ClosureCreationInvokeDynamic {
     static final Handle BOOTSTRAP = new Handle(

@@ -4,6 +4,8 @@
 
 package com.github.vassilibykov.enfilade.expression;
 
+import com.github.vassilibykov.enfilade.core.FreeFunction;
+
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -49,8 +51,8 @@ public class ExpressionLanguage {
         return Const.value(value);
     }
 
-    public static FunctionReference direct(TopLevelFunction target) {
-        return FunctionReference.to(target);
+    public static FreeFunctionReference direct(FreeFunction target) {
+        return FreeFunctionReference.to(target);
     }
 
     public static If if_(AtomicExpression condition, Expression trueBranch, Expression falseBranch) {

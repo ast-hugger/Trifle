@@ -21,10 +21,10 @@ import java.lang.invoke.MethodType;
  *
  * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
-final class ClosureInvokeDynamic {
+final class ExpressionCallInvokeDynamic {
     public static final Handle BOOTSTRAP = new Handle(
         Opcodes.H_INVOKESTATIC,
-        GhostWriter.internalClassName(ClosureInvokeDynamic.class),
+        GhostWriter.internalClassName(ExpressionCallInvokeDynamic.class),
         "bootstrap",
         MethodType.methodType(CallSite.class, Lookup.class, String.class, MethodType.class).toMethodDescriptorString(),
         false);
@@ -50,6 +50,19 @@ final class ClosureInvokeDynamic {
     }
 
     public static Object dispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args) throws Throwable {
+        if (closureArg instanceof FreeFunction) {
+            var adjustedType = thisSite.type().dropParameterTypes(0, 1);
+            var realInvoker = ((FreeFunction) closureArg).invoker(adjustedType);
+            var adjustedInvoker = MethodHandles.dropArguments(realInvoker, 0, Object.class);
+            thisSite.addCacheEntry(IS_SAME_OBJECT.bindTo(closureArg), adjustedInvoker);
+            var result = realInvoker.invokeWithArguments(args);
+            if (JvmType.isCompatibleValue(thisSite.type().returnType(), result)) {
+                return result;
+            } else {
+                throw SquarePegException.with(result);
+            }
+        }
+        // FIXME clean this all up; the method is messy
         var closure = (Closure) closureArg;
         MethodHandle target;
         if (closure.implementation.isCompiled()) {
@@ -58,7 +71,7 @@ final class ClosureInvokeDynamic {
             target = closure.optimalCallSiteInvoker(thisSite.type());
             if (!thisSite.isMegamorphic() && !closure.hasCopiedValues()) {
                 thisSite.addCacheEntry(
-                    IS_SAME_FUNCTION.bindTo(closure.implementation),
+                    IS_SAME_FUNCTION_CLOSURE.bindTo(closure.implementation),
                     MethodHandles.dropArguments(target, 0, Object.class));
             }
             // but don't use the cached invoker it in the switch below; there we need a generic signature
@@ -91,23 +104,30 @@ final class ClosureInvokeDynamic {
         }
     }
 
-
-
-    public static boolean isSameFunction(FunctionImplementation expected, Object closureArg) {
+    public static boolean isClosureOfSameFunction(FunctionImplementation expected, Object closureArg) {
         return closureArg instanceof Closure && ((Closure) closureArg).implementation == expected;
     }
 
-    private static final MethodHandle IS_SAME_FUNCTION;
+    public static boolean isSameObject(Object expected, Object actual) {
+        return expected == actual;
+    }
+
+    private static final MethodHandle IS_SAME_FUNCTION_CLOSURE;
+    private static final MethodHandle IS_SAME_OBJECT;
     private static final MethodHandle DISPATCH;
     static {
         try {
             var lookup = MethodHandles.lookup();
-            IS_SAME_FUNCTION = lookup.findStatic(
-                ClosureInvokeDynamic.class,
-                "isSameFunction",
+            IS_SAME_FUNCTION_CLOSURE = lookup.findStatic(
+                ExpressionCallInvokeDynamic.class,
+                "isClosureOfSameFunction",
                 MethodType.methodType(boolean.class, FunctionImplementation.class, Object.class));
+            IS_SAME_OBJECT = lookup.findStatic(
+                ExpressionCallInvokeDynamic.class,
+                "isSameObject",
+                MethodType.methodType(boolean.class, Object.class, Object.class));
             DISPATCH = lookup.findStatic(
-                ClosureInvokeDynamic.class,
+                ExpressionCallInvokeDynamic.class,
                 "dispatch",
                 MethodType.methodType(Object.class, InlineCachingCallSite.class, Object.class, Object[].class));
         } catch (NoSuchMethodException | IllegalAccessException e) {

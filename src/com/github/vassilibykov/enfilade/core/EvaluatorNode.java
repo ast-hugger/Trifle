@@ -20,17 +20,14 @@ import java.util.stream.Stream;
  */
 public abstract class EvaluatorNode {
 
-    public interface Visitor<T> {
+    interface Visitor<T> {
         T visitBlock(BlockNode block);
         T visitCall0(CallNode.Call0 call);
         T visitCall1(CallNode.Call1 call);
         T visitCall2(CallNode.Call2 call);
         T visitClosure(ClosureNode closure);
         T visitConstant(ConstantNode aConst);
-        T visitConstantFunction(DirectFunctionNode constFunction);
-        T visitDirectCall0(CallNode.DirectCall0 call);
-        T visitDirectCall1(CallNode.DirectCall1 call);
-        T visitDirectCall2(CallNode.DirectCall2 call);
+        T visitFreeFunctionReference(FreeFunctionReferenceNode constFunction);
         T visitGetVar(GetVariableNode varRef);
         T visitIf(IfNode anIf);
         T visitLet(LetNode let);
@@ -40,7 +37,7 @@ public abstract class EvaluatorNode {
         T visitSetVar(SetVariableNode setVar);
     }
 
-    public static abstract class VisitorSkeleton<T> implements Visitor<T> {
+    static abstract class VisitorSkeleton<T> implements Visitor<T> {
         @Override
         public T visitBlock(BlockNode block) {
             Stream.of(block.expressions()).forEach(this::visit);
@@ -49,20 +46,20 @@ public abstract class EvaluatorNode {
 
         @Override
         public T visitCall0(CallNode.Call0 call) {
-            call.function().accept(this);
+            call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
             return null;
         }
 
         @Override
         public T visitCall1(CallNode.Call1 call) {
-            call.function().accept(this);
+            call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
             call.arg().accept(this);
             return null;
         }
 
         @Override
         public T visitCall2(CallNode.Call2 call) {
-            call.function().accept(this);
+            call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
             call.arg1().accept(this);
             call.arg2().accept(this);
             return null;
@@ -77,21 +74,6 @@ public abstract class EvaluatorNode {
         public T visitClosure(ClosureNode closure) {
             closure.function().body().accept(this);
             return null;
-        }
-
-        @Override
-        public T visitDirectCall0(CallNode.DirectCall0 call) {
-            return visitCall0(call);
-        }
-
-        @Override
-        public T visitDirectCall1(CallNode.DirectCall1 call) {
-            return visitCall1(call);
-        }
-
-        @Override
-        public T visitDirectCall2(CallNode.DirectCall2 call) {
-            return visitCall2(call);
         }
 
         @Override
@@ -139,12 +121,84 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitConstantFunction(DirectFunctionNode topLevelBinding) {
+        public T visitFreeFunctionReference(FreeFunctionReferenceNode topLevelBinding) {
             return null;
         }
 
         private T visit(EvaluatorNode expr) {
             return expr.accept(this);
+        }
+    }
+
+    static abstract class NullSkeleton<T> implements Visitor<T> {
+        @Override
+        public T visitBlock(BlockNode block) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitCall0(CallNode.Call0 call) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitCall1(CallNode.Call1 call) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitCall2(CallNode.Call2 call) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitClosure(ClosureNode closure) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitConstant(ConstantNode aConst) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitGetVar(GetVariableNode varRef) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitIf(IfNode anIf) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitLet(LetNode let) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitPrimitive1(Primitive1Node primitive) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitPrimitive2(Primitive2Node primitive) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitReturn(ReturnNode ret) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
+        }
+
+        @Override
+        public T visitSetVar(SetVariableNode setVar) {
+            throw new UnsupportedOperationException("visiting this node type is not expected");
         }
     }
 

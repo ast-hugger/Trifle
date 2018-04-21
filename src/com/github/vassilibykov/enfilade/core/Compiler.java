@@ -82,11 +82,11 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
  */
 class Compiler {
 
-    private static final String GENERIC_METHOD_PREFIX = "function";
-    private static final String SPECIALIZED_METHOD_PREFIX = "specialized$";
+    private static final String GENERIC_METHOD_PREFIX = "fun";
+    private static final String SPECIALIZED_METHOD_SUFFIX = "$s";
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
     private static final String GENERATED_CODE_PACKAGE = GeneratedCode.class.getPackageName();
-    private static final String GENERATED_CLASS_NAME_PREFIX = GENERATED_CODE_PACKAGE + ".$gen$";
+    private static final String GENERATED_CLASS_NAME_PREFIX = GENERATED_CODE_PACKAGE + ".$unit";
 
     /**
      * The access point: compile a function.
@@ -250,7 +250,7 @@ class Compiler {
     }
 
     private void generateSpecializedMethod(FunctionImplementation closureImpl, FunctionResult functionResult) {
-        var methodName = SPECIALIZED_METHOD_PREFIX + functionResult.genericMethodName;
+        var methodName = functionResult.genericMethodName + SPECIALIZED_METHOD_SUFFIX;
         var methodType = computeSpecializationType(closureImpl);
         System.out.println("generating a specialized method of type " + methodType);
         MethodVisitor methodWriter = classWriter.visitMethod(

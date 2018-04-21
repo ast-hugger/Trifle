@@ -105,7 +105,7 @@ import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
  * elsewhere from a call site typed as {@code (Object int Object) -> Object} if
  * those were the types observed at that call site.
  */
-public class FunctionImplementation implements Callable {
+public class FunctionImplementation {
 
     /**
      * The number of times a function is executed as interpreted before it's
@@ -143,6 +143,7 @@ public class FunctionImplementation implements Callable {
      * For an implementation of the top-level expression, contains this function
      * implementation.
      */
+    @Nullable private UserFunction userFunction;
     @NotNull private final FunctionImplementation topImplementation;
     /**
      * Apparent parameters from the function definition. Does not include synthetic
@@ -244,7 +245,14 @@ public class FunctionImplementation implements Callable {
         return definition;
     }
 
-    @Override
+    public UserFunction userFunction() {
+        return userFunction;
+    }
+
+    void setUserFunction(UserFunction userFunction) {
+        this.userFunction = userFunction;
+    }
+
     public int id() {
         return id;
     }
@@ -331,7 +339,6 @@ public class FunctionImplementation implements Callable {
         Invocation
      */
 
-    @Override
     public MethodHandle invoker(MethodType callSiteType) {
         if (specializedImplementation != null && callSiteType == specializedImplementation.type()) {
             return specializedImplementation;

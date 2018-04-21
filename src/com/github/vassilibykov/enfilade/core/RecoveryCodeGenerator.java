@@ -5,7 +5,6 @@ package com.github.vassilibykov.enfilade.core;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Label;
-import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
@@ -344,24 +343,6 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public Void visitDirectCall0(CallNode.DirectCall0 call) {
-            emit(new Load(call));
-            return null;
-        }
-
-        @Override
-        public Void visitDirectCall1(CallNode.DirectCall1 call) {
-            emit(new Load(call));
-            return null;
-        }
-
-        @Override
-        public Void visitDirectCall2(CallNode.DirectCall2 call) {
-            emit(new Load(call));
-            return null;
-        }
-
-        @Override
         public Void visitClosure(ClosureNode closure) {
             emit(new Load(closure));
             return null;
@@ -374,7 +355,7 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public Void visitConstantFunction(DirectFunctionNode constFunction) {
+        public Void visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
             emit(new Load(constFunction));
             return null;
         }
@@ -455,44 +436,62 @@ class RecoveryCodeGenerator {
         }
     }
 
-    private class AtomicExpressionCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
+    private class AtomicExpressionCodeGenerator implements CodeGenerator {
+        @Override
+        public GhostWriter writer() {
+            return writer;
+        }
+
+        @Override
+        public JvmType generateCode(EvaluatorNode node) {
+            return node.accept(this);
+        }
+
         @Override
         public JvmType visitCall0(CallNode.Call0 call) {
-            call.function().accept(this); // puts a value on the stack that must be a closure
-            var type = MethodType.genericMethodType(1); // Closure is the argument
-            writer.invokeDynamic(
-                ClosureInvokeDynamic.BOOTSTRAP,
-                "call0",
-                type);
+            var returnType = call.dispatcher().generateCode(call, this);
+            writer.adaptValue(returnType, REFERENCE);
             return REFERENCE;
         }
 
         @Override
         public JvmType visitCall1(CallNode.Call1 call) {
-            call.function().accept(this); // puts a value on the stack which must be a closure
-            var argType = call.arg().accept(this);
-            var type = MethodType.genericMethodType(2);
-            writer.adaptValue(argType, REFERENCE);
-            writer.invokeDynamic(
-                ClosureInvokeDynamic.BOOTSTRAP,
-                "call1",
-                type);
+            var returnType = call.dispatcher().generateCode(call, this);
+            writer.adaptValue(returnType, REFERENCE);
             return REFERENCE;
         }
 
         @Override
         public JvmType visitCall2(CallNode.Call2 call) {
-            call.function().accept(this); // puts a value on the stack that must be a closure
-            var arg1Type = call.arg1().accept(this);
-            var type = MethodType.genericMethodType(3);
-            writer.adaptValue(arg1Type, REFERENCE);
-            var arg2Type = call.arg2().accept(this);
-            writer.adaptValue(arg2Type, REFERENCE);
-            writer.invokeDynamic(
-                ClosureInvokeDynamic.BOOTSTRAP,
-                "call2",
-                type);
+            var returnType = call.dispatcher().generateCode(call, this);
+            writer.adaptValue(returnType, REFERENCE);
             return REFERENCE;
+        }
+
+        @Override
+        public MethodType generateArgumentLoad(CallNode callNode) {
+            return callNode.accept(new EvaluatorNode.NullSkeleton<>() {
+                @Override
+                public MethodType visitCall0(CallNode.Call0 call) {
+                    return MethodType.genericMethodType(0);
+                }
+
+                @Override
+                public MethodType visitCall1(CallNode.Call1 call) {
+                    var argType = generateCode(call.arg());
+                    writer.adaptValue(argType, REFERENCE);
+                    return MethodType.genericMethodType(1);
+                }
+
+                @Override
+                public MethodType visitCall2(CallNode.Call2 call) {
+                    var arg1Type = generateCode(call.arg1());
+                    writer.adaptValue(arg1Type, REFERENCE);
+                    var arg2Type = generateCode(call.arg2());
+                    writer.adaptValue(arg2Type, REFERENCE);
+                    return MethodType.genericMethodType(2);
+                }
+            });
         }
 
         @Override
@@ -525,45 +524,6 @@ class RecoveryCodeGenerator {
             } else {
                 throw new CompilerError("unexpected const value: " + value);
             }
-        }
-
-        @Override
-        public JvmType visitDirectCall0(CallNode.DirectCall0 call) {
-            var type = MethodType.genericMethodType(0);
-            writer.invokeDynamic(
-                ConstantFunctionInvokeDynamic.BOOTSTRAP,
-                "call0",
-                type,
-                call.target().id());
-            return REFERENCE;
-        }
-
-        @Override
-        public JvmType visitDirectCall1(CallNode.DirectCall1 call) {
-            var type = MethodType.genericMethodType(1);
-            var argType = call.arg().accept(this);
-            writer.adaptValue(argType, REFERENCE);
-            writer.invokeDynamic(
-                ConstantFunctionInvokeDynamic.BOOTSTRAP,
-                "call1",
-                type,
-                call.target().id());
-            return REFERENCE;
-        }
-
-        @Override
-        public JvmType visitDirectCall2(CallNode.DirectCall2 call) {
-            var type = MethodType.genericMethodType(2);
-            var arg1Type = call.arg1().accept(this);
-            writer.adaptValue(arg1Type, REFERENCE);
-            var arg2Type = call.arg2().accept(this);
-            writer.adaptValue(arg2Type, REFERENCE);
-            writer.invokeDynamic(
-                ConstantFunctionInvokeDynamic.BOOTSTRAP,
-                "call2",
-                type,
-                call.target().id());
-            return REFERENCE;
         }
 
         @Override
@@ -613,14 +573,10 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public JvmType visitConstantFunction(DirectFunctionNode constFunction) {
-            int id = constFunction.id();
-            writer
-                .loadInt(id)
-                .invokeStatic(Closure.class, "ofFunctionWithId", Closure.class, int.class);
-            return REFERENCE;
+        public JvmType visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
+            return constFunction.generateLoad(writer);
         }
-        }
+    }
 
 
     /*

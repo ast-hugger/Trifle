@@ -35,23 +35,23 @@ public class Interpreter {
 
         @Override
         public Object visitCall0(CallNode.Call0 call) {
-            var function = call.function().accept(this);
-            return ((Closure) function).invoke();
+            var target = call.dispatcher().getInvocable(this);
+            return target.invoke();
         }
 
         @Override
         public Object visitCall1(CallNode.Call1 call) {
-            var function = call.function().accept(this);
+            var target = call.dispatcher().getInvocable(this);
             var arg = call.arg().accept(this);
-            return ((Closure) function).invoke(arg);
+            return target.invoke(arg);
         }
 
         @Override
         public Object visitCall2(CallNode.Call2 call) {
-            var function = call.function().accept(this);
+            var target = call.dispatcher().getInvocable(this);
             var arg1 = call.arg1().accept(this);
             var arg2 = call.arg2().accept(this);
-            return ((Closure) function).invoke(arg1, arg2);
+            return target.invoke(arg1, arg2);
         }
 
         @Override
@@ -66,24 +66,6 @@ public class Interpreter {
         @Override
         public Object visitConstant(ConstantNode aConst) {
             return aConst.value();
-        }
-
-        @Override
-        public Object visitDirectCall0(CallNode.DirectCall0 call) {
-            return call.target().asCallable().call();
-        }
-
-        @Override
-        public Object visitDirectCall1(CallNode.DirectCall1 call) {
-            var arg = call.arg().accept(this);
-            return call.target().asCallable().call(arg);
-        }
-
-        @Override
-        public Object visitDirectCall2(CallNode.DirectCall2 call) {
-            var arg1 = call.arg1().accept(this);
-            var arg2 = call.arg2().accept(this);
-            return call.target().asCallable().call(arg1, arg2);
         }
 
         @Override
@@ -140,8 +122,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitConstantFunction(DirectFunctionNode constFunction) {
-            return Closure.with(FunctionImplementation.withId(constFunction.id()));
+        public Object visitFreeFunctionReference(FreeFunctionReferenceNode reference) {
+            return reference.target();
         }
     }
 

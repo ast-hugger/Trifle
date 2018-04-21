@@ -32,6 +32,13 @@ public enum JvmType {
         }
     }
 
+    public static JvmType ofClass(Class<?> klass) {
+        if (klass.equals(int.class)) return INT;
+        if (klass.equals(boolean.class)) return BOOL;
+        if (!klass.isPrimitive()) return REFERENCE;
+        throw new IllegalArgumentException("unexpected primitive class: " + klass);
+    }
+
     public static boolean isCompatibleValue(Class<?> typeToken, Object value) {
         /* This method has nothing to do with JvmType directly, but its logic depends on
            the set of primitive types enumerated by JvmType and it needs to be updated if

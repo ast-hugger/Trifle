@@ -6,7 +6,7 @@ public interface Visitor<T> {
     T visitBlock(Block block);
     T visitCall(Call call);
     T visitConst(Const aConst);
-    T visitFunctionReference(FunctionReference functionReference);
+    T visitFunctionReference(FreeFunctionReference freeFunctionReference);
     T visitIf(If anIf);
     T visitLambda(Lambda lambda);
     T visitLet(Let let);

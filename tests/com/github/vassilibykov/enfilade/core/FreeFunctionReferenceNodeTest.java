@@ -2,7 +2,6 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.expression.TopLevel;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -13,7 +12,7 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lam
 import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
 import static org.junit.Assert.assertEquals;
 
-public class DirectFunctionNodeTest {
+public class FreeFunctionReferenceNodeTest {
 
     private TopLevel topLevel;
 

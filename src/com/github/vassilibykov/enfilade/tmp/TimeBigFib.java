@@ -5,7 +5,7 @@ package com.github.vassilibykov.enfilade.tmp;
 import com.github.vassilibykov.enfilade.builtins.Add;
 import com.github.vassilibykov.enfilade.builtins.Subtract;
 import com.github.vassilibykov.enfilade.core.Closure;
-import com.github.vassilibykov.enfilade.expression.TopLevel;
+import com.github.vassilibykov.enfilade.core.TopLevel;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;

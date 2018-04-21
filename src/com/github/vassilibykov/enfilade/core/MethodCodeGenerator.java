@@ -2,10 +2,11 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.builtins.BuiltinFunction;
+import com.github.vassilibykov.enfilade.builtins.Builtins;
 import com.github.vassilibykov.enfilade.primitives.IfAware;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
@@ -15,13 +16,14 @@ import java.util.stream.Stream;
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
+import static com.github.vassilibykov.enfilade.core.JvmType.isCompatibleValue;
 
 /**
  * Generates the "normal" executable representation of a function.
  *
  * @see RecoveryCodeGenerator
  */
-class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
+class MethodCodeGenerator implements CodeGenerator {
 
     /**
      * An SPE handler to be generated once we are done with the method proper.
@@ -63,6 +65,7 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
         this.writer = new GhostWriter(writer);
     }
 
+    @Override
     public GhostWriter writer() {
         return writer;
     }
@@ -132,43 +135,49 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
      */
 
     @Override
+    public JvmType generateCode(EvaluatorNode node) {
+        return node.accept(this);
+    }
+
+    @Override
     public JvmType visitCall0(CallNode.Call0 call) {
-        var functionType = call.function().accept(this);
-        writer.ensureValue(functionType, REFERENCE);
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(returnType.representativeClass(), Object.class);
-        writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call0", callSiteSignature);
-        return returnType;
+        return call.dispatcher().generateCode(call, this);
     }
 
     @Override
     public JvmType visitCall1(CallNode.Call1 call) {
-        var functionType = call.function().accept(this);
-        writer.ensureValue(functionType, REFERENCE);
-        var argType = call.arg().accept(this);
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(
-            returnType.representativeClass(),
-            Object.class, // the closure being called
-            argType.representativeClass());
-        writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature);
-        return returnType;
+        return call.dispatcher().generateCode(call, this);
     }
 
     @Override
     public JvmType visitCall2(CallNode.Call2 call) {
-        var functionType = call.function().accept(this);
-        writer.ensureValue(functionType, REFERENCE);
-        var arg1Type = call.arg1().specializedType();
-        var arg2Type = call.arg2().specializedType();
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(
-            returnType.representativeClass(),
-            Object.class, // really a Closure, but we type it as Object to catch errors locally
-            arg1Type.representativeClass(),
-            arg2Type.representativeClass());
-        writer.invokeDynamic(ClosureInvokeDynamic.BOOTSTRAP, "call2", callSiteSignature);
-        return returnType;
+        return call.dispatcher().generateCode(call, this);
+    }
+
+    @Override
+    public MethodType generateArgumentLoad(CallNode call) {
+        return call.accept(new EvaluatorNode.NullSkeleton<>() {
+            @Override
+            public MethodType visitCall0(CallNode.Call0 call) {
+                var returnType = call.specializedType().representativeClass();
+                return MethodType.methodType(returnType);
+            }
+
+            @Override
+            public MethodType visitCall1(CallNode.Call1 call) {
+                var argType = call.arg().accept(MethodCodeGenerator.this).representativeClass();
+                var returnType = call.specializedType().representativeClass();
+                return MethodType.methodType(returnType, argType);
+            }
+
+            @Override
+            public MethodType visitCall2(CallNode.Call2 call) {
+                var arg1Type = call.arg1().accept(MethodCodeGenerator.this).representativeClass();
+                var arg2Type = call.arg2().accept(MethodCodeGenerator.this).representativeClass();
+                var returnType = call.specializedType().representativeClass();
+                return MethodType.methodType(returnType, arg1Type, arg2Type);
+            }
+        });
     }
 
     @Override
@@ -207,39 +216,6 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
             throw new CompilerError("unexpected const value: " + value);
         }
         return aConst.specializedType();
-    }
-
-    @Override
-    public JvmType visitDirectCall0(CallNode.DirectCall0 call) {
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(
-            returnType.representativeClass());
-        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call0", callSiteSignature, call.target().id());
-        return returnType;
-    }
-
-    @Override
-    public JvmType visitDirectCall1(CallNode.DirectCall1 call) {
-        var argType = call.arg().accept(this);
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(
-            returnType.representativeClass(),
-            argType.representativeClass());
-        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call1", callSiteSignature, call.target().id());
-        return returnType;
-    }
-
-    @Override
-    public JvmType visitDirectCall2(CallNode.DirectCall2 call) {
-        var arg1Type = call.arg1().accept(this);
-        var arg2Type = call.arg2().accept(this);
-        var returnType = call.specializedType();
-        var callSiteSignature = MethodType.methodType(
-            returnType.representativeClass(),
-            arg1Type.representativeClass(),
-            arg2Type.representativeClass());
-        writer.invokeDynamic(ConstantFunctionInvokeDynamic.BOOTSTRAP, "call2", callSiteSignature, call.target().id());
-        return returnType;
     }
 
     @Override
@@ -381,12 +357,8 @@ class MethodCodeGenerator implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitConstantFunction(DirectFunctionNode constFunction) {
-        int id = constFunction.id();
-        writer
-            .loadInt(id)
-            .invokeStatic(Closure.class, "ofFunctionWithId", Closure.class, int.class);
-        return REFERENCE;
+    public JvmType visitFreeFunctionReference(FreeFunctionReferenceNode reference) {
+        return reference.generateLoad(writer);
     }
 
     private void withSquarePegRecovery(RecoverySite requestor, Runnable generate) {

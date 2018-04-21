@@ -47,20 +47,20 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
 
     @Override
     public ExpressionType visitCall0(CallNode.Call0 call) {
-        call.function().accept(this);
+        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
         return andSetIn(call, ExpressionType.unknown());
     }
 
     @Override
     public ExpressionType visitCall1(CallNode.Call1 call) {
-        call.function().accept(this);
+        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
         call.arg().accept(this);
         return andSetIn(call, ExpressionType.unknown());
     }
 
     @Override
     public ExpressionType visitCall2(CallNode.Call2 call) {
-        call.function().accept(this);
+        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
         call.arg1().accept(this);
         call.arg2().accept(this);
         return andSetIn(call, ExpressionType.unknown());
@@ -74,21 +74,6 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitConstant(ConstantNode aConst) {
         return andSetIn(aConst, ExpressionType.known(JvmType.ofObject(aConst.value())));
-    }
-
-    @Override
-    public ExpressionType visitDirectCall0(CallNode.DirectCall0 call) {
-        return visitCall0(call);
-    }
-
-    @Override
-    public ExpressionType visitDirectCall1(CallNode.DirectCall1 call) {
-        return visitCall1(call);
-    }
-
-    @Override
-    public ExpressionType visitDirectCall2(CallNode.DirectCall2 call) {
-        return visitCall2(call);
     }
 
     @Override
@@ -157,7 +142,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitConstantFunction(DirectFunctionNode topLevelBinding) {
+    public ExpressionType visitFreeFunctionReference(FreeFunctionReferenceNode topLevelBinding) {
         return andSetIn(topLevelBinding, ExpressionType.known(REFERENCE));
     }
 

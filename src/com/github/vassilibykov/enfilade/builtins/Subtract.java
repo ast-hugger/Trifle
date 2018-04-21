@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.enfilade.builtins;
 
-import com.github.vassilibykov.enfilade.core.BuiltinFunction;
-import com.github.vassilibykov.enfilade.core.CallableRegistry;
 import com.github.vassilibykov.enfilade.core.SquarePegException;
 
 import java.lang.invoke.MethodHandle;
@@ -19,7 +17,7 @@ public class Subtract extends BuiltinFunction {
     public static final Subtract INSTANCE = new Subtract();
 
     private Subtract() {
-        setId(CallableRegistry.INSTANCE.register(this));
+        super("subtract");
     }
 
     @Override
@@ -85,5 +83,4 @@ public class Subtract extends BuiltinFunction {
             throw new AssertionError(e);
         }
     }
-
 }
