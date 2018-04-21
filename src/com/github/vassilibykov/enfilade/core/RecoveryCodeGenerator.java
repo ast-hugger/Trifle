@@ -325,19 +325,7 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public Void visitCall0(CallNode.Call0 call) {
-            emit(new Load(call));
-            return null;
-        }
-
-        @Override
-        public Void visitCall1(CallNode.Call1 call) {
-            emit(new Load(call));
-            return null;
-        }
-
-        @Override
-        public Void visitCall2(CallNode.Call2 call) {
+        public Void visitCall(CallNode call) {
             emit(new Load(call));
             return null;
         }
@@ -448,21 +436,7 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public JvmType visitCall0(CallNode.Call0 call) {
-            var returnType = call.dispatcher().generateCode(call, this);
-            writer.adaptValue(returnType, REFERENCE);
-            return REFERENCE;
-        }
-
-        @Override
-        public JvmType visitCall1(CallNode.Call1 call) {
-            var returnType = call.dispatcher().generateCode(call, this);
-            writer.adaptValue(returnType, REFERENCE);
-            return REFERENCE;
-        }
-
-        @Override
-        public JvmType visitCall2(CallNode.Call2 call) {
+        public JvmType visitCall(CallNode call) {
             var returnType = call.dispatcher().generateCode(call, this);
             writer.adaptValue(returnType, REFERENCE);
             return REFERENCE;
@@ -470,24 +444,24 @@ class RecoveryCodeGenerator {
 
         @Override
         public MethodType generateArgumentLoad(CallNode callNode) {
-            return callNode.accept(new EvaluatorNode.NullSkeleton<>() {
+            return callNode.match(new CallNode.ArityMatcher<>() {
                 @Override
-                public MethodType visitCall0(CallNode.Call0 call) {
+                public MethodType ifNullary() {
                     return MethodType.genericMethodType(0);
                 }
 
                 @Override
-                public MethodType visitCall1(CallNode.Call1 call) {
-                    var argType = generateCode(call.arg());
+                public MethodType ifUnary(EvaluatorNode arg) {
+                    var argType = generateCode(arg);
                     writer.adaptValue(argType, REFERENCE);
                     return MethodType.genericMethodType(1);
                 }
 
                 @Override
-                public MethodType visitCall2(CallNode.Call2 call) {
-                    var arg1Type = generateCode(call.arg1());
+                public MethodType ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
+                    var arg1Type = generateCode(arg1);
                     writer.adaptValue(arg1Type, REFERENCE);
-                    var arg2Type = generateCode(call.arg2());
+                    var arg2Type = generateCode(arg2);
                     writer.adaptValue(arg2Type, REFERENCE);
                     return MethodType.genericMethodType(2);
                 }

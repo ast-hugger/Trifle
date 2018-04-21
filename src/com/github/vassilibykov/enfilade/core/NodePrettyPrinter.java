@@ -49,35 +49,33 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
     }
 
     @Override
-    public Void visitCall0(CallNode.Call0 call) {
+    public Void visitCall(CallNode call) {
         printLine(() -> {
             output.append(call.toString());
             printNodeProfile(call);
         });
-        return null;
-    }
+        call.match(new CallNode.ArityMatcher<Void>() {
+            @Override
+            public Void ifNullary() {
+                return null;
+            }
 
-    @Override
-    public Void visitCall1(CallNode.Call1 call) {
-        printLine(() -> {
-            output.append(call.toString());
-            printNodeProfile(call);
-        });
-        printLine(() -> output.append("arg:"));
-        indented(() -> call.arg().accept(this));
-        return null;
-    }
+            @Override
+            public Void ifUnary(EvaluatorNode arg) {
+                printLine(() -> output.append("arg:"));
+                indented(() -> arg.accept(NodePrettyPrinter.this));
+                return null;
+            }
 
-    @Override
-    public Void visitCall2(CallNode.Call2 call) {
-        printLine(() -> {
-            output.append(call.toString());
-            printNodeProfile(call);
+            @Override
+            public Void ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
+                printLine(() -> output.append("arg1:"));
+                indented(() -> arg1.accept(NodePrettyPrinter.this));
+                printLine(() -> output.append("arg2:"));
+                indented(() -> arg2.accept(NodePrettyPrinter.this));
+                return null;
+            }
         });
-        printLine(() -> output.append("arg1:"));
-        indented(() -> call.arg1().accept(this));
-        printLine(() -> output.append("arg2:"));
-        indented(() -> call.arg2().accept(this));
         return null;
     }
 

@@ -58,31 +58,27 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
     }
 
     @Override
-    public JvmType visitCall0(CallNode.Call0 call) {
+    public JvmType visitCall(CallNode call) {
         call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
-        if (call.profile.hasProfileData()) {
-            return setSpecializedType(call, call.profile.jvmType());
-        } else {
-            return setSpecializedType(call, REFERENCE);
-        }
-    }
+        call.match(new CallNode.ArityMatcher<Void>() {
+            @Override
+            public Void ifNullary() {
+                return null;
+            }
 
-    @Override
-    public JvmType visitCall1(CallNode.Call1 call) {
-        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
-        call.arg().accept(this);
-        if (call.profile.hasProfileData()) {
-            return setSpecializedType(call, call.profile.jvmType());
-        } else {
-            return setSpecializedType(call, REFERENCE);
-        }
-    }
+            @Override
+            public Void ifUnary(EvaluatorNode arg) {
+                arg.accept(SpecializedTypeComputer.this);
+                return null;
+            }
 
-    @Override
-    public JvmType visitCall2(CallNode.Call2 call) {
-        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
-        call.arg1().accept(this);
-        call.arg2().accept(this);
+            @Override
+            public Void ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
+                arg1.accept(SpecializedTypeComputer.this);
+                arg2.accept(SpecializedTypeComputer.this);
+                return null;
+            }
+        });
         if (call.profile.hasProfileData()) {
             return setSpecializedType(call, call.profile.jvmType());
         } else {

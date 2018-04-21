@@ -16,7 +16,7 @@ public class TopLevel {
     private Map<String, UserFunction> topLevelFunctionsByName = new HashMap<>();
 
     public void define(String name, Function<UserFunction, Lambda> definer) {
-        UserFunction.construct(function -> {
+        UserFunction.construct(name, function -> {
             topLevelFunctionsByName.put(name, function);
             var definition = definer.apply(function);
             return FunctionTranslator.translate(definition);
@@ -24,7 +24,7 @@ public class TopLevel {
     }
 
     public void define(String name, Lambda definition) {
-        UserFunction.construct(it -> {
+        UserFunction.construct(name, it -> {
             topLevelFunctionsByName.put(name, it);
             return FunctionTranslator.translate(definition);
         });

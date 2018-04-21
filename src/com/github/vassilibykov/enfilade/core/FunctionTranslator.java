@@ -134,19 +134,8 @@ public class FunctionTranslator {
         @Override
         public EvaluatorNode visitCall(Call call) {
             var dispatcher = call.target().createDispatcher(this);
-            switch (call.arguments().size()) {
-                case 0:
-                    return new CallNode.Call0(dispatcher);
-                case 1:
-                    var arg = call.arguments().get(0).accept(this);
-                    return new CallNode.Call1(dispatcher, arg);
-                case 2:
-                    var arg1 = call.arguments().get(0).accept(this);
-                    var arg2 = call.arguments().get(1).accept(this);
-                    return new CallNode.Call2(dispatcher, arg1, arg2);
-                default:
-                    throw new UnsupportedOperationException("not yet implemented");
-            }
+            var args = call.arguments().stream().map(each -> each.accept(this)).collect(Collectors.toList());
+            return CallNode.with(dispatcher, args);
         }
 
         @Override

@@ -15,13 +15,28 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
     }
 
     @Override
-    public Invocable getInvocable(EvaluatorNode.Visitor<Object> visitor) {
-        return target;
+    public Optional<EvaluatorNode> evaluatorNode() {
+        return Optional.empty();
     }
 
     @Override
-    public Optional<EvaluatorNode> evaluatorNode() {
-        return Optional.empty();
+    public Object execute(CallNode call, EvaluatorNode.Visitor<Object> visitor) {
+        return call.match(new CallNode.ArityMatcher<>() {
+            @Override
+            public Object ifNullary() {
+                return target.invoke();
+            }
+
+            @Override
+            public Object ifUnary(EvaluatorNode arg) {
+                return target.invoke(arg.accept(visitor));
+            }
+
+            @Override
+            public Object ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
+                return target.invoke(arg1.accept(visitor), arg2.accept(visitor));
+            }
+        });
     }
 
     @Override
@@ -35,11 +50,12 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
                 callSiteType);
             return JvmType.ofClass(callSiteType.returnType());
         } else if (target instanceof UserFunction) {
-            var id = ((UserFunction) target).implementation().id(); // FIXME bogus
+            var userFunction = (UserFunction) this.target;
+            var id = userFunction.implementation().id();
             var callSiteType = generator.generateArgumentLoad(call);
             generator.writer().invokeDynamic(
                 UserFunctionCallInvokeDynamic.BOOTSTRAP,
-                "freeCall",
+                userFunction.name(),
                 callSiteType,
                 id);
             return JvmType.ofClass(callSiteType.returnType());

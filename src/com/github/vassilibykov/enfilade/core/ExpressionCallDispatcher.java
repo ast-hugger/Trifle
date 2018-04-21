@@ -19,12 +19,29 @@ public class ExpressionCallDispatcher implements CallDispatcher {
     }
 
     @Override
-    public Invocable getInvocable(EvaluatorNode.Visitor<Object> visitor) {
+    public Object execute(CallNode call, EvaluatorNode.Visitor<Object> visitor) {
+        Invocable target;
         try {
-            return (Invocable) expression.accept(visitor);
+            target = (Invocable) expression.accept(visitor);
         } catch (ClassCastException e) {
             throw RuntimeError.message("closure expected");
         }
+        return call.match(new CallNode.ArityMatcher<>() {
+            @Override
+            public Object ifNullary() {
+                return target.invoke();
+            }
+
+            @Override
+            public Object ifUnary(EvaluatorNode arg) {
+                return target.invoke(arg.accept(visitor));
+            }
+
+            @Override
+            public Object ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
+                return target.invoke(arg1.accept(visitor), arg2.accept(visitor));
+            }
+        });
     }
 
     @Override

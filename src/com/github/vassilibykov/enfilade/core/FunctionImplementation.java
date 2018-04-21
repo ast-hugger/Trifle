@@ -14,6 +14,7 @@ import java.lang.invoke.MutableCallSite;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
@@ -240,6 +241,10 @@ public class FunctionImplementation {
     /*
         Accessors
      */
+
+    public Optional<String> name() {
+        return userFunction != null ? Optional.of(userFunction.name()) : Optional.empty();
+    }
 
     public Lambda definition() {
         return definition;

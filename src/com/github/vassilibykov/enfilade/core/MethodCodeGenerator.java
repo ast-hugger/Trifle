@@ -140,40 +140,30 @@ class MethodCodeGenerator implements CodeGenerator {
     }
 
     @Override
-    public JvmType visitCall0(CallNode.Call0 call) {
-        return call.dispatcher().generateCode(call, this);
-    }
-
-    @Override
-    public JvmType visitCall1(CallNode.Call1 call) {
-        return call.dispatcher().generateCode(call, this);
-    }
-
-    @Override
-    public JvmType visitCall2(CallNode.Call2 call) {
+    public JvmType visitCall(CallNode call) {
         return call.dispatcher().generateCode(call, this);
     }
 
     @Override
     public MethodType generateArgumentLoad(CallNode call) {
-        return call.accept(new EvaluatorNode.NullSkeleton<>() {
+        return call.match(new CallNode.ArityMatcher<>() {
             @Override
-            public MethodType visitCall0(CallNode.Call0 call) {
+            public MethodType ifNullary() {
                 var returnType = call.specializedType().representativeClass();
                 return MethodType.methodType(returnType);
             }
 
             @Override
-            public MethodType visitCall1(CallNode.Call1 call) {
-                var argType = call.arg().accept(MethodCodeGenerator.this).representativeClass();
+            public MethodType ifUnary(EvaluatorNode arg) {
+                var argType = arg.accept(MethodCodeGenerator.this).representativeClass();
                 var returnType = call.specializedType().representativeClass();
                 return MethodType.methodType(returnType, argType);
             }
 
             @Override
-            public MethodType visitCall2(CallNode.Call2 call) {
-                var arg1Type = call.arg1().accept(MethodCodeGenerator.this).representativeClass();
-                var arg2Type = call.arg2().accept(MethodCodeGenerator.this).representativeClass();
+            public MethodType ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
+                var arg1Type = arg1.accept(MethodCodeGenerator.this).representativeClass();
+                var arg2Type = arg2.accept(MethodCodeGenerator.this).representativeClass();
                 var returnType = call.specializedType().representativeClass();
                 return MethodType.methodType(returnType, arg1Type, arg2Type);
             }

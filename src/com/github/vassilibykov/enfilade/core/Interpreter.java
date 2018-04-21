@@ -34,24 +34,8 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitCall0(CallNode.Call0 call) {
-            var target = call.dispatcher().getInvocable(this);
-            return target.invoke();
-        }
-
-        @Override
-        public Object visitCall1(CallNode.Call1 call) {
-            var target = call.dispatcher().getInvocable(this);
-            var arg = call.arg().accept(this);
-            return target.invoke(arg);
-        }
-
-        @Override
-        public Object visitCall2(CallNode.Call2 call) {
-            var target = call.dispatcher().getInvocable(this);
-            var arg1 = call.arg1().accept(this);
-            var arg2 = call.arg2().accept(this);
-            return target.invoke(arg1, arg2);
+        public Object visitCall(CallNode call) {
+            return call.dispatcher().execute(call, this);
         }
 
         @Override

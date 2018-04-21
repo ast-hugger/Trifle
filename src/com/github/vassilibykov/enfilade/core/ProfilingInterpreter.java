@@ -11,28 +11,8 @@ public class ProfilingInterpreter extends Interpreter {
         }
 
         @Override
-        public Object visitCall0(CallNode.Call0 call) {
-            var target = call.dispatcher().getInvocable(this);
-            var result = target.invoke();
-            call.profile.recordValue(result);
-            return result;
-        }
-
-        @Override
-        public Object visitCall1(CallNode.Call1 call) {
-            var target = call.dispatcher().getInvocable(this);
-            var arg = call.arg().accept(this);
-            var result = target.invoke(arg);
-            call.profile.recordValue(result);
-            return result;
-        }
-
-        @Override
-        public Object visitCall2(CallNode.Call2 call) {
-            var target = call.dispatcher().getInvocable(this);
-            var arg1 = call.arg1().accept(this);
-            var arg2 = call.arg2().accept(this);
-            var result = target.invoke(arg1, arg2);
+        public Object visitCall(CallNode call) {
+            var result = call.dispatcher().execute(call, this);
             call.profile.recordValue(result);
             return result;
         }
