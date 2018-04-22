@@ -64,7 +64,7 @@ public class Interpreter {
             try {
                 test = (boolean) testValue;
             } catch (ClassCastException e) {
-                throw RuntimeError.booleanExpected();
+                throw RuntimeError.booleanExpected(testValue);
             }
             if (test) {
                 return anIf.trueBranch().accept(this);

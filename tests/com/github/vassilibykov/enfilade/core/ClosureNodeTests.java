@@ -17,26 +17,26 @@ import static org.junit.Assert.*;
 @SuppressWarnings("ConstantConditions")
 public class ClosureNodeTests {
 
-    private Closure stringReturningClosureClosure;
+    private UserFunction stringReturningClosureClosure;
     private FunctionImplementation stringReturningClosureFunction;
     private ClosureNode stringReturningClosureNode;
-    private Closure freeVarReturningClosureClosure;
+    private UserFunction freeVarReturningClosureClosure;
     private FunctionImplementation freeVarReturningClosureFunction;
     private ClosureNode freeVarReturningClosureNode;
     private FunctionImplementation freeVarReturningClosureImplementation;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("stringReturning",
             lambda(() -> lambda(() -> const_("hello"))));
-        stringReturningClosureClosure = topLevel.getAsClosure("stringReturning");
-        stringReturningClosureFunction = stringReturningClosureClosure.implementation;
+        stringReturningClosureClosure = topLevel.get("stringReturning");
+        stringReturningClosureFunction = stringReturningClosureClosure.implementation();
         stringReturningClosureNode = (ClosureNode) stringReturningClosureFunction.body();
         topLevel.define("freeVarReturning",
             lambda(arg -> lambda(() -> arg)));
-        freeVarReturningClosureClosure = topLevel.getAsClosure("freeVarReturning");
-        freeVarReturningClosureFunction = freeVarReturningClosureClosure.implementation;
+        freeVarReturningClosureClosure = topLevel.get("freeVarReturning");
+        freeVarReturningClosureFunction = freeVarReturningClosureClosure.implementation();
         freeVarReturningClosureNode = (ClosureNode) freeVarReturningClosureFunction.body();
         freeVarReturningClosureImplementation = freeVarReturningClosureNode.function();
     }

@@ -18,6 +18,10 @@ public interface FreeFunction extends Invocable {
         var invoker = invoker(MethodType.genericMethodType(0));
         try {
             return invoker.invoke();
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -28,6 +32,10 @@ public interface FreeFunction extends Invocable {
         var invoker = invoker(MethodType.genericMethodType(1));
         try {
             return invoker.invoke(arg);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
         }
@@ -38,8 +46,26 @@ public interface FreeFunction extends Invocable {
         var invoker = invoker(MethodType.genericMethodType(2));
         try {
             return invoker.invoke(arg1, arg2);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
         } catch (Throwable throwable) {
             throw new InvocationException(throwable);
+        }
+    }
+
+    @Override
+    default Object invokeWithArguments(Object[] arguments) {
+        switch (arguments.length) {
+            case 0:
+                return invoke();
+            case 1:
+                return invoke(arguments[0]);
+            case 2:
+                return invoke(arguments[0], arguments[1]);
+            default:
+                throw new UnsupportedOperationException("not supported yet");
         }
     }
 }

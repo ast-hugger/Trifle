@@ -31,13 +31,13 @@ public class InterpreterTests extends LanguageFeaturesTest {
             case 2:
                 return Closure.with(FunctionTranslator.translate(function)).invoke(args[0], args[1]);
             default:
-            throw new IllegalArgumentException();
+                throw new UnsupportedOperationException();
         }
     }
 
     @Test
     public void testEvilFibonacci() {
-        Closure fibonacci = evilFibonacci();
+        UserFunction fibonacci = evilFibonacci();
         fibonacci.invoke(35); // enough to force compilation
         assertEquals(1, fibonacci.invoke(1));
         assertEquals(8, fibonacci.invoke(5));
@@ -46,7 +46,7 @@ public class InterpreterTests extends LanguageFeaturesTest {
 
     @Test
     public void testVeryEvilFibonacci() {
-        Closure fibonacci = veryEvilFibonacci();
+        UserFunction fibonacci = veryEvilFibonacci();
         fibonacci.invoke(35); // enough to force compilation
         assertEquals(1, fibonacci.invoke(1));
         assertEquals(8, fibonacci.invoke(5));
@@ -63,8 +63,8 @@ public class InterpreterTests extends LanguageFeaturesTest {
      * which injects a value into computation incompatible with the profiled
      * types, and therefore with the specialized version of code.
      */
-    static Closure evilFibonacci() {
-        TopLevel toplevel = new TopLevel();
+    static UserFunction evilFibonacci() {
+        Library toplevel = new Library();
         toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 if_(lessThan(n, const_(0)),
@@ -74,7 +74,7 @@ public class InterpreterTests extends LanguageFeaturesTest {
                         bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
                             bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                                 add(t1, t2)))))));
-        return toplevel.getAsClosure("fibonacci");
+        return toplevel.get("fibonacci");
     }
 
     /**
@@ -82,8 +82,8 @@ public class InterpreterTests extends LanguageFeaturesTest {
      * tail position, so the continuation which should but can't receive its
      * value lies within the function.
      */
-    static Closure veryEvilFibonacci() {
-        TopLevel toplevel = new TopLevel();
+    static UserFunction veryEvilFibonacci() {
+        Library toplevel = new Library();
         toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 bind(
@@ -95,6 +95,6 @@ public class InterpreterTests extends LanguageFeaturesTest {
                                 bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                                     add(t1, t2))))),
                     t0 -> t0)));
-        return toplevel.getAsClosure("fibonacci");
+        return toplevel.get("fibonacci");
     }
 }

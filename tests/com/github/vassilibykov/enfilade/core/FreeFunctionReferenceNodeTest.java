@@ -14,67 +14,67 @@ import static org.junit.Assert.assertEquals;
 
 public class FreeFunctionReferenceNodeTest {
 
-    private TopLevel topLevel;
+    private Library library;
 
     @Before
     public void setUp() throws Exception {
-        topLevel = new TopLevel();
-        topLevel.define("target", lambda(arg -> add(arg, arg)));
+        library = new Library();
+        library.define("target", lambda(arg -> add(arg, arg)));
     }
 
     @Test
     public void profiledInterpretedUsedInCalledFunctionPosition() {
-        topLevel.define("caller", lambda(() -> call(topLevel.at("target"), const_(3))));
-        assertEquals(6, topLevel.getAsClosure("caller").invoke());
+        library.define("caller", lambda(() -> call(library.at("target"), const_(3))));
+        assertEquals(6, library.get("caller").invoke());
     }
 
     @Test
     public void simpleInterpretedUsedInCalledFunctionPosition() {
-        topLevel.define("caller", lambda(() -> call(topLevel.at("target"), const_(3))));
-        var caller = topLevel.getAsClosure("caller");
-        caller.implementation.useSimpleInterpreter();
+        library.define("caller", lambda(() -> call(library.at("target"), const_(3))));
+        var caller = library.get("caller");
+        caller.implementation().useSimpleInterpreter();
         assertEquals(6, caller.invoke());
     }
 
     @Test
     public void compiledUsedInCalledFunctionPosition() {
-        topLevel.define("caller", lambda(() -> call(topLevel.at("target"), const_(3))));
-        var caller = topLevel.getAsClosure("caller");
+        library.define("caller", lambda(() -> call(library.at("target"), const_(3))));
+        var caller = library.get("caller");
         caller.invoke();
-        caller.implementation.forceCompile();
+        caller.implementation().forceCompile();
         assertEquals(6, caller.invoke());
     }
 
     @Test
     public void profiledInterpretedUsedAsClosure() {
-        topLevel.define("caller",
+        library.define("caller",
             lambda(() ->
-                bind(topLevel.at("target"), t ->
+                bind(library.at("target"), t ->
                     call(t, const_(3)))));
-        var caller = topLevel.getAsClosure("caller");
+        var caller = library.get("caller");
         assertEquals(6, caller.invoke());
     }
 
     @Test
     public void simpleInterpretedUsedAsClosure() {
-        topLevel.define("caller",
+        library.define("caller",
             lambda(() ->
-                bind(topLevel.at("target"), t ->
+                bind(library.at("target"), t ->
                     call(t, const_(3)))));
-        var caller = topLevel.getAsClosure("caller");
-        caller.implementation.useSimpleInterpreter();
+        var caller = library.get("caller");
+        caller.implementation().useSimpleInterpreter();
         assertEquals(6, caller.invoke());
     }
 
     @Test
     public void compiledUsedAsClosure() {
-        topLevel.define("caller",
+        library.define("caller",
             lambda(() ->
-                bind(topLevel.at("target"), t ->
+                bind(library.at("target"), t ->
                     call(t, const_(3)))));
-        var caller = topLevel.getAsClosure("caller");
+        var caller = library.get("caller");
         caller.invoke();
-        caller.implementation.forceCompile();
+        caller.implementation().forceCompile();
         assertEquals(6, caller.invoke());
     }
 }

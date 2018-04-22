@@ -18,37 +18,37 @@ import static org.junit.Assert.assertEquals;
 public class ConstantNodeTests {
 
     public static final MethodType GENERIC_NULLARY_METHOD_TYPE = MethodType.genericMethodType(0);
-    private Closure intClosure;
+    private UserFunction intClosure;
     private FunctionImplementation intFunction;
     private ConstantNode intNode;
-    private Closure boolClosure;
+    private UserFunction boolClosure;
     private FunctionImplementation boolFunction;
     private ConstantNode boolNode;
-    private Closure stringClosure;
+    private UserFunction stringClosure;
     private FunctionImplementation stringFunction;
     private ConstantNode stringNode;
-    private Closure nullClosure;
+    private UserFunction nullClosure;
     private FunctionImplementation nullFunction;
     private ConstantNode nullNode;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("int", lambda(() -> const_(42)));
-        intClosure = topLevel.getAsClosure("int");
-        intFunction = intClosure.implementation;
+        intClosure = topLevel.get("int");
+        intFunction = intClosure.implementation();
         intNode = (ConstantNode) intFunction.body();
         topLevel.define("bool", lambda(() -> const_(true)));
-        boolClosure = topLevel.getAsClosure("bool");
-        boolFunction = boolClosure.implementation;
+        boolClosure = topLevel.get("bool");
+        boolFunction = boolClosure.implementation();
         boolNode = (ConstantNode) boolFunction.body();
         topLevel.define("string", lambda(() -> const_("hello")));
-        stringClosure = topLevel.getAsClosure("string");
-        stringFunction = stringClosure.implementation;
+        stringClosure = topLevel.get("string");
+        stringFunction = stringClosure.implementation();
         stringNode = (ConstantNode) stringFunction.body();
         topLevel.define("null", lambda(() -> const_(null)));
-        nullClosure = topLevel.getAsClosure("null");
-        nullFunction = nullClosure.implementation;
+        nullClosure = topLevel.get("null");
+        nullFunction = nullClosure.implementation();
         nullNode = (ConstantNode) nullFunction.body();
     }
 

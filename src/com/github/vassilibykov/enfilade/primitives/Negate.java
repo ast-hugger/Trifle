@@ -23,7 +23,7 @@ public class Negate extends Primitive1 {
         try {
             return -((Integer) arg);
         } catch (ClassCastException e) {
-            throw RuntimeError.integerExpected();
+            throw RuntimeError.integerExpected(arg);
         }
     }
 

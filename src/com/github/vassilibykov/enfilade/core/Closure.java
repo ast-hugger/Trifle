@@ -154,7 +154,7 @@ public class Closure implements Invocable {
         }
     }
 
-    public Object invoke(Object... args) {
+    public Object invokeWithArguments(Object... args) {
         switch (args.length) {
             case 0:
                 return invoke();

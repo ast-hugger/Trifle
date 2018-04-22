@@ -14,32 +14,32 @@ import static org.junit.Assert.*;
 
 public class LetNodeTests {
 
-    private Closure makeSupplier;
+    private UserFunction makeSupplier;
     private Closure intSupplier;
     private Closure stringSupplier;
-    private Closure letClosure;
+    private UserFunction letClosure;
     private FunctionImplementation letFunction;
     private LetNode letNode;
     private VariableDefinition letVariable;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("makeSupplier",
             lambda(arg ->
                 lambda(() -> arg)));
-        makeSupplier = topLevel.getAsClosure("makeSupplier");
+        makeSupplier = topLevel.get("makeSupplier");
         intSupplier = (Closure) makeSupplier.invoke(42);
         stringSupplier = (Closure) makeSupplier.invoke("hello");
         defineLetFunction(topLevel);
-        letClosure = topLevel.getAsClosure("let");
-        letFunction = letClosure.implementation;
+        letClosure = topLevel.get("let");
+        letFunction = letClosure.implementation();
         letNode = (LetNode) letFunction.body();
         letVariable = letNode.variable();
     }
 
-    protected void defineLetFunction(TopLevel topLevel) {
-        topLevel.define("let",
+    protected void defineLetFunction(Library library) {
+        library.define("let",
             lambda(f ->
                 bind(call(f), t -> t)));
     }

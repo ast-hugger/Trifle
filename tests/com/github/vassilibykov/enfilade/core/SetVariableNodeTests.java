@@ -18,22 +18,22 @@ import static org.junit.Assert.assertTrue;
 
 public class SetVariableNodeTests {
 
-    private Closure closure;
+    private UserFunction closure;
     private FunctionImplementation function;
     private VariableDefinition letVar;
     private SetVariableNode node;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("letVarTest",
             lambda(arg ->
                 bind(const_(1), t ->
                     block(
                         set(t, arg),
                         t))));
-        closure = topLevel.getAsClosure("letVarTest");
-        function = closure.implementation;
+        closure = topLevel.get("letVarTest");
+        function = closure.implementation();
         var let = (LetNode) function.body();
         letVar = let.variable();
         var block = (BlockNode) let.body();

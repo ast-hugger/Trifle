@@ -14,7 +14,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class ProfilingFunction {
-    private Closure function;
+    private UserFunction function;
     private FunctionImplementation callee;
     private FunctionProfile calleeProfile;
     private ValueProfile calleeParamProfile;
@@ -24,15 +24,15 @@ public class ProfilingFunction {
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("callee", lambda(arg -> arg));
         topLevel.define("caller", lambda(arg ->
             block(
                 call(topLevel.at("callee"), arg),
                 call(topLevel.at("callee"), const_("hello")))));
-        function = topLevel.getAsClosure("caller");
-        callee = topLevel.getAsClosure("callee").implementation;
-        caller = topLevel.getAsClosure("caller").implementation;
+        function = topLevel.get("caller");
+        callee = topLevel.get("callee").implementation();
+        caller = topLevel.get("caller").implementation();
         calleeProfile = callee.profile;
         calleeParamProfile = callee.declaredParameters().get(0).profile;
         callerProfile = caller.profile;

@@ -24,7 +24,7 @@ public class ProfilingInterpreter extends Interpreter {
             try {
                 test = (boolean) testValue;
             } catch (ClassCastException e) {
-                throw RuntimeError.booleanExpected();
+                throw RuntimeError.booleanExpected(testValue);
             }
             if (test) {
                 Object result = anIf.trueBranch().accept(this);

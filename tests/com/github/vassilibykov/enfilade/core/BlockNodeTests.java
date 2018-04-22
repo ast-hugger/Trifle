@@ -17,28 +17,28 @@ import static org.junit.Assert.*;
 @SuppressWarnings({"SimplifiableJUnitAssertion", "ConstantConditions"})
 public class BlockNodeTests {
 
-    private Closure emptyBlockClosure;
+    private UserFunction emptyBlockClosure;
     private FunctionImplementation emptyBlockFunction;
     private BlockNode emptyBlockNode;
-    private Closure blockClosure;
+    private UserFunction blockClosure;
     private FunctionImplementation blockFunction;
     private BlockNode blockNode;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("emptyBlock",
             lambda(() -> block()));
-        emptyBlockClosure = topLevel.getAsClosure("emptyBlock");
-        emptyBlockFunction = emptyBlockClosure.implementation;
+        emptyBlockClosure = topLevel.get("emptyBlock");
+        emptyBlockFunction = emptyBlockClosure.implementation();
         emptyBlockNode = (BlockNode) emptyBlockFunction.body();
         topLevel.define("block",
             lambda(() -> block(
                 const_("one"),
                 const_("two"),
                 const_(3))));
-        blockClosure = topLevel.getAsClosure("block");
-        blockFunction = blockClosure.implementation;
+        blockClosure = topLevel.get("block");
+        blockFunction = blockClosure.implementation();
         blockNode = (BlockNode) blockFunction.body();
     }
 

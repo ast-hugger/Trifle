@@ -4,8 +4,8 @@ package com.github.vassilibykov.enfilade.tmp;
 
 import com.github.vassilibykov.enfilade.builtins.Add;
 import com.github.vassilibykov.enfilade.builtins.Subtract;
-import com.github.vassilibykov.enfilade.core.Closure;
-import com.github.vassilibykov.enfilade.core.TopLevel;
+import com.github.vassilibykov.enfilade.core.Library;
+import com.github.vassilibykov.enfilade.core.UserFunction;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
@@ -38,8 +38,8 @@ public class TimeBigFib {
         System.out.format("fibonacci(%s) = %s in %s ms\n", n, result, elapsed / 1_000_000L);
     }
 
-    private static Closure fibonacci() {
-        TopLevel toplevel = new TopLevel();
+    private static UserFunction fibonacci() {
+        Library toplevel = new Library();
         toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 if_(lessThan(n, const_(2)),
@@ -49,6 +49,6 @@ public class TimeBigFib {
                             bind(call(direct(Subtract.INSTANCE), n, const_(2)), n2 ->
                                 bind(call(direct(fibonacci), n2), t2 ->
                                     call(direct(Add.INSTANCE), t1, t2))))))));
-        return toplevel.getAsClosure("fibonacci");
+        return toplevel.get("fibonacci");
     }
 }

@@ -2,19 +2,50 @@
 
 package com.github.vassilibykov.enfilade.core;
 
+import com.github.vassilibykov.enfilade.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * A user-defined function created and managed by {@link TopLevel}.
+ * A user-defined function created and managed by {@link Library}.
  */
 public class UserFunction implements FreeFunction {
-    static UserFunction construct(String name, Function<UserFunction, FunctionImplementation> implementationMaker) {
-        return new UserFunction(name, implementationMaker);
+    /**
+     * Create a new user function by translating a lambda expression.
+     *
+     * @param name The name of the function. The name has no
+     *        effect on the execution, other than allowing to look up
+     *        a function in a library, if it is indeed contained in a
+     *        library.
+     * @param definition The lambda expression defining the function.
+     * @return The newly created user function object.
+     */
+    static UserFunction construct(@NotNull String name, Lambda definition) {
+        return new UserFunction(name, definition);
+    }
+
+    /**
+     * Create a new user function in such a way that the lambda defining the
+     * user function is supplied by a Java function which receives the
+     * user-function-to-be. This approach allows defining recursive functions
+     * using {@link Library#define(String, Function)} and at the same time keep
+     * immutable all the relevant fields in the classes involved.
+     *
+     * @param name The name of the function. The name has no
+     *        effect on the execution, other than allowing to look up
+     *        a function in a library, if it is indeed contained in a
+     *        library.
+     * @param definitionMaker A Java function receiving the partially
+     *        initialized UserFunction instance being created. The
+     *        function should return a Lambda to use as the user
+     *        function's definition.
+     * @return The newly created user function object.
+     */
+    static UserFunction construct(String name, Function<UserFunction, Lambda> definitionMaker) {
+        return new UserFunction(name, definitionMaker);
     }
 
     /*
@@ -24,9 +55,16 @@ public class UserFunction implements FreeFunction {
     @NotNull private final String name;
     @NotNull private final FunctionImplementation implementation;
 
-    private UserFunction(@NotNull String name, Function<UserFunction, FunctionImplementation> implementationMaker) {
+    public UserFunction(@NotNull String name, @NotNull Lambda definition) {
         this.name = name;
-        this.implementation = Objects.requireNonNull(implementationMaker.apply(this));
+        this.implementation = FunctionTranslator.translate(definition);
+        this.implementation.setUserFunction(this);
+    }
+
+    private UserFunction(@NotNull String name, Function<UserFunction, Lambda> definitionMaker) {
+        this.name = name;
+        var definition = definitionMaker.apply(this);
+        this.implementation = FunctionTranslator.translate(definition);
         this.implementation.setUserFunction(this);
     }
 

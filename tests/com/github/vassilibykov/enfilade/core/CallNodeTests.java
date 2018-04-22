@@ -16,27 +16,27 @@ import static org.junit.Assert.assertTrue;
 @SuppressWarnings("ConstantConditions")
 public class CallNodeTests {
 
-    private Closure lambdaEcho;
+    private UserFunction lambdaEcho;
     private FunctionImplementation lambdaEchoFunction;
     private CallNode lambdaEchoCall;
-    private Closure directEcho;
+    private UserFunction directEcho;
     private FunctionImplementation directEchoFunction;
     private CallNode directEchoCall;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("lambdaEcho",
             lambda(arg ->
                 bind(lambda(x -> x), t ->
                     call(t, arg))));
-        lambdaEcho = topLevel.getAsClosure("lambdaEcho");
-        lambdaEchoFunction = lambdaEcho.implementation;
+        lambdaEcho = topLevel.get("lambdaEcho");
+        lambdaEchoFunction = lambdaEcho.implementation();
         lambdaEchoCall = (CallNode) ((LetNode) lambdaEchoFunction.body()).body();
         topLevel.define("echo", lambda(arg -> arg));
         topLevel.define("directEcho", lambda(arg -> call(topLevel.at("echo"), arg)));
-        directEcho = topLevel.getAsClosure("directEcho");
-        directEchoFunction = directEcho.implementation;
+        directEcho = topLevel.get("directEcho");
+        directEchoFunction = directEcho.implementation();
         directEchoCall = (CallNode) directEchoFunction.body();
     }
 

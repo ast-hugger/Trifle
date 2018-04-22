@@ -15,19 +15,19 @@ import static org.junit.Assert.assertEquals;
  * evaluation counts.
  */
 public class ProfilingIf {
-    private Closure function;
+    private UserFunction function;
     private IfNode ifNode;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("test",
             lambda(arg ->
                 if_(arg,
                     const_("hello"),
                     const_("bye"))));
-        function = topLevel.getAsClosure("test");
-        ifNode = (IfNode) function.implementation.body();
+        function = topLevel.get("test");
+        ifNode = (IfNode) function.implementation().body();
     }
 
     @Test

@@ -22,11 +22,11 @@ public class SpecializedCompilerTests extends LanguageFeaturesTest {
 
     @Override
     protected Object invoke(Lambda definition, Object... args) {
-        var function = Closure.with(FunctionTranslator.translate(definition));
-        if (!function.implementation.isCompiled()) {
-            function.invoke(args); // to profile
-            function.implementation.forceCompile();
+        var function = UserFunction.construct("test", definition);
+        if (!function.implementation().isCompiled()) {
+            function.invokeWithArguments(args); // to profile
+            function.implementation().forceCompile();
         }
-        return function.invoke(args);
+        return function.invokeWithArguments(args);
     }
 }

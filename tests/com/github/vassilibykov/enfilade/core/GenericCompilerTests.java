@@ -13,26 +13,18 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lam
  */
 public class GenericCompilerTests extends LanguageFeaturesTest {
 
-    private TopLevel topLevel;
-
-    @Before
-    public void setUp() throws Exception {
-        topLevel = new TopLevel();
-    }
-
     @Override
     protected Object eval(Expression expression) {
-        topLevel.define("test", lambda(() -> expression));
-        var function = topLevel.getAsClosure("test");
-        function.implementation.forceCompile();
+        var function = UserFunction.construct("test", lambda(() -> expression));
+        function.implementation().forceCompile();
         return function.invoke();
     }
 
     @Override
     protected Object invoke(Lambda definition, Object... args) {
-        topLevel.define("test", definition);
-        var function = topLevel.getAsClosure("test");
-        function.implementation.forceCompile();
-        return function.invoke(args);
+        var function = UserFunction.construct("test", definition);
+        function.implementation().forceCompile();
+        Object result = function.invokeWithArguments(args);
+        return result;
     }
 }

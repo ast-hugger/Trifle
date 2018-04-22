@@ -17,20 +17,20 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class ProfilingLet {
-    protected Closure function;
+    protected UserFunction function;
     protected ValueProfile profile;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("test",
             lambda((shouldSet, setValue) ->
                 bind(const_(1), t ->
                     if_(shouldSet,
                         set(t, setValue),
                         block()))));
-        function = topLevel.getAsClosure("test");
-        var let = (LetNode) function.implementation.body();
+        function = topLevel.get("test");
+        var let = (LetNode) function.implementation().body();
         var tDef = let.variable();
         profile = tDef.profile;
     }

@@ -16,18 +16,18 @@ import static org.junit.Assert.assertTrue;
  * Test {@link CallNode}'s type profile which tracks the type of return values.
  */
 public class ProfilingCall {
-    private Closure function;
+    private UserFunction function;
     private ValueProfile profile;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("callee",
             lambda(arg -> arg));
         topLevel.define("caller",
             lambda(arg -> call(topLevel.at("callee"), arg))); // the return value of the call is the arg
-        function = topLevel.getAsClosure("caller");
-        var call = (CallNode) function.implementation.body();
+        function = topLevel.get("caller");
+        var call = (CallNode) function.implementation().body();
         profile = call.profile;
     }
 

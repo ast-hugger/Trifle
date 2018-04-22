@@ -3,8 +3,8 @@
 package com.github.vassilibykov.enfilade.tmp;
 
 import com.github.vassilibykov.enfilade.builtins.Multiply;
-import com.github.vassilibykov.enfilade.core.Closure;
-import com.github.vassilibykov.enfilade.core.TopLevel;
+import com.github.vassilibykov.enfilade.core.Library;
+import com.github.vassilibykov.enfilade.core.UserFunction;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
@@ -32,14 +32,14 @@ public class BigFactorial {
         System.out.format("factorial(%s) = %s in %s ms\n", n, result, elapsed / 1_000_000L);
     }
 
-    private static Closure factorial() {
-        TopLevel toplevel = new TopLevel();
+    private static UserFunction factorial() {
+        Library toplevel = new Library();
         toplevel.define("factorial",
             factorial -> lambda(n ->
                 if_(lessThan(n, const_(1)),
                     const_(1),
                     bind(call(direct(factorial), sub(n, const_(1))), t ->
                         call(direct(Multiply.INSTANCE), t, n)))));
-        return toplevel.getAsClosure("factorial");
+        return toplevel.get("factorial");
     }
 }

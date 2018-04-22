@@ -2,8 +2,8 @@
 
 package com.github.vassilibykov.enfilade.tmp;
 
-import com.github.vassilibykov.enfilade.core.Closure;
-import com.github.vassilibykov.enfilade.core.TopLevel;
+import com.github.vassilibykov.enfilade.core.Library;
+import com.github.vassilibykov.enfilade.core.UserFunction;
 
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bind;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
@@ -32,8 +32,8 @@ public class TimeFib {
         System.out.format("fibonacci(%s) = %s in %s ms\n", n, result, elapsed / 1_000_000L);
     }
 
-    private static Closure fibonacci() {
-        TopLevel toplevel = new TopLevel();
+    private static UserFunction fibonacci() {
+        Library toplevel = new Library();
         toplevel.define("fibonacci",
             fibonacci -> lambda(n ->
                 if_(lessThan(n, const_(2)),
@@ -41,14 +41,14 @@ public class TimeFib {
                     bind(call(direct(fibonacci), sub(n, const_(1))), t1 ->
                         bind(call(direct(fibonacci), sub(n, const_(2))), t2 ->
                             add(t1, t2))))));
-        return toplevel.getAsClosure("fibonacci");
+        return toplevel.get("fibonacci");
     }
 
 //    private static Closure altFib() {
 //        var n = var("n");
 //        var t1 = var("t1");
 //        var t2 = var("t2");
-//        return TopLevel.define(
+//        return Library.define(
 //            fibonacci -> Lambda.with(List.of(n),
 //                If.with(PrimitiveCall.with(new PrimitiveKey("lessThan", LessThan::new), n, Const.value(2)),
 //                    Const.value(1),
@@ -60,7 +60,7 @@ public class TimeFib {
 //    private static Closure fibonacci() {
 //        var t1 = var("t1");
 //        var t2 = var("t2");
-//        return TopLevel.define(
+//        return Library.define(
 //            fibonacci -> lambda(n ->
 //                if_(lessThan(n, const_(2)),
 //                    const_(1),

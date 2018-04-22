@@ -17,19 +17,19 @@ import static org.junit.Assert.assertEquals;
 @SuppressWarnings("ConstantConditions")
 public class ReturnNodeTests {
 
-    private Closure closure;
+    private UserFunction closure;
     private FunctionImplementation function;
     private ReturnNode node;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("test",
             lambda(() -> block(
                 ret(const_(42)),
                 const_("hello"))));
-        closure = topLevel.getAsClosure("test");
-        function = closure.implementation;
+        closure = topLevel.get("test");
+        function = closure.implementation();
         var block = (BlockNode) function.body();
         node = (ReturnNode) block.expressions()[0];
     }

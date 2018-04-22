@@ -16,8 +16,16 @@ public class RuntimeError extends RuntimeException {
         return message("boolean expected");
     }
 
+    public static RuntimeError booleanExpected(Object actual) {
+        return message("boolean expected, got: " + actual);
+    }
+
     public static RuntimeError integerExpected() {
         return message("integer expected");
+    }
+
+    public static RuntimeError integerExpected(Object actual) {
+        return message("integer expected, got: " + actual);
     }
 
     private RuntimeError(String message) {

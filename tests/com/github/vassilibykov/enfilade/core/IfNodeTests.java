@@ -15,27 +15,27 @@ import static org.junit.Assert.*;
 @SuppressWarnings("ConstantConditions")
 public class IfNodeTests {
 
-    private Closure intReturningClosure;
+    private UserFunction intReturningClosure;
     private FunctionImplementation intReturningFunction;
     private IfNode intReturningNode;
-    private Closure mixedClosure;
+    private UserFunction mixedClosure;
     private FunctionImplementation mixedFunction;
     private IfNode mixedNode;
 
     @Before
     public void setUp() throws Exception {
-        var topLevel = new TopLevel();
+        var topLevel = new Library();
         topLevel.define("intReturning",
             lambda(arg ->
                 if_(arg, const_(1), const_(0))));
-        intReturningClosure = topLevel.getAsClosure("intReturning");
-        intReturningFunction = intReturningClosure.implementation;
+        intReturningClosure = topLevel.get("intReturning");
+        intReturningFunction = intReturningClosure.implementation();
         intReturningNode = (IfNode) intReturningFunction.body();
         topLevel.define("mixed",
             lambda(arg ->
                 if_(arg, const_(1), const_("false"))));
-        mixedClosure = topLevel.getAsClosure("mixed");
-        mixedFunction = mixedClosure.implementation;
+        mixedClosure = topLevel.get("mixed");
+        mixedFunction = mixedClosure.implementation();
         mixedNode = (IfNode) mixedFunction.body();
     }
 
