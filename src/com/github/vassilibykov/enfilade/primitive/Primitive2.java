@@ -1,6 +1,6 @@
 // Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-package com.github.vassilibykov.enfilade.primitives;
+package com.github.vassilibykov.enfilade.primitive;
 
 import com.github.vassilibykov.enfilade.core.ExpressionType;
 import com.github.vassilibykov.enfilade.core.GhostWriter;

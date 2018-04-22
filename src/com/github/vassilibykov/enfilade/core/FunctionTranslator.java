@@ -15,8 +15,8 @@ import com.github.vassilibykov.enfilade.expression.Return;
 import com.github.vassilibykov.enfilade.expression.SetVariable;
 import com.github.vassilibykov.enfilade.expression.Variable;
 import com.github.vassilibykov.enfilade.expression.Visitor;
-import com.github.vassilibykov.enfilade.primitives.Primitive1;
-import com.github.vassilibykov.enfilade.primitives.Primitive2;
+import com.github.vassilibykov.enfilade.primitive.Primitive1;
+import com.github.vassilibykov.enfilade.primitive.Primitive2;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;

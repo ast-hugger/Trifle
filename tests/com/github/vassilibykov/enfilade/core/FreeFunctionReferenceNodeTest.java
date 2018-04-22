@@ -9,7 +9,7 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.bin
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.call;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.const_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.add;
 import static org.junit.Assert.assertEquals;
 
 public class FreeFunctionReferenceNodeTest {

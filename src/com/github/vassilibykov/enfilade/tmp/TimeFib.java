@@ -11,9 +11,9 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.con
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.direct;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.add;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.lessThan;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.sub;
 
 public class TimeFib {
 

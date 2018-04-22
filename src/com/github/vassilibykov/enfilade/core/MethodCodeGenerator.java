@@ -2,9 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.builtins.BuiltinFunction;
-import com.github.vassilibykov.enfilade.builtins.Builtins;
-import com.github.vassilibykov.enfilade.primitives.IfAware;
+import com.github.vassilibykov.enfilade.primitive.IfAware;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
@@ -16,7 +14,6 @@ import java.util.stream.Stream;
 import static com.github.vassilibykov.enfilade.core.JvmType.BOOL;
 import static com.github.vassilibykov.enfilade.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.enfilade.core.JvmType.VOID;
-import static com.github.vassilibykov.enfilade.core.JvmType.isCompatibleValue;
 
 /**
  * Generates the "normal" executable representation of a function.

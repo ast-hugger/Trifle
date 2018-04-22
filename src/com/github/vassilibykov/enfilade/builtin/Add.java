@@ -1,6 +1,6 @@
 // Copyright (c) 2018 Vassili Bykov. Licensed under the Apache License, Version 2.0.
 
-package com.github.vassilibykov.enfilade.builtins;
+package com.github.vassilibykov.enfilade.builtin;
 
 import com.github.vassilibykov.enfilade.core.SquarePegException;
 
@@ -10,14 +10,14 @@ import java.lang.invoke.MethodType;
 import java.math.BigInteger;
 
 /**
- * Implements multiplication on integers of unlimited size, overflowing into
+ * Implements addition on integers of unlimited size, overflowing into
  * {@link BigInteger}s as needed.
  */
-public class Multiply extends BuiltinFunction {
-    public static final Multiply INSTANCE = new Multiply();
+public class Add extends BuiltinFunction {
+    public static final Add INSTANCE = new Add();
 
-    private Multiply() {
-        super("multiply");
+    private Add() {
+        super("add");
     }
 
     @Override
@@ -25,43 +25,43 @@ public class Multiply extends BuiltinFunction {
         var type1 = callSiteType.parameterType(0);
         var type2 = callSiteType.parameterType(1);
         if (type1 == int.class && type2 == int.class) {
-            return MULTIPLY_INT.asType(callSiteType);
+            return ADD_INT.asType(callSiteType);
         } else {
-            return MULTIPLY_GENERIC.asType(callSiteType);
+            return ADD_GENERIC.asType(callSiteType);
         }
     }
 
-    public static int multiply(int x, int y) {
+    public static int add(int x, int y) {
         try {
-            return Math.multiplyExact(x, y);
+            return Math.addExact(x, y);
         } catch (ArithmeticException e) {
-            var result = BigInteger.valueOf(x).multiply(BigInteger.valueOf(y));
+            var result = BigInteger.valueOf(x).add(BigInteger.valueOf(y));
             throw SquarePegException.with(result);
         }
     }
 
-    public static Object multiply(Object x, Object y) {
+    public static Object add(Object x, Object y) {
         try {
-            return Math.multiplyExact((Integer) x, (Integer) y);
+            return Math.addExact((Integer) x, (Integer) y);
         } catch (ClassCastException | ArithmeticException e) {
-            return generalMultiply(x, y);
+            return generalAdd(x, y);
         }
     }
 
-    private static Object generalMultiply(Object x, Object y) {
+    private static Object generalAdd(Object x, Object y) {
         if (x instanceof Integer) {
             if (y instanceof Integer) {
-                return BigInteger.valueOf((Integer) x).multiply(BigInteger.valueOf((Integer) y));
+                return BigInteger.valueOf((Integer) x).add(BigInteger.valueOf((Integer) y));
             } else if (y instanceof BigInteger) {
-                return BigInteger.valueOf((Integer) x).multiply((BigInteger) y);
+                return BigInteger.valueOf((Integer) x).add((BigInteger) y);
             } else {
                 throw new IllegalArgumentException();
             }
         } else if (x instanceof BigInteger) {
             if (y instanceof Integer) {
-                return ((BigInteger) x).multiply(BigInteger.valueOf((Integer) y));
+                return ((BigInteger) x).add(BigInteger.valueOf((Integer) y));
             } else if (y instanceof BigInteger) {
-                return ((BigInteger) x).multiply((BigInteger) y);
+                return ((BigInteger) x).add((BigInteger) y);
             } else {
                 throw new IllegalArgumentException();
             }
@@ -70,14 +70,14 @@ public class Multiply extends BuiltinFunction {
         }
     }
 
-    private static final MethodHandle MULTIPLY_INT;
-    private static final MethodHandle MULTIPLY_GENERIC;
+    private static final MethodHandle ADD_INT;
+    private static final MethodHandle ADD_GENERIC;
     static {
         var lookup = MethodHandles.lookup();
         try {
-            MULTIPLY_INT = lookup.findStatic(Multiply.class, "multiply",
+            ADD_INT = lookup.findStatic(Add.class, "add",
                 MethodType.methodType(int.class, int.class, int.class));
-            MULTIPLY_GENERIC = lookup.findStatic(Multiply.class, "multiply",
+            ADD_GENERIC = lookup.findStatic(Add.class, "add",
                 MethodType.methodType(Object.class, Object.class, Object.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);

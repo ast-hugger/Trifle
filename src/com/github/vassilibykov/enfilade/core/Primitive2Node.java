@@ -2,12 +2,12 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.primitives.Primitive2;
+import com.github.vassilibykov.enfilade.primitive.Primitive2;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * A call of a binary primitive. This is an abstract class with a variety of
- * implementations in the {@link com.github.vassilibykov.enfilade.primitives} package.
+ * implementations in the {@link com.github.vassilibykov.enfilade.primitive} package.
  * Note that we conflate the notions of a primitive and a call of a primitive.
  */
 public class Primitive2Node extends PrimitiveNode {

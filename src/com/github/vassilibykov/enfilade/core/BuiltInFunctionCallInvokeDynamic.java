@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.builtins.Builtins;
+import com.github.vassilibykov.enfilade.builtin.Builtins;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 

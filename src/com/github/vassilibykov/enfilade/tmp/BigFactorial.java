@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.tmp;
 
-import com.github.vassilibykov.enfilade.builtins.Multiply;
+import com.github.vassilibykov.enfilade.builtin.Multiply;
 import com.github.vassilibykov.enfilade.core.Library;
 import com.github.vassilibykov.enfilade.core.UserFunction;
 
@@ -12,8 +12,8 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.con
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.direct;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.if_;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lambda;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.lessThan;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.sub;
 
 public class BigFactorial {
 

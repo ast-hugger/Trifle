@@ -16,11 +16,11 @@ import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.lam
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.let;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.set;
 import static com.github.vassilibykov.enfilade.expression.ExpressionLanguage.var;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.add;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.lessThan;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.mul;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.negate;
-import static com.github.vassilibykov.enfilade.primitives.StandardPrimitiveLanguage.sub;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.add;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.lessThan;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.mul;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.negate;
+import static com.github.vassilibykov.enfilade.primitive.StandardPrimitiveLanguage.sub;
 import static org.junit.Assert.assertEquals;
 
 public abstract class LanguageFeaturesTest {

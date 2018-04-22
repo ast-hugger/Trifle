@@ -2,7 +2,7 @@
 
 package com.github.vassilibykov.enfilade.core;
 
-import com.github.vassilibykov.enfilade.builtins.BuiltinFunction;
+import com.github.vassilibykov.enfilade.builtin.BuiltinFunction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
