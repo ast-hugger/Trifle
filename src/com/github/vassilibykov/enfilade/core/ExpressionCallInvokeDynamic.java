@@ -46,35 +46,26 @@ final class ExpressionCallInvokeDynamic {
         var callArity = callSiteType.parameterCount() - 1; // don't count the closure
         return new InlineCachingCallSite(
             callSiteType,
-            site -> DISPATCH.bindTo(site).asCollector(Object[].class, callArity).asType(callSiteType));
+            DISPATCH.asCollector(Object[].class, callArity),
+            MEGAMORPHIC_DISPATCH.asCollector(Object[].class, callArity));
     }
 
     public static Object dispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args) throws Throwable {
         if (closureArg instanceof FreeFunction) {
-            var adjustedType = thisSite.type().dropParameterTypes(0, 1);
-            var realInvoker = ((FreeFunction) closureArg).invoker(adjustedType);
-            var adjustedInvoker = MethodHandles.dropArguments(realInvoker, 0, Object.class);
-            thisSite.addCacheEntry(IS_SAME_OBJECT.bindTo(closureArg), adjustedInvoker);
-            var result = realInvoker.invokeWithArguments(args);
-            if (JvmType.isCompatibleValue(thisSite.type().returnType(), result)) {
-                return result;
-            } else {
-                throw SquarePegException.with(result);
-            }
+            return dispatchFreeFunctionCall(thisSite, (FreeFunction) closureArg, args);
         }
-        // FIXME clean this all up; the method is messy
         var closure = (Closure) closureArg;
         MethodHandle target;
-        if (closure.implementation.isCompiled()) {
-            /* If the implementation function has not been compiled yet, it doesn't
-               make sense to install an inline cache because we can do better later. */
+        /* If the implementation function has not been compiled, it doesn't
+           make sense to install an inline cache just yet because we can do better
+           later. */
+        if (closure.implementation.isCompiled() && !closure.hasCopiedValues() && !thisSite.isMegamorphic()) {
+            // TODO I think we can still do something for closures with copied values, but with a different logic
             target = closure.optimalCallSiteInvoker(thisSite.type());
-            if (!thisSite.isMegamorphic() && !closure.hasCopiedValues()) {
-                thisSite.addCacheEntry(
-                    IS_SAME_FUNCTION_CLOSURE.bindTo(closure.implementation),
-                    MethodHandles.dropArguments(target, 0, Object.class));
-            }
-            // but don't use the cached invoker it in the switch below; there we need a generic signature
+            thisSite.addCacheEntry(
+                IS_SAME_FUNCTION_CLOSURE.bindTo(closure.implementation),
+                MethodHandles.dropArguments(target, 0, Object.class));
+            // don't use the cached invoker (target) in this call; here we need a generic signature
         }
         target = closure.genericInvoker();
         Object result;
@@ -104,6 +95,58 @@ final class ExpressionCallInvokeDynamic {
         }
     }
 
+    private static Object dispatchFreeFunctionCall(InlineCachingCallSite thisSite, FreeFunction function, Object[] args) throws Throwable {
+        var adjustedType = thisSite.type().dropParameterTypes(0, 1);
+        var realInvoker = function.invoker(adjustedType);
+        var adjustedInvoker = MethodHandles.dropArguments(realInvoker, 0, Object.class);
+        thisSite.addCacheEntry(IS_SAME_OBJECT.bindTo(function), adjustedInvoker);
+        var result = realInvoker.invokeWithArguments(args);
+        if (JvmType.isCompatibleValue(thisSite.type().returnType(), result)) {
+            return result;
+        } else {
+            throw SquarePegException.with(result);
+        }
+    }
+
+    /**
+     * Called by a call site in the megamorphic state.
+     */
+    public static Object megamorphicDispatch(InlineCachingCallSite thisSite, Object closureArg, Object[] args)
+        throws Throwable
+    {
+        Object result;
+        if (closureArg instanceof FreeFunction) {
+            var adjustedType = thisSite.type().dropParameterTypes(0, 1);
+            result = ((FreeFunction) closureArg).invoker(adjustedType).invokeWithArguments(args);
+        } else {
+            MethodHandle target = ((Closure) closureArg).genericInvoker();
+            switch (args.length) {
+                case 0:
+                    result = target.invokeExact();
+                    break;
+                case 1:
+                    result = target.invokeExact(args[0]);
+                    break;
+                case 2:
+                    result = target.invokeExact(args[0], args[1]);
+                    break;
+                case 3:
+                    result = target.invokeExact(args[0], args[1], args[2]);
+                    break;
+                case 4:
+                    result = target.invokeExact(args[0], args[1], args[2], args[3]);
+                    break;
+                default:
+                    result = target.invokeWithArguments(args);
+            }
+        }
+        if (JvmType.isCompatibleValue(thisSite.type().returnType(), result)) {
+            return result;
+        } else {
+            throw SquarePegException.with(result);
+        }
+    }
+
     public static boolean isClosureOfSameFunction(FunctionImplementation expected, Object closureArg) {
         return closureArg instanceof Closure && ((Closure) closureArg).implementation == expected;
     }
@@ -115,6 +158,7 @@ final class ExpressionCallInvokeDynamic {
     private static final MethodHandle IS_SAME_FUNCTION_CLOSURE;
     private static final MethodHandle IS_SAME_OBJECT;
     private static final MethodHandle DISPATCH;
+    private static final MethodHandle MEGAMORPHIC_DISPATCH;
     static {
         try {
             var lookup = MethodHandles.lookup();
@@ -129,6 +173,10 @@ final class ExpressionCallInvokeDynamic {
             DISPATCH = lookup.findStatic(
                 ExpressionCallInvokeDynamic.class,
                 "dispatch",
+                MethodType.methodType(Object.class, InlineCachingCallSite.class, Object.class, Object[].class));
+            MEGAMORPHIC_DISPATCH = lookup.findStatic(
+                ExpressionCallInvokeDynamic.class,
+                "megamorphicDispatch",
                 MethodType.methodType(Object.class, InlineCachingCallSite.class, Object.class, Object[].class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
