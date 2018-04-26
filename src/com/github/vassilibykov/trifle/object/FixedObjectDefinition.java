@@ -2,29 +2,57 @@
 
 package com.github.vassilibykov.trifle.object;
 
+import java.lang.invoke.SwitchPoint;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * A list of field names available in a {@link FixedObject} which follows
- * this definition. The set of field names may be changed dynamically.
+ * A definition of fields available in a {@link FixedObject} which follows this
+ * definition. The set of field names may be changed dynamically.
  */
 public class FixedObjectDefinition {
+
     private FixedObjectLayout layout;
     /**
-     * Must be acquired and held by any operation that replaces the layout,
-     * until the old layout's switch point has been invalidated. Must also be
-     * acquired while constructing a fast access path at an access site (which
-     * will incorporate a dependency on the current layout's switch point).
+     * Guards all accesses to this object and the stability of its layout. An
+     * explicit lock is used instead of the intrinsic monitor to support
+     * transactional atomic modifications when a FixedObjectDefinition is a
+     * foundation of a class, and a modification affects multiple classes in a
+     * hierarchy.
      */
-    private final Lock modificationLock = new ReentrantLock();
+    private final Lock lock = new ReentrantLock();
 
-    public synchronized List<String> fieldNames() {
-        return layout.fieldNames();
+    public FixedObjectDefinition(List<String> fieldNames) {
+        this.layout = new FixedObjectLayout(fieldNames);
+    }
+
+    public List<String> fieldNames() {
+        lock();
+        try {
+            return layout.fieldNames();
+        } finally {
+            unlock();
+        }
     }
 
     public void setFieldNames(List<String> fieldNames) {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        lock();
+        try {
+            if (layout.fieldNames().equals(fieldNames)) return;
+            var oldLayout = layout;
+            layout = new FixedObjectLayout(fieldNames);
+            SwitchPoint.invalidateAll(new SwitchPoint[] {oldLayout.switchPoint()});
+        } finally {
+            unlock();
+        }
+    }
+
+    public void lock() {
+        lock.lock();
+    }
+
+    public void unlock() {
+        lock.unlock();
     }
 }

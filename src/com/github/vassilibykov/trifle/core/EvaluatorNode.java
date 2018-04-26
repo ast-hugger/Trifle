@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  */
 public abstract class EvaluatorNode {
 
-    interface Visitor<T> {
+    public interface Visitor<T> {
         T visitBlock(BlockNode block);
         T visitCall(CallNode call);
         T visitClosure(ClosureNode closure);

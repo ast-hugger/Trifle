@@ -11,7 +11,7 @@ import java.util.List;
  * expression. This is an abstract superclass, with concrete implementations
  * for specific function arities.
  */
-abstract class CallNode extends EvaluatorNode {
+public abstract class CallNode extends EvaluatorNode {
 
     interface ArityMatcher<T> {
         T ifNullary();
@@ -47,7 +47,9 @@ abstract class CallNode extends EvaluatorNode {
         return dispatcher;
     }
 
-    protected abstract int arity();
+    public abstract int arity();
+
+    public abstract EvaluatorNode parameter(int index);
 
     public abstract <T> T match(ArityMatcher<T> matcher);
 
@@ -71,8 +73,13 @@ abstract class CallNode extends EvaluatorNode {
         }
 
         @Override
-        protected int arity() {
+        public int arity() {
             return 0;
+        }
+
+        @Override
+        public EvaluatorNode parameter(int index) {
+            throw new IllegalArgumentException();
         }
 
         @Override
@@ -94,8 +101,14 @@ abstract class CallNode extends EvaluatorNode {
         }
 
         @Override
-        protected int arity() {
+        public int arity() {
             return 1;
+        }
+
+        @Override
+        public EvaluatorNode parameter(int index) {
+            if (index > 0) throw new IllegalArgumentException();
+            return arg;
         }
 
         @Override
@@ -123,8 +136,17 @@ abstract class CallNode extends EvaluatorNode {
         }
 
         @Override
-        protected int arity() {
+        public int arity() {
             return 2;
+        }
+
+        @Override
+        public EvaluatorNode parameter(int index) {
+            switch (index) {
+                case 0: return arg1;
+                case 1: return arg2;
+                default: throw new IllegalArgumentException();
+            }
         }
 
         @Override

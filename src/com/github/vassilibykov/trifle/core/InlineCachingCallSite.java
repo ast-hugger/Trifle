@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.MutableCallSite;
+import java.lang.invoke.VolatileCallSite;
 
 /**
  * A mutable call site with inline cache management support. A site is
@@ -25,26 +25,30 @@ import java.lang.invoke.MutableCallSite;
  * now in the megamorphic state, further attempts to add inline cache entries
  * will be ignored.
  */
-class InlineCachingCallSite extends MutableCallSite {
-    static final int CACHE_LIMIT = 3;
+public class InlineCachingCallSite extends VolatileCallSite {
+    private static final int CACHE_LIMIT = 3;
 
     /** The original dispatch method installed in this call site. */
-    private final MethodHandle dispatch;
+    private final MethodHandle originalDispatch;
     /** The dispatch method to permanently switch to when the cache limit is hit. */
     @Nullable private final MethodHandle megamorphicDispatch;
     private int cacheSize = 0;
 
-    InlineCachingCallSite(MethodType type, MethodHandle dispatch, @Nullable MethodHandle megamorphicDispatch) {
+    public InlineCachingCallSite(MethodType type, MethodHandle dispatch, @Nullable MethodHandle megamorphicDispatch) {
         super(type);
-        this.dispatch = dispatch.bindTo(this).asType(type);
+        this.originalDispatch = dispatch.bindTo(this).asType(type);
         this.megamorphicDispatch = megamorphicDispatch != null
             ? megamorphicDispatch.bindTo(this).asType(type)
             : null;
-        setTarget(this.dispatch);
+        setTarget(this.originalDispatch);
     }
 
-    InlineCachingCallSite(MethodType type, MethodHandle dispatch) {
+    public InlineCachingCallSite(MethodType type, MethodHandle dispatch) {
         this(type, dispatch, null);
+    }
+
+    public MethodHandle originalDispatch() {
+        return originalDispatch;
     }
 
     /**
@@ -53,7 +57,7 @@ class InlineCachingCallSite extends MutableCallSite {
      * method to decide whether to build and add an inline cache entry. However,
      * it is harmless and will only result in an one ignored attempt to do so.
      */
-    synchronized boolean isMegamorphic() {
+    public synchronized boolean isMegamorphic() {
         return cacheSize > CACHE_LIMIT;
     }
 
@@ -61,19 +65,33 @@ class InlineCachingCallSite extends MutableCallSite {
      * Invoked by the dispatch method to establish an inline cache entry. If the
      * site is megamorphic, this method does nothing.
      */
-    synchronized void addCacheEntry(MethodHandle guard, MethodHandle guardedPath) {
+    public synchronized void addCacheEntry(MethodHandle guard, MethodHandle guardedPath) {
         if (cacheSize < CACHE_LIMIT) {
             cacheSize++;
             MethodHandle entry = MethodHandles.guardWithTest(guard, guardedPath, getTarget());
             setTarget(entry);
         } else if (cacheSize == CACHE_LIMIT) {
             cacheSize++;
-            setTarget(megamorphicDispatch != null ? megamorphicDispatch : dispatch);
+            setTarget(megamorphicDispatch != null ? megamorphicDispatch : originalDispatch);
         }
     }
 
-    synchronized void reset() {
+    public synchronized void reset() {
         cacheSize = 0;
-        setTarget(dispatch);
+        setTarget(originalDispatch);
+    }
+
+    public MethodHandle resetter() {
+        return MethodHandles.filterArguments(originalDispatch, 0, RESET.bindTo(this));
+    }
+
+    private static final MethodHandle RESET;
+    static {
+        try {
+            RESET = MethodHandles.lookup().findVirtual(
+                InlineCachingCallSite.class, "reset", MethodType.methodType(void.class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
     }
 }
