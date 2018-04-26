@@ -1,5 +1,5 @@
 
-## Benchmark function definition in Enfilade
+## Benchmark function definition in Trifle
         
 The actual definition using DSLish helper combinators:
         
@@ -42,18 +42,18 @@ with dead code not reachable from recovery entry points eliminated.
     Code:
        0: aload_0
        1: iconst_2
-       2: invokestatic  #12                 // Method com/github/vassilibykov/enfilade/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
+       2: invokestatic  #12                 // Method com/github/vassilibykov/trifle/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
        5: ifeq          12
        8: iconst_1
        9: goto          37
       12: aload_0
       13: iconst_1
-      14: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      14: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
       17: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
       22: istore_1
       23: aload_0
       24: iconst_2
-      25: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      25: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
       28: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
       33: istore_2
       34: iload_1
@@ -61,9 +61,9 @@ with dead code not reachable from recovery entry points eliminated.
       36: iadd
       37: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       40: areturn
-      41: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      41: getfield      #42                 // Field com/github/vassilibykov/trifle/core/SquarePegException.value:Ljava/lang/Object;
       44: goto          58
-      47: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      47: getfield      #42                 // Field com/github/vassilibykov/trifle/core/SquarePegException.value:Ljava/lang/Object;
       50: iload_1
       51: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       54: astore_1
@@ -71,19 +71,19 @@ with dead code not reachable from recovery entry points eliminated.
       58: astore_1
       59: aload_0
       60: iconst_2
-      61: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      61: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
       64: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       67: invokedynamic #44,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
       72: astore_2
       73: aload_1
       74: aload_2
-      75: invokestatic  #50                 // Method com/github/vassilibykov/enfilade/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
+      75: invokestatic  #50                 // Method com/github/vassilibykov/trifle/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
       78: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       81: areturn
     Exception table:
        from    to  target type
-          12    22    41   Class com/github/vassilibykov/enfilade/core/SquarePegException
-          23    33    47   Class com/github/vassilibykov/enfilade/core/SquarePegException
+          12    22    41   Class com/github/vassilibykov/trifle/core/SquarePegException
+          23    33    47   Class com/github/vassilibykov/trifle/core/SquarePegException
     
     public static final int specialized$function0(int);
     Code:
@@ -106,12 +106,12 @@ with dead code not reachable from recovery entry points eliminated.
       28: iload_2
       29: iadd
       30: ireturn
-      31: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      31: getfield      #42                 // Field com/github/vassilibykov/trifle/core/SquarePegException.value:Ljava/lang/Object;
       34: iload_0
       35: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       38: astore_0
       39: goto          58
-      42: getfield      #42                 // Field com/github/vassilibykov/enfilade/core/SquarePegException.value:Ljava/lang/Object;
+      42: getfield      #42                 // Field com/github/vassilibykov/trifle/core/SquarePegException.value:Ljava/lang/Object;
       45: iload_0
       46: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       49: astore_0
@@ -122,13 +122,13 @@ with dead code not reachable from recovery entry points eliminated.
       58: astore_1
       59: aload_0
       60: iconst_2
-      61: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      61: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
       64: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       67: invokedynamic #44,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
       72: astore_2
       73: aload_1
       74: aload_2
-      75: invokestatic  #50                 // Method com/github/vassilibykov/enfilade/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
+      75: invokestatic  #50                 // Method com/github/vassilibykov/trifle/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
       78: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       81: dup
       82: instanceof    #34                 // class java/lang/Integer
@@ -136,36 +136,36 @@ with dead code not reachable from recovery entry points eliminated.
       88: checkcast     #34                 // class java/lang/Integer
       91: invokevirtual #55                 // Method java/lang/Integer.intValue:()I
       94: goto          101
-      97: invokestatic  #59                 // Method com/github/vassilibykov/enfilade/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/enfilade/core/SquarePegException;
+      97: invokestatic  #59                 // Method com/github/vassilibykov/trifle/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/trifle/core/SquarePegException;
      100: athrow
      101: ireturn
     Exception table:
        from    to  target type
-           9    17    31   Class com/github/vassilibykov/enfilade/core/SquarePegException
-          18    26    42   Class com/github/vassilibykov/enfilade/core/SquarePegException
+           9    17    31   Class com/github/vassilibykov/trifle/core/SquarePegException
+          18    26    42   Class com/github/vassilibykov/trifle/core/SquarePegException
 
 ## Generated code with a separate recovery method
 
 An earlier implementation phase in which recovery already became compiled rather
 than interpreted, but was compiled as a separate method.
 
-    public final class com.github.vassilibykov.enfilade.core.$gen$0 {
+    public final class com.github.vassilibykov.trifle.core.$gen$0 {
         public static final java.lang.Object closure0(java.lang.Object);
         Code:
            0: aload_0
            1: iconst_2
-           2: invokestatic  #12                 // Method com/github/vassilibykov/enfilade/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
+           2: invokestatic  #12                 // Method com/github/vassilibykov/trifle/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
            5: ifeq          12
            8: iconst_1
            9: goto          37
           12: aload_0
           13: iconst_1
-          14: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+          14: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
           17: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
           22: istore_1
           23: aload_0
           24: iconst_2
-          25: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+          25: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
           28: invokedynamic #30,  0             // InvokeDynamic #0:call1:(I)I
           33: istore_2
           34: iload_1
@@ -189,12 +189,12 @@ than interpreted, but was compiled as a separate method.
           62: iconst_0
           63: aload_0
           64: aastore
-          65: invokedynamic #46,  0             // InvokeDynamic #1:recover:(Lcom/github/vassilibykov/enfilade/core/SquarePegException;I[Ljava/lang/Object;)Ljava/lang/Object;
+          65: invokedynamic #46,  0             // InvokeDynamic #1:recover:(Lcom/github/vassilibykov/trifle/core/SquarePegException;I[Ljava/lang/Object;)Ljava/lang/Object;
           70: areturn
         Exception table:
            from    to  target type
-              12    22    41   Class com/github/vassilibykov/enfilade/core/SquarePegException
-              23    33    49   Class com/github/vassilibykov/enfilade/core/SquarePegException
+              12    22    41   Class com/github/vassilibykov/trifle/core/SquarePegException
+              23    33    49   Class com/github/vassilibykov/trifle/core/SquarePegException
     
       public static final java.lang.Object recovery$closure0(java.lang.Object, int, java.lang.Object[]);
         Code:
@@ -222,26 +222,26 @@ than interpreted, but was compiled as a separate method.
           40: pop
           41: aload_3
           42: iconst_2
-          43: invokestatic  #12                 // Method com/github/vassilibykov/enfilade/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
+          43: invokestatic  #12                 // Method com/github/vassilibykov/trifle/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
           46: ifeq          56
           49: iconst_1
           50: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
           53: goto          96
           56: aload_3
           57: iconst_1
-          58: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+          58: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
           61: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
           64: invokedynamic #52,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
           69: astore        4
           71: aload_3
           72: iconst_2
-          73: invokestatic  #18                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+          73: invokestatic  #18                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
           76: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
           79: invokedynamic #52,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
           84: astore        5
           86: aload         4
           88: aload         5
-          90: invokestatic  #58                 // Method com/github/vassilibykov/enfilade/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
+          90: invokestatic  #58                 // Method com/github/vassilibykov/trifle/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
           93: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
           96: areturn
     
@@ -283,20 +283,20 @@ than interpreted, but was compiled as a separate method.
           53: iload_0
           54: invokestatic  #38                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
           57: aastore
-          58: invokedynamic #46,  0             // InvokeDynamic #1:recover:(Lcom/github/vassilibykov/enfilade/core/SquarePegException;I[Ljava/lang/Object;)Ljava/lang/Object;
+          58: invokedynamic #46,  0             // InvokeDynamic #1:recover:(Lcom/github/vassilibykov/trifle/core/SquarePegException;I[Ljava/lang/Object;)Ljava/lang/Object;
           63: dup
           64: instanceof    #34                 // class java/lang/Integer
           67: ifeq          79
           70: checkcast     #34                 // class java/lang/Integer
           73: invokevirtual #63                 // Method java/lang/Integer.intValue:()I
           76: goto          83
-          79: invokestatic  #67                 // Method com/github/vassilibykov/enfilade/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/enfilade/core/SquarePegException;
+          79: invokestatic  #67                 // Method com/github/vassilibykov/trifle/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/trifle/core/SquarePegException;
           82: athrow
           83: ireturn
         Exception table:
            from    to  target type
-               9    17    31   Class com/github/vassilibykov/enfilade/core/SquarePegException
-              18    26    39   Class com/github/vassilibykov/enfilade/core/SquarePegException
+               9    17    31   Class com/github/vassilibykov/trifle/core/SquarePegException
+              18    26    39   Class com/github/vassilibykov/trifle/core/SquarePegException
     }
 
 
@@ -316,26 +316,26 @@ method, and were handled using an interpreter.
     Code:
        0: aload_0
        1: iconst_2
-       2: invokestatic  #12                 // Method com/github/vassilibykov/enfilade/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
+       2: invokestatic  #12                 // Method com/github/vassilibykov/trifle/primitives/LessThan.lessThan:(Ljava/lang/Object;I)Z
        5: ifeq          15
        8: iconst_1
        9: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       12: goto          51
       15: aload_0
       16: iconst_1
-      17: invokestatic  #24                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      17: invokestatic  #24                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
       20: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       23: invokedynamic #35,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
       28: astore_1
       29: aload_0
       30: iconst_2
-      31: invokestatic  #24                 // Method com/github/vassilibykov/enfilade/primitives/Sub.sub:(Ljava/lang/Object;I)I
+      31: invokestatic  #24                 // Method com/github/vassilibykov/trifle/primitives/Sub.sub:(Ljava/lang/Object;I)I
       34: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       37: invokedynamic #35,  0             // InvokeDynamic #0:call1:(Ljava/lang/Object;)Ljava/lang/Object;
       42: astore_2
       43: aload_1
       44: aload_2
-      45: invokestatic  #41                 // Method com/github/vassilibykov/enfilade/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
+      45: invokestatic  #41                 // Method com/github/vassilibykov/trifle/primitives/Add.add:(Ljava/lang/Object;Ljava/lang/Object;)I
       48: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       51: areturn
 
@@ -391,10 +391,10 @@ Common epilogue finishing the construction of the frame replica and invoking a r
       54: invokestatic  #18                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
       57: aastore
       58: iconst_0
-      59: invokestatic  #53                 // Method com/github/vassilibykov/enfilade/acode/Interpreter.forRecovery:(I[Ljava/lang/Object;I)Lcom/github/vassilibykov/enfilade/acode/Interpreter;
+      59: invokestatic  #53                 // Method com/github/vassilibykov/trifle/acode/Interpreter.forRecovery:(I[Ljava/lang/Object;I)Lcom/github/vassilibykov/trifle/acode/Interpreter;
       62: swap
-      63: invokevirtual #57                 // Method com/github/vassilibykov/enfilade/core/SquarePegException.value:()Ljava/lang/Object;
-      66: invokevirtual #60                 // Method com/github/vassilibykov/enfilade/acode/Interpreter.interpret:(Ljava/lang/Object;)Ljava/lang/Object;
+      63: invokevirtual #57                 // Method com/github/vassilibykov/trifle/core/SquarePegException.value:()Ljava/lang/Object;
+      66: invokevirtual #60                 // Method com/github/vassilibykov/trifle/acode/Interpreter.interpret:(Ljava/lang/Object;)Ljava/lang/Object;
   
 The value produced by the interpreter is on the stack. If it's an `Integer`, return it normally as an `int`.
   
@@ -407,9 +407,9 @@ The value produced by the interpreter is on the stack. If it's an `Integer`, ret
       83: nop
       84: nop
       85: athrow
-      86: invokestatic  #68                 // Method com/github/vassilibykov/enfilade/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/enfilade/core/SquarePegException;
+      86: invokestatic  #68                 // Method com/github/vassilibykov/trifle/core/SquarePegException.with:(Ljava/lang/Object;)Lcom/github/vassilibykov/trifle/core/SquarePegException;
       89: athrow
     Exception table:
        from    to  target type
-           9    17    31   Class com/github/vassilibykov/enfilade/core/SquarePegException
-          18    26    39   Class com/github/vassilibykov/enfilade/core/SquarePegException
+           9    17    31   Class com/github/vassilibykov/trifle/core/SquarePegException
+          18    26    39   Class com/github/vassilibykov/trifle/core/SquarePegException

@@ -1,4 +1,4 @@
-A closure call is a fundamental type of call in Enfilade, as even a top-level
+A closure call is a fundamental type of call in Trifle, as even a top-level
 function is a closure with an empty list of copied values.
 
 ## Interpreted mode calls
