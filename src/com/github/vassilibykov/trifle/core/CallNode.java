@@ -5,6 +5,7 @@ package com.github.vassilibykov.trifle.core;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * An executable representation of a {@link com.github.vassilibykov.trifle.expression.Call}
@@ -49,7 +50,9 @@ public abstract class CallNode extends EvaluatorNode {
 
     public abstract int arity();
 
-    public abstract EvaluatorNode parameter(int index);
+    public abstract Stream<EvaluatorNode> arguments();
+
+    public abstract EvaluatorNode argument(int index);
 
     public abstract <T> T match(ArityMatcher<T> matcher);
 
@@ -78,7 +81,12 @@ public abstract class CallNode extends EvaluatorNode {
         }
 
         @Override
-        public EvaluatorNode parameter(int index) {
+        public Stream<EvaluatorNode> arguments() {
+            return Stream.empty();
+        }
+
+        @Override
+        public EvaluatorNode argument(int index) {
             throw new IllegalArgumentException();
         }
 
@@ -106,7 +114,12 @@ public abstract class CallNode extends EvaluatorNode {
         }
 
         @Override
-        public EvaluatorNode parameter(int index) {
+        public Stream<EvaluatorNode> arguments() {
+            return Stream.of(arg);
+        }
+
+        @Override
+        public EvaluatorNode argument(int index) {
             if (index > 0) throw new IllegalArgumentException();
             return arg;
         }
@@ -141,7 +154,12 @@ public abstract class CallNode extends EvaluatorNode {
         }
 
         @Override
-        public EvaluatorNode parameter(int index) {
+        public Stream<EvaluatorNode> arguments() {
+            return Stream.of(arg1, arg2);
+        }
+
+        @Override
+        public EvaluatorNode argument(int index) {
             switch (index) {
                 case 0: return arg1;
                 case 1: return arg2;

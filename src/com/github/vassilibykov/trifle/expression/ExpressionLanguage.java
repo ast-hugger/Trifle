@@ -35,15 +35,15 @@ public class ExpressionLanguage {
         return Lambda.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
     }
 
-    public static Call call(AtomicExpression function) {
+    public static Call call(Callable function) {
         return Call.with(function);
     }
 
-    public static Call call(AtomicExpression function, AtomicExpression arg) {
+    public static Call call(Callable function, AtomicExpression arg) {
         return Call.with(function, arg);
     }
 
-    public static Call call(AtomicExpression function, AtomicExpression arg1, AtomicExpression arg2) {
+    public static Call call(Callable function, AtomicExpression arg1, AtomicExpression arg2) {
         return Call.with(function, arg1, arg2);
     }
 
@@ -65,6 +65,10 @@ public class ExpressionLanguage {
 
     public static Block block(Expression... expressions) {
         return Block.with(List.of(expressions));
+    }
+
+    public static PrimitiveCall primitive(Class<? extends Primitive> primitive, AtomicExpression... args) {
+        return PrimitiveCall.with(primitive, args);
     }
 
     public static Return ret(AtomicExpression value) {

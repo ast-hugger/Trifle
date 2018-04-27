@@ -8,6 +8,7 @@ import com.github.vassilibykov.trifle.expression.Lambda;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -28,7 +29,7 @@ public class Library {
      * @return The newly created user function object.
      * @throws IllegalArgumentException If a function by that name already exists.
      */
-    public UserFunction define(String name, Lambda definition) {
+    public synchronized UserFunction define(String name, Lambda definition) {
         if (functionsByName.containsKey(name)) throw new IllegalArgumentException();
         var function = UserFunction.construct(name, definition);
         functionsByName.put(name, function);
@@ -46,7 +47,7 @@ public class Library {
      * @return the newly created user function object.
      * @throws IllegalArgumentException If a function by that name already exists.
      */
-    public UserFunction define(String name, Function<UserFunction, Lambda> definer) {
+    public synchronized UserFunction define(String name, Function<UserFunction, Lambda> definer) {
         if (functionsByName.containsKey(name)) throw new IllegalArgumentException();
         return UserFunction.construct(name, function -> {
             /* The function must be added to the map before running the definer
@@ -61,8 +62,15 @@ public class Library {
      *
      * @throws NullPointerException If there is no function by that name.
      */
-    public UserFunction get(String name) {
+    public synchronized UserFunction get(String name) {
         return Objects.requireNonNull(functionsByName.get(name));
+    }
+
+    /**
+     * Return as an Optional a user function by the specified name.
+     */
+    public synchronized Optional<UserFunction> getOptional(String name) {
+        return Optional.ofNullable(functionsByName.get(name));
     }
 
     /**
@@ -71,7 +79,7 @@ public class Library {
      *
      * @throws NullPointerException If there is no function by that name.
      */
-    public FreeFunctionReference at(String name) {
+    public synchronized FreeFunctionReference at(String name) {
         return FreeFunctionReference.to(get(name));
     }
 }

@@ -30,7 +30,7 @@ class GetFieldDispatcher implements CallDispatcher {
         if (call.arity() != 1) {
             throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception
         }
-        var object = call.parameter(0).accept(interpreter);
+        var object = call.argument(0).accept(interpreter);
         if (object instanceof FixedObject) {
             return ((FixedObject) object).get(fieldName);
         } else {
@@ -43,10 +43,11 @@ class GetFieldDispatcher implements CallDispatcher {
         if (call.arity() != 1) {
             throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception
         }
-        generator.generateCode(call.parameter(0));
+        var type = generator.generateCode(call.argument(0));
+        generator.writer().adaptValue(type, JvmType.REFERENCE);
         generator.writer().invokeDynamic(
-            FixedObjectAccessInvokeDynamic.BOOTSTRAP_GET,
-            FixedObjectAccessInvokeDynamic.getterName(fieldName),
+            FixedObject.accessImplementation().getterBootstrapper(),
+            FieldAccessImplementation.getterName(fieldName),
             MethodType.genericMethodType(1));
         return JvmType.REFERENCE;
     }

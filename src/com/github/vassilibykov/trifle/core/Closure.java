@@ -58,6 +58,11 @@ public class Closure implements Invocable {
         return genericInvoker;
     }
 
+    @Override
+    public MethodHandle invoker(MethodType type) {
+        return optimalInvoker(type);
+    }
+
     /**
      * Return an invoker of the specified type, where the type only considers
      * the function's declared parameters. It does not include the leading

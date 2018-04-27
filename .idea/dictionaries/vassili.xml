@@ -5,6 +5,8 @@
       <w>bootstrapper</w>
       <w>inferencer</w>
       <w>inferencing</w>
+      <w>invocable</w>
+      <w>invocables</w>
       <w>invokedynamic</w>
       <w>letrec</w>
       <w>linearizes</w>
@@ -13,6 +15,7 @@
       <w>polymorphically</w>
       <w>prog</w>
       <w>progn</w>
+      <w>resetter</w>
       <w>unboxed</w>
       <w>unspecialize</w>
       <w>vassilibykov</w>

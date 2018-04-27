@@ -5,6 +5,7 @@ package com.github.vassilibykov.trifle.object;
 import com.github.vassilibykov.trifle.core.CallDispatcher;
 import com.github.vassilibykov.trifle.core.CallNode;
 import com.github.vassilibykov.trifle.core.CodeGenerator;
+import com.github.vassilibykov.trifle.core.CompilerError;
 import com.github.vassilibykov.trifle.core.EvaluatorNode;
 import com.github.vassilibykov.trifle.core.JvmType;
 import com.github.vassilibykov.trifle.core.RuntimeError;
@@ -31,8 +32,8 @@ class SetFieldDispatcher implements CallDispatcher {
         if (call.arity() != 2) {
             throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception
         }
-        var object = call.parameter(0).accept(interpreter);
-        var value = call.parameter(1).accept(interpreter);
+        var object = call.argument(0).accept(interpreter);
+        var value = call.argument(1).accept(interpreter);
         if (object instanceof FixedObject) {
             ((FixedObject) object).set(fieldName, value);
             return value;
@@ -44,14 +45,16 @@ class SetFieldDispatcher implements CallDispatcher {
     @Override
     public JvmType generateCode(CallNode call, CodeGenerator generator) {
         if (call.arity() != 2) {
-            throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception
+            throw new CompilerError("invalid call expression");
         }
-        generator.generateCode(call.parameter(0));
-        generator.generateCode(call.parameter(1));
+        var type1 = generator.generateCode(call.argument(0));
+        generator.writer().adaptValue(type1, JvmType.REFERENCE);
+        var type2 = generator.generateCode(call.argument(1));
+        generator.writer().adaptValue(type2, JvmType.REFERENCE);
         generator.writer().asm().visitInsn(Opcodes.DUP_X1);
         generator.writer().invokeDynamic(
-            FixedObjectAccessInvokeDynamic.BOOTSTRAP_GET,
-            FixedObjectAccessInvokeDynamic.getterName(fieldName),
+            FixedObject.accessImplementation().setterBootstrapper(),
+            FieldAccessImplementation.setterName(fieldName),
             MethodType.methodType(void.class, Object.class, Object.class));
         return JvmType.REFERENCE;
     }

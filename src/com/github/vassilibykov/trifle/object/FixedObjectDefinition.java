@@ -15,7 +15,7 @@ public class FixedObjectDefinition {
 
     private FixedObjectLayout layout;
     /**
-     * Guards all accesses to this object and the stability of its layout. An
+     * Guards all access to this object and the stability of its layout. An
      * explicit lock is used instead of the intrinsic monitor to support
      * transactional atomic modifications when a FixedObjectDefinition is a
      * foundation of a class, and a modification affects multiple classes in a
@@ -25,6 +25,15 @@ public class FixedObjectDefinition {
 
     public FixedObjectDefinition(List<String> fieldNames) {
         this.layout = new FixedObjectLayout(fieldNames);
+    }
+
+    public FixedObjectLayout layout() {
+        lock();
+        try {
+            return layout;
+        } finally {
+            unlock();
+        }
     }
 
     public List<String> fieldNames() {
@@ -54,5 +63,14 @@ public class FixedObjectDefinition {
 
     public void unlock() {
         lock.unlock();
+    }
+
+    public FixedObject instantiate() {
+        return new FixedObject(this);
+    }
+
+    @SuppressWarnings("unused") // called by generated code
+    public Object instantiateAsObject() {
+        return new FixedObject(this);
     }
 }

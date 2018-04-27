@@ -4,6 +4,7 @@ package com.github.vassilibykov.trifle.core;
 
 import com.github.vassilibykov.trifle.expression.Lambda;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.TestOnly;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -23,7 +24,7 @@ public class UserFunction implements FreeFunction {
      * @param definition The lambda expression defining the function.
      * @return The newly created user function object.
      */
-    static UserFunction construct(@NotNull String name, Lambda definition) {
+    public static UserFunction construct(@NotNull String name, Lambda definition) {
         return new UserFunction(name, definition);
     }
 
@@ -44,7 +45,7 @@ public class UserFunction implements FreeFunction {
      *        function's definition.
      * @return The newly created user function object.
      */
-    static UserFunction construct(String name, Function<UserFunction, Lambda> definitionMaker) {
+    public static UserFunction construct(String name, Function<UserFunction, Lambda> definitionMaker) {
         return new UserFunction(name, definitionMaker);
     }
 
@@ -72,12 +73,22 @@ public class UserFunction implements FreeFunction {
         return name;
     }
 
-    FunctionImplementation implementation() {
+    public FunctionImplementation implementation() {
         return implementation;
     }
 
     @Override
     public MethodHandle invoker(MethodType callSiteType) {
         return implementation.callSiteInvoker().asType(callSiteType);
+    }
+
+    @TestOnly
+    public void useSimpleInterpreter() {
+        implementation.useSimpleInterpreter();
+    }
+
+    @TestOnly
+    public void forceCompile() {
+        implementation.forceCompile();
     }
 }

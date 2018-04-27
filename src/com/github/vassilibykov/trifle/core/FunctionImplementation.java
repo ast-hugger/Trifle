@@ -112,7 +112,7 @@ public class FunctionImplementation {
      * The number of times a function is executed as interpreted before it's
      * queued for compilation. The current value is picked fairly randomly.
      */
-    private static final long PROFILING_TARGET = 10;
+    public static final long PROFILING_TARGET = 10;
 
     private enum State {
         INVALID,

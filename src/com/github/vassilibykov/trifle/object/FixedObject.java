@@ -3,6 +3,7 @@
 package com.github.vassilibykov.trifle.object;
 
 import com.github.vassilibykov.trifle.core.RuntimeError;
+import org.jetbrains.annotations.TestOnly;
 
 /**
  * An object with storage locations (fields), identified by names (strings).
@@ -11,7 +12,19 @@ import com.github.vassilibykov.trifle.core.RuntimeError;
  * changing it for all other objects sharing the same definition.
  */
 public class FixedObject {
+
     static final Object NO_VALUE = new Object();
+
+    private static FieldAccessImplementation accessImplementation = FieldAccessInvokeDynamic.FACTORY;
+
+    static FieldAccessImplementation accessImplementation() {
+        return accessImplementation;
+    }
+
+    @TestOnly
+    static void accessImplementation(FieldAccessImplementation implementation) {
+        accessImplementation = implementation;
+    }
 
     /**
      * The associated definition. Not final because we want to support the
@@ -28,8 +41,12 @@ public class FixedObject {
     /*internal*/ Object[] referenceData;
     /*internal*/ int[] intData;
 
-    public FixedObject(FixedObjectDefinition definition) {
+    FixedObject(FixedObjectDefinition definition) {
         this.definition = definition;
+        this.layout = definition.layout();
+        var size = layout.size();
+        this.referenceData = new Object[size];
+        this.intData = new int[size];
     }
 
     public FixedObjectDefinition definition() {
@@ -37,12 +54,17 @@ public class FixedObject {
     }
 
     FixedObjectLayout ensureUpToDateLayout() {
-        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+        FixedObjectLayout currentLayout = definition.layout();
+        if (currentLayout != layout) {
+            var migrator = layout.getMigrator(currentLayout);
+            layout = currentLayout;
+            referenceData = migrator.migrate(referenceData);
+            intData = migrator.migrate(intData);
+        }
+        return layout;
     }
 
-    // FIXME properly synchronize everything that must be synchronized
-
-    public Object get(String fieldName) {
+    public synchronized Object get(String fieldName) {
         ensureUpToDateLayout();
         var index = layout.fieldIndex(fieldName);
         if (index < 0) {
@@ -52,7 +74,7 @@ public class FixedObject {
         return ref != NO_VALUE ? ref : intData[index];
     }
 
-    public void set(String fieldName, Object value) {
+    public synchronized void set(String fieldName, Object value) {
         ensureUpToDateLayout();
         var index = layout.fieldIndex(fieldName);
         if (index < 0) {

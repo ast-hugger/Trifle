@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.VolatileCallSite;
+import java.lang.invoke.MutableCallSite;
 
 /**
  * A mutable call site with inline cache management support. A site is
@@ -25,7 +25,7 @@ import java.lang.invoke.VolatileCallSite;
  * now in the megamorphic state, further attempts to add inline cache entries
  * will be ignored.
  */
-public class InlineCachingCallSite extends VolatileCallSite {
+public class InlineCachingCallSite extends MutableCallSite {
     private static final int CACHE_LIMIT = 3;
 
     /** The original dispatch method installed in this call site. */
@@ -45,10 +45,6 @@ public class InlineCachingCallSite extends VolatileCallSite {
 
     public InlineCachingCallSite(MethodType type, MethodHandle dispatch) {
         this(type, dispatch, null);
-    }
-
-    public MethodHandle originalDispatch() {
-        return originalDispatch;
     }
 
     /**
@@ -74,15 +70,22 @@ public class InlineCachingCallSite extends VolatileCallSite {
             cacheSize++;
             setTarget(megamorphicDispatch != null ? megamorphicDispatch : originalDispatch);
         }
+        MutableCallSite.syncAll(new MutableCallSite[]{this});
     }
 
     public synchronized void reset() {
         cacheSize = 0;
         setTarget(originalDispatch);
+        MutableCallSite.syncAll(new MutableCallSite[]{this});
     }
 
-    public MethodHandle resetter() {
-        return MethodHandles.filterArguments(originalDispatch, 0, RESET.bindTo(this));
+    /**
+     * Return a method handle of the same type as this call site, invoking which
+     * discards all inline caches and makes the original dispatch method the
+     * call site target, then invokes the original dispatch method.
+     */
+    public MethodHandle resetAndDispatchInvoker() {
+        return MethodHandles.foldArguments(originalDispatch, 0, RESET.bindTo(this));
     }
 
     private static final MethodHandle RESET;

@@ -2,7 +2,6 @@
 
 package com.github.vassilibykov.trifle.core;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 
 /**
@@ -10,8 +9,6 @@ import java.lang.invoke.MethodType;
  * context.
  */
 public interface FreeFunction extends Invocable {
-
-    MethodHandle invoker(MethodType callSiteType);
 
     @Override
     default Object invoke() {
