@@ -83,6 +83,10 @@ public class ExpressionLanguage {
         return Variable.named(name);
     }
 
+    public static While while_(AtomicExpression condition, Expression body) {
+        return While.with(condition, body);
+    }
+
     public static Let bind(Expression initializer, Function<Variable, Expression> bodyBuilder) {
         var var = var("t" + tempSerial++);
         return Let.with(var, initializer, bodyBuilder.apply(var));

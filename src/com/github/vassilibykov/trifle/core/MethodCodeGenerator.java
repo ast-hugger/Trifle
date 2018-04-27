@@ -348,6 +348,23 @@ class MethodCodeGenerator implements CodeGenerator {
         return reference.generateLoad(writer);
     }
 
+    @Override
+    public JvmType visitWhile(WhileNode whileNode) {
+        writer.loadNull();
+        writer.withLabelsAround((start, end) -> {
+            var conditionType = whileNode.condition().accept(this);
+            writer.ensureValue(conditionType, BOOL);
+            writer.jumpIf0(end);
+            writer.pop(); // the prior iteration result or the initial null
+            var bodyType = whileNode.body().accept(this);
+            writer.bridgeValue(bodyType, REFERENCE);
+            writer.jump(start);
+        });
+        // TODO The loop as generated here is always treated as if of a reference type.
+        // Perhaps we can do better.
+        return REFERENCE;
+    }
+
     private void withSquarePegRecovery(RecoverySite requestor, Runnable generate) {
         Label handlerStart = new Label();
         SquarePegHandler handler = new SquarePegHandler(

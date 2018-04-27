@@ -8,6 +8,7 @@ import com.github.vassilibykov.trifle.expression.Lambda;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.bind;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.block;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.call;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.const_;
@@ -16,6 +17,7 @@ import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.lambd
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.let;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.set;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.var;
+import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.while_;
 import static com.github.vassilibykov.trifle.primitive.StandardPrimitiveLanguage.add;
 import static com.github.vassilibykov.trifle.primitive.StandardPrimitiveLanguage.lessThan;
 import static com.github.vassilibykov.trifle.primitive.StandardPrimitiveLanguage.mul;
@@ -143,6 +145,14 @@ public abstract class LanguageFeaturesTest {
     }
 
     @Test
+    public void testIterativeFactorial() {
+        var factorial = iterativeFactorial();
+        assertEquals(6, invoke(factorial, 3));
+        assertEquals(24, invoke(factorial, 4));
+        assertEquals(120, invoke(factorial, 5));
+    }
+
+    @Test
     public void testFibonacci() { // and everybody's favorite
         var fibonacci = LanguageFeaturesTest.fibonacci();
         assertEquals(1, invoke(fibonacci, 0));
@@ -166,6 +176,18 @@ public abstract class LanguageFeaturesTest {
                             let(t, call(factorial, sub(n, const_(1))),
                                 mul(t, n))))),
                     call(factorial, arg))));
+    }
+
+    static Lambda iterativeFactorial() {
+        return lambda(arg ->
+            bind(const_(1), result ->
+                bind(const_(1), n ->
+                    block(
+                        while_(lessThan(n, add(arg, const_(1))),
+                            block(
+                                set(result, mul(result, n)),
+                                set(n, add(n, const_(1))))),
+                        result))));
     }
 
     static Lambda fibonacci() {

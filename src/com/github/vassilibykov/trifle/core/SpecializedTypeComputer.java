@@ -2,6 +2,8 @@
 
 package com.github.vassilibykov.trifle.core;
 
+import com.github.vassilibykov.trifle.expression.Expression;
+
 import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
 
 /**
@@ -206,6 +208,16 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
         return setSpecializedType(constFunction, REFERENCE);
+    }
+
+    @Override
+    public JvmType visitWhile(WhileNode whileNode) {
+        whileNode.condition().accept(this);
+        var bodyType = whileNode.body().accept(this);
+        var effectiveBodyType = whileNode.bodyCount.get() > 0
+            ? bodyType
+            : REFERENCE;
+        return setSpecializedType(whileNode, effectiveBodyType);
     }
 
     private JvmType setSpecializedType(EvaluatorNode expression, JvmType type) {

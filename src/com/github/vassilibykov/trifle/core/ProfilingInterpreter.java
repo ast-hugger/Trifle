@@ -56,6 +56,16 @@ public class ProfilingInterpreter extends Interpreter {
             setVar.variable().profile().recordValue(value);
             return value;
         }
+
+        @Override
+        public Object visitWhile(WhileNode whileNode) {
+            Object result = null;
+            while (evaluateCondition(whileNode.condition())) {
+                result = whileNode.body().accept(this);
+                whileNode.bodyCount.incrementAndGet();
+            }
+            return result;
+        }
     }
 
     /*

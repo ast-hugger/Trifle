@@ -58,15 +58,13 @@ public class Interpreter {
         }
 
         @Override
+        public Object visitFreeFunctionReference(FreeFunctionReferenceNode reference) {
+            return reference.target();
+        }
+
+        @Override
         public Object visitIf(IfNode anIf) {
-            Object testValue = anIf.condition().accept(this);
-            boolean test;
-            try {
-                test = (boolean) testValue;
-            } catch (ClassCastException e) {
-                throw RuntimeError.booleanExpected(testValue);
-            }
-            if (test) {
+            if (evaluateCondition(anIf.condition())) {
                 return anIf.trueBranch().accept(this);
             } else {
                 return anIf.falseBranch().accept(this);
@@ -106,8 +104,21 @@ public class Interpreter {
         }
 
         @Override
-        public Object visitFreeFunctionReference(FreeFunctionReferenceNode reference) {
-            return reference.target();
+        public Object visitWhile(WhileNode whileNode) {
+            Object result = null;
+            while (evaluateCondition(whileNode.condition())) {
+                result = whileNode.body().accept(this);
+            }
+            return result;
+        }
+
+        protected boolean evaluateCondition(EvaluatorNode condition) {
+            var value = condition.accept(this);
+            try {
+                return (Boolean) value;
+            } catch (ClassCastException e) {
+                throw RuntimeError.booleanExpected(value);
+            }
         }
     }
 

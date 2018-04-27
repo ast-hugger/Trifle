@@ -33,6 +33,7 @@ public abstract class EvaluatorNode {
         T visitPrimitive2(Primitive2Node primitive);
         T visitReturn(ReturnNode ret);
         T visitSetVar(SetVariableNode setVar);
+        T visitWhile(WhileNode whileNode);
     }
 
     static abstract class VisitorSkeleton<T> implements Visitor<T> {
@@ -84,6 +85,11 @@ public abstract class EvaluatorNode {
         }
 
         @Override
+        public T visitFreeFunctionReference(FreeFunctionReferenceNode topLevelBinding) {
+            return null;
+        }
+
+        @Override
         public T visitIf(IfNode anIf) {
             anIf.condition().accept(this);
             anIf.trueBranch().accept(this);
@@ -123,7 +129,9 @@ public abstract class EvaluatorNode {
         }
 
         @Override
-        public T visitFreeFunctionReference(FreeFunctionReferenceNode topLevelBinding) {
+        public T visitWhile(WhileNode whileNode) {
+            whileNode.condition().accept(this);
+            whileNode.body().accept(this);
             return null;
         }
 

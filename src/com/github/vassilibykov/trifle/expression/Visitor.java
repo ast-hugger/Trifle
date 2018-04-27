@@ -14,4 +14,5 @@ public interface Visitor<T> {
     T visitReturn(Return aReturn);
     T visitSetVariable(SetVariable setVariable);
     T visitVariable(Variable variable);
+    T visitWhile(While aWhile);
 }

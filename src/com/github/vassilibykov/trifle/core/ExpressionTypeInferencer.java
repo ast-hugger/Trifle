@@ -46,6 +46,15 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
+    public ExpressionType visitBlock(BlockNode block) {
+        ExpressionType type = ExpressionType.known(JvmType.REFERENCE);
+        for (EvaluatorNode each : block.expressions()) {
+            type = each.accept(this);
+        }
+        return andSetIn(block, type);
+    }
+
+    @Override
     public ExpressionType visitCall(CallNode call) {
         call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
         call.match(new CallNode.ArityMatcher<Void>() {
@@ -78,6 +87,20 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitConstant(ConstantNode aConst) {
         return andSetIn(aConst, ExpressionType.known(JvmType.ofObject(aConst.value())));
+    }
+
+    @Override
+    public ExpressionType visitFreeFunctionReference(FreeFunctionReferenceNode topLevelBinding) {
+        return andSetIn(topLevelBinding, ExpressionType.known(REFERENCE));
+    }
+
+    @Override
+    public ExpressionType visitGetVar(GetVariableNode varRef) {
+        ExpressionType inferredType = varRef.variable().inferredType();
+        if (varRef.unifyInferredTypeWith(inferredType)) {
+            needsRevisiting = true;
+        }
+        return inferredType;
     }
 
     @Override
@@ -114,15 +137,6 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
         return andSetIn(primitive, primitive.implementation().inferredType(arg1Type, arg2Type));
     }
 
-    @Override
-    public ExpressionType visitBlock(BlockNode block) {
-        ExpressionType type = ExpressionType.known(JvmType.REFERENCE);
-        for (EvaluatorNode each : block.expressions()) {
-            type = each.accept(this);
-        }
-        return andSetIn(block, type);
-    }
-
     /**
      * A ReturnNode is unusual compared to others in that its own type is void
      * because its continuation never receives any value, but the type
@@ -146,17 +160,16 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     }
 
     @Override
-    public ExpressionType visitFreeFunctionReference(FreeFunctionReferenceNode topLevelBinding) {
-        return andSetIn(topLevelBinding, ExpressionType.known(REFERENCE));
-    }
-
-    @Override
-    public ExpressionType visitGetVar(GetVariableNode varRef) {
-        ExpressionType inferredType = varRef.variable().inferredType();
-        if (varRef.unifyInferredTypeWith(inferredType)) {
-            needsRevisiting = true;
+    public ExpressionType visitWhile(WhileNode whileNode) {
+        var conditionType = whileNode.condition().accept(this);
+        if (conditionType.jvmType()
+            .map(it -> !(it.equals(JvmType.BOOL) || it.equals(JvmType.REFERENCE)))
+            .orElse(false))
+        {
+            throw new CompilerError("while() condition is not a boolean");
         }
-        return inferredType;
+        var bodyType = whileNode.body().accept(this);
+        return andSetIn(whileNode, bodyType);
     }
 
     private ExpressionType andSetIn(EvaluatorNode expression, ExpressionType type) {

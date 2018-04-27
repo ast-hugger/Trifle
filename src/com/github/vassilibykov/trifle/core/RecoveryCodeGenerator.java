@@ -97,14 +97,20 @@ class RecoveryCodeGenerator {
 
     /**
      * Set the instruction pointer to the specified address if the test evaluates to
-     * true.
+     * true (or for an inverted branch, if it evaluates to false).
      */
     private static class Branch extends JumpInstruction {
         final EvaluatorNode test;
+        final boolean branchesOnTrue;
 
         Branch(EvaluatorNode test, int address) {
+            this(test, true, address);
+        }
+
+        Branch(EvaluatorNode test, boolean shouldBranchOnTrue, int address) {
             super(address);
             this.test = test;
+            this.branchesOnTrue = shouldBranchOnTrue;
         }
 
         @Override
@@ -114,7 +120,7 @@ class RecoveryCodeGenerator {
 
         @Override
         public String toString() {
-            return "BRANCH " + address + " " + test;
+            return "BRANCH " + (branchesOnTrue ? "if false " : "") + address + " " + test;
         }
     }
 
@@ -210,6 +216,15 @@ class RecoveryCodeGenerator {
         @Override
         public void accept(RecoveryCodeGenerator visitor) {
             visitor.visitCopy(this);
+        }
+    }
+
+    private static class Drop extends Instruction {
+        Drop() {}
+
+        @Override
+        void accept(RecoveryCodeGenerator visitor) {
+            visitor.visitDrop(this);
         }
     }
 
@@ -415,6 +430,19 @@ class RecoveryCodeGenerator {
             return null;
         }
 
+        @Override
+        public Void visitWhile(WhileNode whileNode) {
+            emit(new Load(new ConstantNode(null)));
+            int start = nextInstructionAddress();
+            var branch = new Branch(whileNode.condition(), false, -1);
+            emit(branch);
+            emit(new Drop());
+            whileNode.body().accept(this);
+            emit(new Goto(start));
+            branch.address = nextInstructionAddress();
+            return null;
+        }
+
         private void emit(Instruction instruction) {
             code.add(instruction);
         }
@@ -526,7 +554,7 @@ class RecoveryCodeGenerator {
 
         @Override
         public JvmType visitPrimitive2(Primitive2Node primitive2) {
-            JvmType arg1Type =  primitive2.argument1().accept(this);
+            JvmType arg1Type = primitive2.argument1().accept(this);
             JvmType arg2Type = primitive2.argument2().accept(this);
             return primitive2.implementation().generate(writer, arg1Type, arg2Type);
         }
@@ -549,6 +577,11 @@ class RecoveryCodeGenerator {
         @Override
         public JvmType visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
             return constFunction.generateLoad(writer);
+        }
+
+        @Override
+        public JvmType visitWhile(WhileNode whileNode) {
+            throw new UnsupportedOperationException("should not be called");
         }
     }
 
@@ -596,7 +629,11 @@ class RecoveryCodeGenerator {
     private void visitBranch(Branch branch) {
         var valueType = branch.test.accept(atomicGenerator);
         writer.adaptValue(valueType, BOOL);
-        writer.jumpIfNot0(branch.target.incomingJumpLabel);
+        if (branch.branchesOnTrue) {
+            writer.jumpIfNot0(branch.target.incomingJumpLabel);
+        } else {
+            writer.jumpIf0(branch.target.incomingJumpLabel);
+        }
     }
 
     private void visitGoto(Goto aGoto) {
@@ -623,6 +660,10 @@ class RecoveryCodeGenerator {
         writer
             .dup()
             .storeLocal(REFERENCE, copy.variable.index());
+    }
+
+    private void visitDrop(Drop drop) {
+        writer.pop();
     }
 
     private void setRecoveryLabelHere(@Nullable RecoverySite site) {

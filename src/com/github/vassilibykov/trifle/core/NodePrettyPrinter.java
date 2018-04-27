@@ -181,4 +181,17 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
         });
         return null;
     }
+
+    @Override
+    public Void visitWhile(WhileNode whileNode) {
+        printLine(() -> {
+            output.append("while ");
+            printNodeProfile(whileNode);
+        });
+        printLine(() -> output.append("condition:"));
+        indented(() -> whileNode.condition().accept(this));
+        printLine(() -> output.append("body: ").append(Objects.toString(whileNode.bodyCount.get())));
+        indented(() -> whileNode.body().accept(this));
+        return null;
+    }
 }

@@ -15,6 +15,7 @@ import com.github.vassilibykov.trifle.expression.Return;
 import com.github.vassilibykov.trifle.expression.SetVariable;
 import com.github.vassilibykov.trifle.expression.Variable;
 import com.github.vassilibykov.trifle.expression.Visitor;
+import com.github.vassilibykov.trifle.expression.While;
 import com.github.vassilibykov.trifle.primitive.Primitive1;
 import com.github.vassilibykov.trifle.primitive.Primitive2;
 
@@ -144,6 +145,11 @@ public class FunctionTranslator {
         }
 
         @Override
+        public EvaluatorNode visitFunctionReference(FreeFunctionReference freeFunctionReference) {
+            return new FreeFunctionReferenceNode(freeFunctionReference.target());
+        }
+
+        @Override
         public EvaluatorNode visitIf(If anIf) {
             return new IfNode(
                 anIf.condition().accept(this),
@@ -202,15 +208,15 @@ public class FunctionTranslator {
         }
 
         @Override
-        public EvaluatorNode visitFunctionReference(FreeFunctionReference freeFunctionReference) {
-            return new FreeFunctionReferenceNode(freeFunctionReference.target());
-        }
-
-        @Override
         public EvaluatorNode visitVariable(Variable expressionVariable) {
             var variable = lookupVariable(expressionVariable);
             if (variable.isFreeIn(thisFunction)) variable.markAsReferencedNonlocally();
             return new GetVariableNode(variable);
+        }
+
+        @Override
+        public EvaluatorNode visitWhile(While aWhile) {
+            return new WhileNode(aWhile.condition().accept(this), aWhile.body().accept(this));
         }
     }
 }
