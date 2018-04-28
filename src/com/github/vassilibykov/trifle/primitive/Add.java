@@ -11,6 +11,10 @@ import com.github.vassilibykov.trifle.core.RuntimeError;
 import static com.github.vassilibykov.trifle.core.JvmType.INT;
 import static org.objectweb.asm.Opcodes.IADD;
 
+/**
+ * Integer addition with the semantics of Java {@code +}
+ * (overflow by wrapping around).
+ */
 public class Add extends Primitive2 {
 
     @Override

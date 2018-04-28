@@ -403,7 +403,12 @@ class RecoveryCodeGenerator {
             if (expressions.length == 0) {
                 emit(new Load(new ConstantNode(null)));
             } else {
-                for (var each : expressions) each.accept(this);
+                int i;
+                for (i = 0; i < expressions.length - 1; i++) {
+                    expressions[i].accept(this);
+                    emit(new Drop());
+                }
+                expressions[i].accept(this);
             }
             return null;
         }
@@ -667,6 +672,9 @@ class RecoveryCodeGenerator {
     }
 
     private void setRecoveryLabelHere(@Nullable RecoverySite site) {
-        if (site != null) writer.setLabelHere(site.recoverySiteLabel());
+        if (site != null) {
+            var label = site.recoverySiteLabel();
+            if (label != null) writer.setLabelHere(label);
+        }
     }
 }

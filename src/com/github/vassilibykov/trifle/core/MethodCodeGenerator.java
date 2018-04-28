@@ -9,6 +9,7 @@ import org.objectweb.asm.MethodVisitor;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.github.vassilibykov.trifle.core.JvmType.BOOL;
@@ -107,9 +108,9 @@ class MethodCodeGenerator implements CodeGenerator {
     /*
         An overview of how values produced by visitor methods are handled.
 
-        I believe the following are fundamental invariants. If a method
-        doesn't do they say it should, or does something they say it doesn't
-        have to, the method is probably wrong.
+        I believe the following are fundamental invariants. If a method doesn't
+        do what they say it should, or does something they say it doesn't have
+        to, the method is probably wrong.
 
         A visitor method always returns the JvmType left on the stack by the
         code the method generated.
@@ -270,6 +271,7 @@ class MethodCodeGenerator implements CodeGenerator {
         withSquarePegRecovery(let, () -> {
             var initType = let.initializer().accept(this);
             writer.bridgeValue(initType, varType);
+            return true; // FIXME SPE possibility as reported by bridgeValue is incorrect
         });
         if (variable.isBoxed()) {
             writer.initBoxedVariable(varType, variable.index());
@@ -321,6 +323,7 @@ class MethodCodeGenerator implements CodeGenerator {
         withSquarePegRecovery(returnNode, () -> {
             var returnType = returnNode.value().accept(this);
             writer.bridgeValue(returnType, function.specializedReturnType());
+            return true; // FIXME SPE possibility as reported by bridgeValue is incorrect
         });
         writer.ret(function.specializedReturnType());
         return VOID;
@@ -333,6 +336,7 @@ class MethodCodeGenerator implements CodeGenerator {
         withSquarePegRecovery(set, () -> {
             var valueType = set.value().accept(this);
             writer.bridgeValue(valueType, varType);
+            return true; // FIXME SPE possibility as reported by bridgeValue is incorrect
         });
         writer.dup(); // the duplicate is left on the stack as the set expression value
         if (var.isBoxed()) {
@@ -365,16 +369,27 @@ class MethodCodeGenerator implements CodeGenerator {
         return REFERENCE;
     }
 
-    private void withSquarePegRecovery(RecoverySite requestor, Runnable generate) {
-        Label handlerStart = new Label();
-        SquarePegHandler handler = new SquarePegHandler(
-            handlerStart,
-            new ArrayList<>(liveLocals));
-        requestor.setRecoverySiteLabel(handler.recoverySiteLabel);
-        squarePegHandlers.add(handler);
+    /**
+     * Generate a fragment of code that may throw an SPE which must be
+     * recovered from.
+     *
+     * @param requestor The evaluator node which contains the continuation
+     *        receiving the value of the generated code.
+     * @param generate Generates the code and returns an indication of
+     *        whether an SPE is possible in the code as it was generated.
+     */
+    private void withSquarePegRecovery(RecoverySite requestor, Supplier<Boolean> generate) {
         writer.withLabelsAround((begin, end) -> {
-            generate.run();
-            writer.handleSquarePegException(begin, end, handlerStart);
+            var spePossible = generate.get();
+            if (spePossible) {
+                Label handlerStart = new Label();
+                SquarePegHandler handler = new SquarePegHandler(
+                    handlerStart,
+                    new ArrayList<>(liveLocals));
+                requestor.setRecoverySiteLabel(handler.recoverySiteLabel);
+                squarePegHandlers.add(handler);
+                writer.handleSquarePegException(begin, end, handlerStart);
+            }
         });
     }
 

@@ -5,10 +5,10 @@ package com.github.vassilibykov.trifle.core;
 /**
  * Thrown in generated code when the result of the preceding computation
  * currently on the stack cannot be accepted by its continuation because the
- * continuation if of a narrower type. The value is wrapped as the {@link
+ * continuation is of a narrower type. The value is wrapped as the {@link
  * #value} field of this exception. The structure of the {@link EvaluatorNode}
- * language allows us to generate code in such a way that there are no
- * other values on the stack at this point.
+ * language guarantees that that there are no other values on the stack
+ * at this point.
  *
  * <p>This exception can only occur in generated specialized code when execution
  * takes a path not taken while profiling. For example, a function defined as
@@ -39,7 +39,7 @@ package com.github.vassilibykov.trifle.core;
 public class SquarePegException extends RuntimeException {
     public static final String INTERNAL_CLASS_NAME = GhostWriter.internalClassName(SquarePegException.class);
 
-    public static SquarePegException with(Object value) {
+    public static SquarePegException with(Object value) { // called by generated code
         return new SquarePegException(value);
     }
 
@@ -47,9 +47,5 @@ public class SquarePegException extends RuntimeException {
 
     private SquarePegException(Object value) {
         this.value = value;
-    }
-
-    public Object value() {
-        return value;
     }
 }

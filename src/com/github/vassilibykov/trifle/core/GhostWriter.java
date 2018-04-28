@@ -106,9 +106,10 @@ public class GhostWriter {
      * the continuation will successfully receive the value.
      *
      * <p>If the from/to pair of types is such that a value of 'from' cannot in
-     * the be converted to a value of 'to', for example {@code reference -> int}
-     * when the reference is not to an {@code Integer}, the generated code will
-     * throw an exception to complete the evaluation in recovery mode.
+     * the general case be converted to a value of 'to', for example
+     * {@code reference -> int} when the reference is not to an {@code Integer},
+     * the generated code may throw an exception to complete the evaluation in
+     * recovery mode.
      *
      * <p>If the 'to' type is VOID, that means the value will be discarded by
      * the continuation, so it doesn't matter what it is.
@@ -116,8 +117,8 @@ public class GhostWriter {
      * <p>This is different from {@link GhostWriter#adaptValue(JvmType,
      * JvmType)}. The latter performs wrapping and unwrapping of values,
      * assuming that in a conversion between a primitive and a reference type,
-     * the reference type is a valid wrapper value for the primitive. In a
-     * conversion from a reference to an int, the reference can value never be
+     * the reference type is a valid wrapper value for the primitive. When
+     * adapting a reference to an int, the reference can value never be
      * anything other than {@code Integer}. This is true no matter if the user
      * program is correct or not. A violation of this expectation is a sign of
      * an internal error in the compiler.
@@ -126,38 +127,72 @@ public class GhostWriter {
      * reference value to not be an {@code Integer}. In that case it should be
      * packaged up and thrown as a {@link SquarePegException}.
      *
+     * @param from The type initially on the stack.
+     * @param to The type required to be on the stack.
+     * @return An indication of whether a {@link SquarePegException} can be
+     *         thrown in the generated code.
      */
-    public GhostWriter bridgeValue(JvmType from, JvmType to) {
-        from.match(new JvmType.VoidMatcher() {
-            public void ifReference() {
-                to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { }
-                    public void ifInt() { unwrapIntegerOr(GhostWriter.this::throwSquarePegException); }
-                    public void ifBoolean() { unwrapBooleanOr(GhostWriter.this::throwSquarePegException); }
-                    public void ifVoid() { }
+    public boolean bridgeValue(JvmType from, JvmType to) {
+        return from.match(new JvmType.Matcher<>() {
+            public Boolean ifReference() {
+                return to.match(new JvmType.Matcher<>() {
+                    public Boolean ifReference() {
+                        return false;
+                    }
+                    public Boolean ifInt() {
+                        unwrapIntegerOr(GhostWriter.this::throwSquarePegException);
+                        return true;
+                    }
+                    public Boolean ifBoolean() {
+                        unwrapBooleanOr(GhostWriter.this::throwSquarePegException);
+                        return true;
+                    }
+                    public Boolean ifVoid() {
+                        return false;
+                    }
                 });
             }
-            public void ifInt() {
-                to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { wrapInteger(); }
-                    public void ifInt() { }
-                    public void ifBoolean() { wrapInteger().throwSquarePegException(); }
-                    public void ifVoid() { }
+            public Boolean ifInt() {
+                return to.match(new JvmType.Matcher<>() {
+                    public Boolean ifReference() {
+                        wrapInteger();
+                        return false;
+                    }
+                    public Boolean ifInt() {
+                        return false;
+                    }
+                    public Boolean ifBoolean() {
+                        wrapInteger().throwSquarePegException();
+                        return true;
+                    }
+                    public Boolean ifVoid() {
+                        return false;
+                    }
                 });
             }
-            public void ifBoolean() {
-                to.match(new JvmType.VoidMatcher() {
-                    public void ifReference() { wrapBoolean(); }
-                    public void ifInt() { wrapBoolean().throwSquarePegException(); }
-                    public void ifBoolean() { }
-                    public void ifVoid() { }
+            public Boolean ifBoolean() {
+                return to.match(new JvmType.Matcher<>() {
+                    public Boolean ifReference() {
+                        wrapBoolean();
+                        return false;
+                    }
+                    public Boolean ifInt() {
+                        wrapBoolean().throwSquarePegException();
+                        return true;
+                    }
+                    public Boolean ifBoolean() {
+                        return false;
+                    }
+                    public Boolean ifVoid() {
+                        return false;
+                    }
                 });
             }
-            public void ifVoid() {
+            public Boolean ifVoid() {
                 // occurs in the middle of blocks and in return statements; nothing needs to be done
+                return false;
             }
         });
-        return this;
     }
 
 

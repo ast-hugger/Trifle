@@ -244,6 +244,7 @@ class Compiler {
         methodWriter.visitCode();
         var generator = new MethodCodeGenerator(closureImpl, methodWriter);
         generator.generate();
+//dumpClassFile(classWriter.toByteArray());
         methodWriter.visitMaxs(-1, -1);
         methodWriter.visitEnd();
         return methodName;

@@ -13,26 +13,22 @@ import java.util.function.Supplier;
 
 /**
  * A set of static factory methods for creating expressions in a readable form,
- * especially in unit tests.
+ * chiefly for unit tests.
  */
-public class ExpressionLanguage {
+public final class ExpressionLanguage {
 
     private static int argSerial = 0;
     private static int tempSerial = 0;
 
-    public static Lambda lambda(Supplier<Expression> bodyBuilder) {
-        return Lambda.with(List.of(), bodyBuilder.get());
+    private ExpressionLanguage() {}
+
+    public static Let bind(Expression initializer, Function<Variable, Expression> bodyBuilder) {
+        var var = var("t" + tempSerial++);
+        return Let.with(var, initializer, bodyBuilder.apply(var));
     }
 
-    public static Lambda lambda(Function<Variable, Expression> bodyBuilder) {
-        var arg = var("a" + argSerial++);
-        return Lambda.with(List.of(arg), bodyBuilder.apply(arg));
-    }
-
-    public static Lambda lambda(BiFunction<Variable, Variable, Expression> bodyBuilder) {
-        var arg1 = var("a" + argSerial++);
-        var arg2 = var("a" + argSerial++);
-        return Lambda.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
+    public static Block block(Expression... expressions) {
+        return Block.with(List.of(expressions));
     }
 
     public static Call call(Callable function) {
@@ -59,12 +55,23 @@ public class ExpressionLanguage {
         return If.with(condition, trueBranch, falseBranch);
     }
 
-    public static Let let(Variable variable, Expression initializer, Expression body) {
-        return Let.with(variable, initializer, body);
+    public static Lambda lambda(Supplier<Expression> bodyBuilder) {
+        return Lambda.with(List.of(), bodyBuilder.get());
     }
 
-    public static Block block(Expression... expressions) {
-        return Block.with(List.of(expressions));
+    public static Lambda lambda(Function<Variable, Expression> bodyBuilder) {
+        var arg = var("a" + argSerial++);
+        return Lambda.with(List.of(arg), bodyBuilder.apply(arg));
+    }
+
+    public static Lambda lambda(BiFunction<Variable, Variable, Expression> bodyBuilder) {
+        var arg1 = var("a" + argSerial++);
+        var arg2 = var("a" + argSerial++);
+        return Lambda.with(List.of(arg1, arg2), bodyBuilder.apply(arg1, arg2));
+    }
+
+    public static Let let(Variable variable, Expression initializer, Expression body) {
+        return Let.with(variable, initializer, body);
     }
 
     public static PrimitiveCall primitive(Class<? extends Primitive> primitive, AtomicExpression... args) {
@@ -83,12 +90,11 @@ public class ExpressionLanguage {
         return Variable.named(name);
     }
 
-    public static While while_(AtomicExpression condition, Expression body) {
-        return While.with(condition, body);
-    }
-
-    public static Let bind(Expression initializer, Function<Variable, Expression> bodyBuilder) {
-        var var = var("t" + tempSerial++);
-        return Let.with(var, initializer, bodyBuilder.apply(var));
+    public static While while_(AtomicExpression condition, Expression... body) {
+        if (body.length == 1) {
+            return While.with(condition, body[0]);
+        } else {
+            return While.with(condition, block(body));
+        }
     }
 }

@@ -28,6 +28,10 @@ public class RuntimeError extends RuntimeException {
         return message("integer expected, got: " + actual);
     }
 
+    public static RuntimeError integerExpected(Object actual1, Object actual2) {
+        return message("integer expected, got: " + actual1 + " and: " + actual2);
+    }
+
     private RuntimeError(String message) {
         super(message);
     }

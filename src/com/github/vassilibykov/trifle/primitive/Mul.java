@@ -12,6 +12,9 @@ import static com.github.vassilibykov.trifle.core.JvmType.INT;
 import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
 import static org.objectweb.asm.Opcodes.IMUL;
 
+/**
+ * Integer multiplication with the semantics of Java {@code *}.
+ */
 public class Mul extends Primitive2 {
     @Override
     public ExpressionType inferredType(ExpressionType argument1Type, ExpressionType argument2Type) {
