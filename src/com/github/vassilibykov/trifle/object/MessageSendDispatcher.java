@@ -6,6 +6,7 @@ import com.github.vassilibykov.trifle.core.CallDispatcher;
 import com.github.vassilibykov.trifle.core.CallNode;
 import com.github.vassilibykov.trifle.core.CodeGenerator;
 import com.github.vassilibykov.trifle.core.EvaluatorNode;
+import com.github.vassilibykov.trifle.core.Gist;
 import com.github.vassilibykov.trifle.core.JvmType;
 import com.github.vassilibykov.trifle.core.RuntimeError;
 
@@ -44,15 +45,15 @@ class MessageSendDispatcher implements CallDispatcher {
     }
 
     @Override
-    public JvmType generateCode(CallNode call, CodeGenerator generator) {
+    public Gist generateCode(CallNode call, CodeGenerator generator) {
         if (call.arity() < 1) {
             throw RuntimeError.message("invalid message send expression; no receiver");
         }
-        var argTypes = call.arguments().map(each -> generator.generateCode(each)).collect(Collectors.toList());
+        var argTypes = call.arguments().map(each -> generator.generateCode(each).type()).collect(Collectors.toList());
         generator.writer().invokeDynamic(
             MessageSendInvokeDynamic.BOOTSTRAP,
             MessageSendInvokeDynamic.indyName(selector),
             MethodType.methodType(Object.class, argTypes.stream().map(JvmType::representativeClass).collect(Collectors.toList())));
-        return JvmType.REFERENCE;
+        return Gist.INFALLIBLE_REFERENCE;
     }
 }

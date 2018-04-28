@@ -40,7 +40,7 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
     }
 
     @Override
-    public JvmType generateCode(CallNode call, CodeGenerator generator) {
+    public Gist generateCode(CallNode call, CodeGenerator generator) {
         if (target instanceof BuiltinFunction) {
             var name = ((BuiltinFunction) target).name();
             var callSiteType = generator.generateArgumentLoad(call);
@@ -48,7 +48,8 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
                 BuiltInFunctionCallInvokeDynamic.BOOTSTRAP,
                 name,
                 callSiteType);
-            return JvmType.ofClass(callSiteType.returnType());
+            var returnType = JvmType.ofClass(callSiteType.returnType());
+            return Gist.of(returnType, returnType != JvmType.REFERENCE);
         } else if (target instanceof UserFunction) {
             var userFunction = (UserFunction) this.target;
             var id = userFunction.implementation().id();
@@ -58,7 +59,8 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
                 userFunction.name(),
                 callSiteType,
                 id);
-            return JvmType.ofClass(callSiteType.returnType());
+            var returnType = JvmType.ofClass(callSiteType.returnType());
+            return Gist.of(returnType, returnType != JvmType.REFERENCE);
         } else {
             throw new AssertionError("unexpected dispatcher target: " + target);
         }

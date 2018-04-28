@@ -36,5 +36,5 @@ public interface CallDispatcher {
     /**
      * Generate executable code executing which results in calling the function.
      */
-    JvmType generateCode(CallNode call, CodeGenerator generator);
+    Gist generateCode(CallNode call, CodeGenerator generator);
 }

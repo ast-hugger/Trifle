@@ -45,12 +45,13 @@ public class ExpressionCallDispatcher implements CallDispatcher {
     }
 
     @Override
-    public JvmType generateCode(CallNode call, CodeGenerator generator) {
+    public Gist generateCode(CallNode call, CodeGenerator generator) {
         var functionType = generator.generateCode(expression);
-        generator.writer().ensureValue(functionType, JvmType.REFERENCE);
+        generator.writer().ensureValue(functionType.type(), JvmType.REFERENCE);
         var callSiteType = generator.generateArgumentLoad(call);
         callSiteType = callSiteType.insertParameterTypes(0, Object.class); // the leading closure
         generator.writer().invokeDynamic(ExpressionCallInvokeDynamic.BOOTSTRAP, "call", callSiteType);
-        return JvmType.ofClass(callSiteType.returnType());
+        var returnType = JvmType.ofClass(callSiteType.returnType());
+        return Gist.of(returnType, returnType != JvmType.REFERENCE);
     }
 }

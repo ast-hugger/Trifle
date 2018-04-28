@@ -464,15 +464,15 @@ class RecoveryCodeGenerator {
         }
 
         @Override
-        public JvmType generateCode(EvaluatorNode node) {
+        public Gist generateCode(EvaluatorNode node) {
             return node.accept(this);
         }
 
         @Override
-        public JvmType visitCall(CallNode call) {
-            var returnType = call.dispatcher().generateCode(call, this);
-            writer.adaptValue(returnType, REFERENCE);
-            return REFERENCE;
+        public Gist visitCall(CallNode call) {
+            var returnGist = call.dispatcher().generateCode(call, this);
+            writer.adaptValue(returnGist.type(), REFERENCE);
+            return Gist.INFALLIBLE_REFERENCE;
         }
 
         @Override
@@ -485,24 +485,24 @@ class RecoveryCodeGenerator {
 
                 @Override
                 public MethodType ifUnary(EvaluatorNode arg) {
-                    var argType = generateCode(arg);
-                    writer.adaptValue(argType, REFERENCE);
+                    var argGist = generateCode(arg);
+                    writer.adaptValue(argGist.type(), REFERENCE);
                     return MethodType.genericMethodType(1);
                 }
 
                 @Override
                 public MethodType ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                    var arg1Type = generateCode(arg1);
-                    writer.adaptValue(arg1Type, REFERENCE);
-                    var arg2Type = generateCode(arg2);
-                    writer.adaptValue(arg2Type, REFERENCE);
+                    var gist1 = generateCode(arg1);
+                    writer.adaptValue(gist1.type(), REFERENCE);
+                    var gist2 = generateCode(arg2);
+                    writer.adaptValue(gist2.type(), REFERENCE);
                     return MethodType.genericMethodType(2);
                 }
             });
         }
 
         @Override
-        public JvmType visitClosure(ClosureNode closure) {
+        public Gist visitClosure(ClosureNode closure) {
             var indicesToCopy = closure.copiedVariableIndices;
             for (var copiedIndex : indicesToCopy) writer.loadLocal(REFERENCE, copiedIndex);
             writer.invokeDynamic(
@@ -510,82 +510,84 @@ class RecoveryCodeGenerator {
                 "createClosure",
                 MethodType.genericMethodType(indicesToCopy.length),
                 closure.function().id());
-            return REFERENCE;
+            return Gist.INFALLIBLE_REFERENCE;
         }
 
         @Override
-        public JvmType visitConstant(ConstantNode aConst) {
+        public Gist visitConstant(ConstantNode aConst) {
             Object value = aConst.value();
             if (value instanceof Integer) {
                 writer.loadInt((Integer) value);
-                return INT;
+                return Gist.INFALLIBLE_INT;
             } else if (value instanceof String) {
                 writer.loadString((String) value);
-                return REFERENCE;
+                return Gist.INFALLIBLE_REFERENCE;
             } else if (value == null) {
                 writer.loadNull();
-                return REFERENCE;
+                return Gist.INFALLIBLE_REFERENCE;
             } else if (value instanceof Boolean) {
                 writer.loadInt((Boolean) value ? 1 : 0);
-                return BOOL;
+                return Gist.INFALLIBLE_BOOL;
             } else {
                 throw new CompilerError("unexpected const value: " + value);
             }
         }
 
         @Override
-        public JvmType visitGetVar(GetVariableNode getVar) {
+        public Gist visitGetVar(GetVariableNode getVar) {
             var variable = getVar.variable();
             writer.loadLocal(REFERENCE, variable.index());
             if (variable.isBoxed()) writer.extractBoxedVariable();
-            return REFERENCE;
+            return Gist.INFALLIBLE_REFERENCE;
         }
 
         @Override
-        public JvmType visitIf(IfNode anIf) {
+        public Gist visitIf(IfNode anIf) {
             throw new UnsupportedOperationException("should not be called");
         }
 
         @Override
-        public JvmType visitLet(LetNode let) {
+        public Gist visitLet(LetNode let) {
             throw new UnsupportedOperationException("should not be called");
         }
 
         @Override
-        public JvmType visitPrimitive1(Primitive1Node primitive1) {
-            JvmType argType = primitive1.argument().accept(this);
-            return primitive1.implementation().generate(writer, argType);
+        public Gist visitPrimitive1(Primitive1Node primitive1) {
+            var argGist = primitive1.argument().accept(this);
+            var type = primitive1.implementation().generate(writer, argGist.type());
+            return Gist.infallible(type);
         }
 
         @Override
-        public JvmType visitPrimitive2(Primitive2Node primitive2) {
-            JvmType arg1Type = primitive2.argument1().accept(this);
-            JvmType arg2Type = primitive2.argument2().accept(this);
-            return primitive2.implementation().generate(writer, arg1Type, arg2Type);
+        public Gist visitPrimitive2(Primitive2Node primitive2) {
+            var gist1 = primitive2.argument1().accept(this);
+            var gist2 = primitive2.argument2().accept(this);
+            var type = primitive2.implementation().generate(writer, gist1.type(), gist2.type());
+            return Gist.infallible(type);
         }
 
         @Override
-        public JvmType visitBlock(BlockNode block) {
+        public Gist visitBlock(BlockNode block) {
             throw new UnsupportedOperationException("should not be called");
         }
 
         @Override
-        public JvmType visitReturn(ReturnNode ret) {
+        public Gist visitReturn(ReturnNode ret) {
             throw new UnsupportedOperationException("should not be called");
         }
 
         @Override
-        public JvmType visitSetVar(SetVariableNode setVar) {
+        public Gist visitSetVar(SetVariableNode setVar) {
             throw new UnsupportedOperationException("should not be called");
         }
 
         @Override
-        public JvmType visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
+        public Gist visitFreeFunctionReference(FreeFunctionReferenceNode constFunction) {
             return constFunction.generateLoad(writer);
         }
 
         @Override
-        public JvmType visitWhile(WhileNode whileNode) {
+        public Gist visitWhile(WhileNode whileNode) {
             throw new UnsupportedOperationException("should not be called");
         }
     }
@@ -632,7 +634,7 @@ class RecoveryCodeGenerator {
     }
 
     private void visitBranch(Branch branch) {
-        var valueType = branch.test.accept(atomicGenerator);
+        var valueType = branch.test.accept(atomicGenerator).type();
         writer.adaptValue(valueType, BOOL);
         if (branch.branchesOnTrue) {
             writer.jumpIfNot0(branch.target.incomingJumpLabel);
@@ -646,7 +648,7 @@ class RecoveryCodeGenerator {
     }
 
     private void visitLoad(Load load) {
-        var valueType = load.expression.accept(atomicGenerator);
+        var valueType = load.expression.accept(atomicGenerator).type();
         writer.adaptValue(valueType, REFERENCE);
     }
 

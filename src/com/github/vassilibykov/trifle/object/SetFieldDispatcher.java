@@ -7,6 +7,7 @@ import com.github.vassilibykov.trifle.core.CallNode;
 import com.github.vassilibykov.trifle.core.CodeGenerator;
 import com.github.vassilibykov.trifle.core.CompilerError;
 import com.github.vassilibykov.trifle.core.EvaluatorNode;
+import com.github.vassilibykov.trifle.core.Gist;
 import com.github.vassilibykov.trifle.core.JvmType;
 import com.github.vassilibykov.trifle.core.RuntimeError;
 import org.objectweb.asm.Opcodes;
@@ -43,19 +44,19 @@ class SetFieldDispatcher implements CallDispatcher {
     }
 
     @Override
-    public JvmType generateCode(CallNode call, CodeGenerator generator) {
+    public Gist generateCode(CallNode call, CodeGenerator generator) {
         if (call.arity() != 2) {
             throw new CompilerError("invalid call expression");
         }
-        var type1 = generator.generateCode(call.argument(0));
-        generator.writer().adaptValue(type1, JvmType.REFERENCE);
-        var type2 = generator.generateCode(call.argument(1));
-        generator.writer().adaptValue(type2, JvmType.REFERENCE);
+        var gist1 = generator.generateCode(call.argument(0));
+        generator.writer().adaptValue(gist1.type(), JvmType.REFERENCE);
+        var gist2 = generator.generateCode(call.argument(1));
+        generator.writer().adaptValue(gist2.type(), JvmType.REFERENCE);
         generator.writer().asm().visitInsn(Opcodes.DUP_X1);
         generator.writer().invokeDynamic(
             FixedObject.accessImplementation().setterBootstrapper(),
             FieldAccessImplementation.setterName(fieldName),
             MethodType.methodType(void.class, Object.class, Object.class));
-        return JvmType.REFERENCE;
+        return Gist.INFALLIBLE_REFERENCE;
     }
 }

@@ -6,6 +6,7 @@ import com.github.vassilibykov.trifle.core.CallDispatcher;
 import com.github.vassilibykov.trifle.core.CallNode;
 import com.github.vassilibykov.trifle.core.CodeGenerator;
 import com.github.vassilibykov.trifle.core.EvaluatorNode;
+import com.github.vassilibykov.trifle.core.Gist;
 import com.github.vassilibykov.trifle.core.JvmType;
 import com.github.vassilibykov.trifle.core.RuntimeError;
 
@@ -39,16 +40,16 @@ class GetFieldDispatcher implements CallDispatcher {
     }
 
     @Override
-    public JvmType generateCode(CallNode call, CodeGenerator generator) {
+    public Gist generateCode(CallNode call, CodeGenerator generator) {
         if (call.arity() != 1) {
             throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception
         }
-        var type = generator.generateCode(call.argument(0));
-        generator.writer().adaptValue(type, JvmType.REFERENCE);
+        var gist = generator.generateCode(call.argument(0));
+        generator.writer().adaptValue(gist.type(), JvmType.REFERENCE);
         generator.writer().invokeDynamic(
             FixedObject.accessImplementation().getterBootstrapper(),
             FieldAccessImplementation.getterName(fieldName),
             MethodType.genericMethodType(1));
-        return JvmType.REFERENCE;
+        return Gist.INFALLIBLE_REFERENCE;
     }
 }

@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 
 import static com.github.vassilibykov.trifle.core.JvmType.BOOL;
 import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
-import static com.github.vassilibykov.trifle.core.JvmType.VOID;
 
 /**
  * Generates the "normal" executable representation of a function.
@@ -70,8 +69,13 @@ class MethodCodeGenerator implements CodeGenerator {
 
     void generate() {
         generatePrologue();
-        var expressionType = function.body().accept(this);
-        writer.bridgeValue(expressionType, function.specializedReturnType());
+        var bodyGist = function.body().accept(this);
+        writer.bridgeValue(bodyGist.type(), function.specializedReturnType());
+        /*
+         * Here we don't care whether the body of the bridging of the result can fail.
+         * There is no need to set up an SPE handler because if they do,
+         * the unhandled SPE is a proper way to return the unreturnable value.
+         */
         writer.ret(function.specializedReturnType());
         if (!squarePegHandlers.isEmpty()) {
             generateRecoveryHandlers();
@@ -133,12 +137,12 @@ class MethodCodeGenerator implements CodeGenerator {
      */
 
     @Override
-    public JvmType generateCode(EvaluatorNode node) {
+    public Gist generateCode(EvaluatorNode node) {
         return node.accept(this);
     }
 
     @Override
-    public JvmType visitCall(CallNode call) {
+    public Gist visitCall(CallNode call) {
         return call.dispatcher().generateCode(call, this);
     }
 
@@ -153,15 +157,15 @@ class MethodCodeGenerator implements CodeGenerator {
 
             @Override
             public MethodType ifUnary(EvaluatorNode arg) {
-                var argType = arg.accept(MethodCodeGenerator.this).representativeClass();
+                var argType = arg.accept(MethodCodeGenerator.this).type().representativeClass();
                 var returnType = call.specializedType().representativeClass();
                 return MethodType.methodType(returnType, argType);
             }
 
             @Override
             public MethodType ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                var arg1Type = arg1.accept(MethodCodeGenerator.this).representativeClass();
-                var arg2Type = arg2.accept(MethodCodeGenerator.this).representativeClass();
+                var arg1Type = arg1.accept(MethodCodeGenerator.this).type().representativeClass();
+                var arg2Type = arg2.accept(MethodCodeGenerator.this).type().representativeClass();
                 var returnType = call.specializedType().representativeClass();
                 return MethodType.methodType(returnType, arg1Type, arg2Type);
             }
@@ -169,7 +173,7 @@ class MethodCodeGenerator implements CodeGenerator {
     }
 
     @Override
-    public JvmType visitClosure(ClosureNode closure) {
+    public Gist visitClosure(ClosureNode closure) {
         var copiedOuterVariables = closure.copiedOuterVariables;
         for (var copiedVar : copiedOuterVariables) {
             if (copiedVar.isBoxed()) {
@@ -186,11 +190,11 @@ class MethodCodeGenerator implements CodeGenerator {
             "createClosure",
             MethodType.genericMethodType(copiedOuterVariables.size()),
             closure.function().id());
-        return REFERENCE;
+        return Gist.INFALLIBLE_REFERENCE;
     }
 
     @Override
-    public JvmType visitConstant(ConstantNode aConst) {
+    public Gist visitConstant(ConstantNode aConst) {
         Object value = aConst.value();
         if (value instanceof Integer) {
             writer.loadInt((Integer) value);
@@ -203,11 +207,11 @@ class MethodCodeGenerator implements CodeGenerator {
         } else {
             throw new CompilerError("unexpected const value: " + value);
         }
-        return aConst.specializedType();
+        return Gist.infallible(aConst.specializedType());
     }
 
     @Override
-    public JvmType visitGetVar(GetVariableNode varRef) {
+    public Gist visitGetVar(GetVariableNode varRef) {
         var variable = varRef.variable();
         var varType = variable.specializedType();
         if (variable.isBoxed()) {
@@ -217,11 +221,11 @@ class MethodCodeGenerator implements CodeGenerator {
         } else {
             writer.loadLocal(varType, variable.index());
         }
-        return varType;
+        return Gist.infallible(varType);
     }
 
     @Override
-    public JvmType visitIf(IfNode anIf) {
+    public Gist visitIf(IfNode anIf) {
         var trueBranch = anIf.trueBranch();
         var falseBranch = anIf.falseBranch();
         var resultType = anIf.specializedType();
@@ -234,44 +238,61 @@ class MethodCodeGenerator implements CodeGenerator {
                 if (maybeOptimized.isPresent()) {
                     var optimized = maybeOptimized.get();
                     optimized.loadArguments(each -> each.accept(this));
+                    boolean[] canFail = new boolean[2];
                     writer.withLabelAtEnd(end -> {
                         writer.withLabelAtEnd(elseStart -> {
                             writer.asm().visitJumpInsn(optimized.jumpInstruction(), elseStart);
-                            var valueType = trueBranch.accept(this);
-                            writer.bridgeValue(valueType, resultType); // in tail position
+                            var valueGist = trueBranch.accept(this);
+                            canFail[0] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
                             writer.jump(end);
                         });
-                        var valueType = falseBranch.accept(this);
-                        writer.bridgeValue(valueType, resultType); // in tail position
+                        var valueGist = falseBranch.accept(this);
+                        canFail[1] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
                     });
-                    return resultType;
+                    /*
+                     * Above we carefully track the fallibility of both branches, but don't set up
+                     * an SPE handler if there is a possibility of SPE. That is because both branches
+                     * are in the tail position within the 'if' expression. The thrown SPE is a
+                     * proper way to return an unreturnable value, as long as we indicate to
+                     * the containing expression that the 'if' as a whole is fallible.
+                     */
+                    return Gist.of(resultType, canFail[0] || canFail[1]);
                 }
             }
         }
         // General 'if' form
-        var conditionType = anIf.condition().accept(this);
+        var conditionType = anIf.condition().accept(this).type();
         writer.ensureValue(conditionType, BOOL);
+        boolean[] canFail = new boolean[2];
         writer.ifThenElse(
             () -> {
-                var valueType = trueBranch.accept(this);
-                writer.bridgeValue(valueType, resultType); // in tail position
+                var valueGist = trueBranch.accept(this);
+                canFail[0] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
             },
             () -> {
-                var valueType = falseBranch.accept(this);
-                writer.bridgeValue(valueType, resultType); // in tail position
+                var valueGist = falseBranch.accept(this);
+                canFail[1] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
             }
         );
-        return resultType;
+        // The note above about tracking fallibility applies here as well.
+        return Gist.of(resultType, canFail[0] || canFail[1]);
     }
 
     @Override
-    public JvmType visitLet(LetNode let) {
+    public Gist visitLet(LetNode let) {
         VariableDefinition variable = let.variable();
         JvmType varType = variable.specializedType();
+        /*
+         * The initializer may be a fallible expression, and unlike 'if'
+         * branches, it is not in the tail position within the 'let'. Thus, we
+         * must pay attention to its fallibility and if required, set up an SPE
+         * handler to flip over to the generic code if the initial value does
+         * not fit the specialization.
+         */
         withSquarePegRecovery(let, () -> {
-            var initType = let.initializer().accept(this);
-            writer.bridgeValue(initType, varType);
-            return true; // FIXME SPE possibility as reported by bridgeValue is incorrect
+            var initGist = let.initializer().accept(this);
+            var bridgeCanFail = writer.bridgeValue(initGist.type(), varType);
+            return initGist.canFail() || bridgeCanFail;
         });
         if (variable.isBoxed()) {
             writer.initBoxedVariable(varType, variable.index());
@@ -279,30 +300,34 @@ class MethodCodeGenerator implements CodeGenerator {
             writer.storeLocal(varType, variable.index());
         }
         liveLocals.add(variable);
-        var bodyType = let.body().accept(this);
+        var bodyGist = let.body().accept(this);
         liveLocals.remove(variable);
-        return bodyType;
+        return bodyGist;
     }
 
     @Override
-    public JvmType visitPrimitive1(Primitive1Node primitive) {
-        var argType = primitive.argument().accept(this);
-        return primitive.implementation().generate(writer, argType);
+    public Gist visitPrimitive1(Primitive1Node primitive) {
+        // Primitive arguments are atomic and therefore always infallible; no need to check.
+        var argGist = primitive.argument().accept(this);
+        var type = primitive.implementation().generate(writer, argGist.type());
+        return Gist.infallible(type);
     }
 
     @Override
-    public JvmType visitPrimitive2(Primitive2Node primitive) {
-        var arg1Type = primitive.argument1().accept(this);
-        var arg2Type = primitive.argument2().accept(this);
-        return primitive.implementation().generate(writer, arg1Type, arg2Type);
+    public Gist visitPrimitive2(Primitive2Node primitive) {
+        // Primitive arguments are atomic and therefore always infallible; no need to check.
+        var gist1 = primitive.argument1().accept(this);
+        var gist2 = primitive.argument2().accept(this);
+        var type = primitive.implementation().generate(writer, gist1.type(), gist2.type());
+        return Gist.infallible(type);
     }
 
     @Override
-    public JvmType visitBlock(BlockNode block) {
+    public Gist visitBlock(BlockNode block) {
         EvaluatorNode[] expressions = block.expressions();
         if (expressions.length == 0) {
             writer.loadNull();
-            return REFERENCE;
+            return Gist.INFALLIBLE_REFERENCE;
         }
         int i;
         for (i = 0; i < expressions.length - 1; i++) {
@@ -313,60 +338,63 @@ class MethodCodeGenerator implements CodeGenerator {
     }
 
     @Override
-    public JvmType visitReturn(ReturnNode returnNode) {
-        /* Return causes a non-local control transfer, so the bridging of the return value
-           is not in the tail position and must have an SPE handler established.
-           The return value is atomic and in principle there is no need to place
-           its code within an SPE handler. But just in case we might lift that
-           restriction and forget to modify the code here accordingly, we treat
-           value() as if it were complex already. */
+    public Gist visitReturn(ReturnNode returnNode) {
+        /*
+         * Unlike the implicit return at the end of a function which does not
+         * need an SPE handler, an explicit return is more like a 'set'
+         * expression. We must establish a handler if there is a possibility of
+         * a failure. The return value is atomic and in principle there is no
+         * need to place its code within an SPE handler. But just in case we
+         * might lift that restriction and forget to modify the code here
+         * accordingly, we track its fallibility.
+         */
         withSquarePegRecovery(returnNode, () -> {
-            var returnType = returnNode.value().accept(this);
-            writer.bridgeValue(returnType, function.specializedReturnType());
-            return true; // FIXME SPE possibility as reported by bridgeValue is incorrect
+            var valueGist = returnNode.value().accept(this);
+            var bridgeCanFail = writer.bridgeValue(valueGist.type(), function.specializedReturnType());
+            return valueGist.canFail() || bridgeCanFail;
         });
         writer.ret(function.specializedReturnType());
-        return VOID;
+        return Gist.INFALLIBLE_VOID;
     }
 
     @Override
-    public JvmType visitSetVar(SetVariableNode set) {
+    public Gist visitSetVar(SetVariableNode set) {
         var var = set.variable();
         var varType = var.specializedType();
         withSquarePegRecovery(set, () -> {
-            var valueType = set.value().accept(this);
-            writer.bridgeValue(valueType, varType);
-            return true; // FIXME SPE possibility as reported by bridgeValue is incorrect
+            var valueGist = set.value().accept(this);
+            var bridgingCanFail = writer.bridgeValue(valueGist.type(), varType);
+            return valueGist.canFail() && bridgingCanFail;
         });
-        writer.dup(); // the duplicate is left on the stack as the set expression value
+        writer.dup(); // the duplicate is left on the stack as the expression value
         if (var.isBoxed()) {
             writer.storeBoxedVariable(varType, var.index());
         } else {
             writer.storeLocal(varType, var.index());
         }
-        return varType;
+        return Gist.infallible(varType);
     }
 
     @Override
-    public JvmType visitFreeFunctionReference(FreeFunctionReferenceNode reference) {
+    public Gist visitFreeFunctionReference(FreeFunctionReferenceNode reference) {
         return reference.generateLoad(writer);
     }
 
     @Override
-    public JvmType visitWhile(WhileNode whileNode) {
+    public Gist visitWhile(WhileNode whileNode) {
         writer.loadNull();
         writer.withLabelsAround((start, end) -> {
-            var conditionType = whileNode.condition().accept(this);
-            writer.ensureValue(conditionType, BOOL);
+            var conditionGist = whileNode.condition().accept(this);
+            writer.ensureValue(conditionGist.type(), BOOL);
             writer.jumpIf0(end);
             writer.pop(); // the prior iteration result or the initial null
-            var bodyType = whileNode.body().accept(this);
-            writer.bridgeValue(bodyType, REFERENCE);
+            var bodyGist = whileNode.body().accept(this);
+            writer.bridgeValue(bodyGist.type(), REFERENCE);
             writer.jump(start);
         });
         // TODO The loop as generated here is always treated as if of a reference type.
         // Perhaps we can do better.
-        return REFERENCE;
+        return Gist.INFALLIBLE_REFERENCE;
     }
 
     /**

@@ -7,8 +7,6 @@ import com.github.vassilibykov.trifle.expression.FreeFunctionReference;
 
 import java.lang.invoke.MethodType;
 
-import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
-
 /**
  * A node representing a reference to a built-in of user-defined function
  * introduced in the input using the {@link FreeFunctionReference}
@@ -36,7 +34,7 @@ class FreeFunctionReferenceNode extends EvaluatorNode {
      * duplication across all the code generators which all handle this the same
      * way.
      */
-    JvmType generateLoad(GhostWriter writer) {
+    Gist generateLoad(GhostWriter writer) {
         if (target instanceof BuiltinFunction) {
             writer.invokeDynamic(
                 BuiltinFunctionReferenceInvokeDynamic.BOOTSTRAP,
@@ -51,6 +49,6 @@ class FreeFunctionReferenceNode extends EvaluatorNode {
         } else {
             throw new AssertionError("unexpected target: " + target);
         }
-        return REFERENCE;
+        return Gist.INFALLIBLE_REFERENCE;
     }
 }
