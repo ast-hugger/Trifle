@@ -10,6 +10,8 @@ import java.lang.invoke.MethodType;
  */
 public interface FreeFunction extends Invocable {
 
+    String name();
+
     @Override
     default Object invoke() {
         var invoker = invoker(MethodType.genericMethodType(0));

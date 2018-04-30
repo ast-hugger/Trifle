@@ -13,6 +13,7 @@ public abstract class BuiltinFunction implements FreeFunction {
         Builtins.register(this);
     }
 
+    @Override
     public String name() {
         return name;
     }

@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A collection of user-defined named functions with one-way immutability of
@@ -96,6 +97,9 @@ public class Library {
         });
     }
 
+    public Stream<UserFunction> functions() {
+        return functionsByName.values().stream();
+    }
 
     /**
      * Return a user function by the specified name.

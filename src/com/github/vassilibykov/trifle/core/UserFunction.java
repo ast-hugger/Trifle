@@ -93,6 +93,7 @@ public class UserFunction implements FreeFunction {
         this.name = Objects.requireNonNull(name);
     }
 
+    @Override
     public String name() {
         return name;
     }
