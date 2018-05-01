@@ -4,6 +4,7 @@ package com.github.vassilibykov.trifle.builtin;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * A registry of known builtins.
@@ -11,11 +12,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Builtins {
     private static final Map<String, BuiltinFunction> builtins = new ConcurrentHashMap<>();
 
+    public static void register(BuiltinFunction builtin) {
+        builtins.put(builtin.name(), builtin);
+    }
+
     public static BuiltinFunction lookup(String name) {
         return builtins.get(name);
     }
 
-    static void register(BuiltinFunction builtin) {
-        builtins.put(builtin.name(), builtin);
+    public static Stream<BuiltinFunction> builtins() {
+        return builtins.values().stream();
     }
 }

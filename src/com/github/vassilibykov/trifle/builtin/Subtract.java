@@ -17,7 +17,7 @@ public class Subtract extends BuiltinFunction {
     public static final Subtract INSTANCE = new Subtract();
 
     private Subtract() {
-        super("subtract");
+        super("trifle:subtract");
     }
 
     @Override

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 public abstract class BuiltinFunction implements FreeFunction {
     @NotNull private final String name;
 
-    protected BuiltinFunction(@NotNull String name) {
+    protected BuiltinFunction(String name) {
         this.name = name;
         Builtins.register(this);
     }

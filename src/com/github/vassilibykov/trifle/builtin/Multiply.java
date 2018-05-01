@@ -17,7 +17,7 @@ public class Multiply extends BuiltinFunction {
     public static final Multiply INSTANCE = new Multiply();
 
     private Multiply() {
-        super("multiply");
+        super("trifle:multiply");
     }
 
     @Override

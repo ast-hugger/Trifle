@@ -17,7 +17,7 @@ public class Add extends BuiltinFunction {
     public static final Add INSTANCE = new Add();
 
     private Add() {
-        super("add");
+        super("trifle:add");
     }
 
     @Override

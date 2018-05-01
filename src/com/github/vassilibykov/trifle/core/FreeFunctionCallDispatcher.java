@@ -65,4 +65,9 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
             throw new AssertionError("unexpected dispatcher target: " + target);
         }
     }
+
+    @Override
+    public String toString() {
+        return target.name();
+    }
 }
