@@ -22,7 +22,8 @@ import java.lang.invoke.MethodType;
  * <p>See {@code doc/closure-calls.md} for a design overview of closure invocations.
  */
 final class ExpressionCallInvokeDynamic {
-    public static final Handle BOOTSTRAP = new Handle(
+
+    static final Handle BOOTSTRAP = new Handle(
         Opcodes.H_INVOKESTATIC,
         GhostWriter.internalClassName(ExpressionCallInvokeDynamic.class),
         "bootstrap",

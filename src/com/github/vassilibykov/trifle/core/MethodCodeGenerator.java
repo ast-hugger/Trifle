@@ -205,7 +205,12 @@ class MethodCodeGenerator implements CodeGenerator {
         } else if (value instanceof Boolean) {
             writer.loadInt((Boolean) value ? 1 : 0);
         } else {
-            throw new CompilerError("unexpected const value: " + value);
+            var id = LiteralPool.INSTANCE.register(value);
+            writer.invokeDynamic(
+                LiteralObjectInvokeDynamic.BOOTSTRAP,
+                "literal",
+                MethodType.methodType(Object.class),
+                id);
         }
         return Gist.infallible(aConst.specializedType());
     }

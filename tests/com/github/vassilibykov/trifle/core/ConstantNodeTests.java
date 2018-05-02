@@ -6,13 +6,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.invoke.MethodType;
+import java.util.List;
 
 import static com.github.vassilibykov.trifle.core.JvmType.BOOL;
 import static com.github.vassilibykov.trifle.core.JvmType.INT;
 import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.const_;
 import static com.github.vassilibykov.trifle.expression.ExpressionLanguage.lambda;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings({"ConstantConditions", "SimplifiableJUnitAssertion"})
 public class ConstantNodeTests {
@@ -30,6 +33,9 @@ public class ConstantNodeTests {
     private UserFunction nullClosure;
     private FunctionImplementation nullFunction;
     private ConstantNode nullNode;
+    private UserFunction complexLiteralFunction;
+    private FunctionImplementation complexLiteralImpl;
+    private ConstantNode complexLiteralNode;
 
     @Before
     public void setUp() throws Exception {
@@ -50,6 +56,9 @@ public class ConstantNodeTests {
         nullClosure = topLevel.get("null");
         nullFunction = nullClosure.implementation();
         nullNode = (ConstantNode) nullFunction.body();
+        complexLiteralFunction = topLevel.define("complexLiteral", lambda(() -> const_(List.of("hello", "bye"))));
+        complexLiteralImpl = complexLiteralFunction.implementation();
+        complexLiteralNode = (ConstantNode) complexLiteralImpl.body();
     }
 
     private void invokeAndCompileAll() {
@@ -57,10 +66,17 @@ public class ConstantNodeTests {
         boolClosure.invoke();
         stringClosure.invoke();
         nullClosure.invoke();
+        complexLiteralFunction.invoke();
         intFunction.forceCompile();
         boolFunction.forceCompile();
         stringFunction.forceCompile();
         nullFunction.forceCompile();
+        complexLiteralImpl.forceCompile();
+    }
+
+    private void assertProperList(Object object) {
+        assertTrue(object instanceof List);
+        assertArrayEquals(new Object[] {"hello", "bye"}, ((List) object).toArray());
     }
 
     @Test
@@ -69,6 +85,7 @@ public class ConstantNodeTests {
         assertEquals(true, boolClosure.invoke());
         assertEquals("hello", stringClosure.invoke());
         assertEquals(null, nullClosure.invoke());
+        assertProperList(complexLiteralFunction.invoke());
     }
 
     @Test
@@ -77,10 +94,12 @@ public class ConstantNodeTests {
         boolFunction.useSimpleInterpreter();
         stringFunction.useSimpleInterpreter();
         nullFunction.useSimpleInterpreter();
+        complexLiteralImpl.useSimpleInterpreter();
         assertEquals(42, intClosure.invoke());
         assertEquals(true, boolClosure.invoke());
         assertEquals("hello", stringClosure.invoke());
         assertEquals(null, nullClosure.invoke());
+        assertProperList(complexLiteralFunction.invoke());
     }
 
     @Test
@@ -89,10 +108,12 @@ public class ConstantNodeTests {
         ExpressionTypeInferencer.inferTypesIn(boolFunction);
         ExpressionTypeInferencer.inferTypesIn(stringFunction);
         ExpressionTypeInferencer.inferTypesIn(nullFunction);
+        ExpressionTypeInferencer.inferTypesIn(complexLiteralImpl);
         assertEquals(INT, intNode.inferredType().jvmType().get());
         assertEquals(BOOL, boolNode.inferredType().jvmType().get());
         assertEquals(REFERENCE, stringNode.inferredType().jvmType().get());
         assertEquals(REFERENCE, nullNode.inferredType().jvmType().get());
+        assertEquals(REFERENCE, complexLiteralNode.inferredType().jvmType().get());
     }
 
     @Test
@@ -106,6 +127,7 @@ public class ConstantNodeTests {
         assertEquals(REFERENCE, stringFunction.specializedReturnType());
         assertEquals(REFERENCE, nullNode.specializedType());
         assertEquals(REFERENCE, nullFunction.specializedReturnType());
+        assertEquals(REFERENCE, complexLiteralImpl.specializedReturnType());
     }
 
     @Test
@@ -115,6 +137,7 @@ public class ConstantNodeTests {
         assertEquals(true, boolClosure.invoke());
         assertEquals("hello", stringClosure.invoke());
         assertEquals(null, nullClosure.invoke());
+        assertProperList(complexLiteralFunction.invoke());
     }
 
     @Test
@@ -124,9 +147,11 @@ public class ConstantNodeTests {
         assertEquals(GENERIC_NULLARY_METHOD_TYPE, boolFunction.genericImplementation().type());
         assertEquals(GENERIC_NULLARY_METHOD_TYPE, stringFunction.genericImplementation().type());
         assertEquals(GENERIC_NULLARY_METHOD_TYPE, nullFunction.genericImplementation().type());
+        assertEquals(GENERIC_NULLARY_METHOD_TYPE, complexLiteralImpl.genericImplementation().type());
         assertEquals(42, intFunction.genericImplementation().invoke());
         assertEquals(true, boolFunction.genericImplementation().invoke());
         assertEquals("hello", stringFunction.genericImplementation().invoke());
         assertEquals(null, nullFunction.genericImplementation().invoke());
+        assertProperList(complexLiteralImpl.genericImplementation().invoke());
     }
 }

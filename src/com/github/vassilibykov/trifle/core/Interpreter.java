@@ -23,10 +23,10 @@ public class Interpreter {
         @Override
         public Object visitBlock(BlockNode block) {
             EvaluatorNode[] expressions = block.expressions();
-            int bodySize = expressions.length - 1;
-            if (bodySize > 0) {
+            int exprCount = expressions.length;
+            if (exprCount > 0) {
                 int i;
-                for (i = 0; i < bodySize; i++) expressions[i].accept(this);
+                for (i = 0; i < exprCount - 1; i++) expressions[i].accept(this);
                 return expressions[i].accept(this);
             } else {
                 return null;
