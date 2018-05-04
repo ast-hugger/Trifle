@@ -2,7 +2,6 @@
 
 package com.github.vassilibykov.trifle.primitive;
 
-import com.github.vassilibykov.trifle.core.CompilerError;
 import com.github.vassilibykov.trifle.core.ExpressionType;
 import com.github.vassilibykov.trifle.core.GhostWriter;
 import com.github.vassilibykov.trifle.core.JvmType;
@@ -28,28 +27,27 @@ public class Negate extends Primitive1 {
     }
 
     @Override
-    public JvmType generate(GhostWriter writer, JvmType argCategory) {
-        return argCategory.match(new JvmType.Matcher<>() {
-            public JvmType ifReference() {
-                writer
-                    .adaptValue(REFERENCE, INT)
-                    .loadInt(0)
-                    .swap()
-                    .asm().visitInsn(ISUB);
-                return INT;
-            }
+    protected JvmType generateForReference(GhostWriter writer) {
+        writer
+            .adaptValue(REFERENCE, INT)
+            .loadInt(0)
+            .swap()
+            .asm().visitInsn(ISUB);
+        return INT;
+    }
 
-            public JvmType ifInt() {
-                writer
-                    .loadInt(0)
-                    .swap()
-                    .asm().visitInsn(ISUB);
-                return INT;
-            }
+    @Override
+    protected JvmType generateForInt(GhostWriter writer) {
+        writer
+            .loadInt(0)
+            .swap()
+            .asm().visitInsn(ISUB);
+        return INT;
+    }
 
-            public JvmType ifBoolean() {
-                throw new CompilerError("NEGATE is not applicable to a boolean");
-            }
-        });
+    @Override
+    protected JvmType generateForBoolean(GhostWriter writer) {
+        writer.throwError("cannot negate a boolean");
+        return INT;
     }
 }

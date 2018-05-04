@@ -373,6 +373,10 @@ public class GhostWriter {
         return this;
     }
 
+    public GhostWriter loadClass(Class<?> klass) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
     /**
      * Load an {@code int} constant on the stack using the best available
      * instruction.

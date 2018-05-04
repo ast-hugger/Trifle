@@ -7,18 +7,23 @@ import com.github.vassilibykov.trifle.core.GhostWriter;
 import com.github.vassilibykov.trifle.core.JvmType;
 import com.github.vassilibykov.trifle.core.Primitive2Node;
 import com.github.vassilibykov.trifle.core.PrimitiveNode;
-import com.github.vassilibykov.trifle.core.RuntimeError;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.github.vassilibykov.trifle.core.JvmType.BOOL;
 import static com.github.vassilibykov.trifle.core.JvmType.INT;
+import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
 
 /**
- * A greater-than comparison of integers.
+ * Object equivalence, generally in the sense of {@code ==}. Exceptions are
+ * comparisons of Integer and Boolean wrapper instances, which should be
+ * indistinguishable from comparing their underlying primitive values.
  */
-public class GT extends Primitive2 implements IfAware {
+public class EQ extends Primitive2 implements IfAware {
+
     @Override
     public ExpressionType inferredType(ExpressionType argument1Type, ExpressionType argument2Type) {
         return ExpressionType.known(BOOL);
@@ -26,96 +31,94 @@ public class GT extends Primitive2 implements IfAware {
 
     @Override
     public Object apply(Object argument1, Object argument2) {
-        try {
-            return (Integer) argument1 > (Integer) argument2;
-        } catch (ClassCastException e) {
-            throw RuntimeError.integerExpected(argument1, argument2);
+        if (argument1 instanceof Integer || argument1 instanceof Boolean) {
+            return Objects.equals(argument1, argument2);
+        } else {
+            return argument1 == argument2;
         }
     }
 
     @Override
     protected JvmType generateForReferenceReference(GhostWriter writer) {
-        writer.invokeStatic(GT.class, "greaterThan", boolean.class, Object.class, Object.class);
+        writer.invokeStatic(Objects.class, "equals", boolean.class, Object.class, Object.class);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForReferenceInt(GhostWriter writer) {
-        writer.invokeStatic(GT.class, "greaterThan", boolean.class, Object.class, int.class);
+        writer.swap();
+        writer.ensureValue(REFERENCE, INT);
+        generateCompareInts(writer);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForReferenceBoolean(GhostWriter writer) {
-        writer.throwError("cannot compare a boolean");
+        writer.swap();
+        writer.ensureValue(REFERENCE, BOOL);
+        generateCompareInts(writer);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForIntReference(GhostWriter writer) {
-        writer.invokeStatic(GT.class, "greaterThan", boolean.class, int.class, Object.class);
+        writer.ensureValue(REFERENCE, INT);
+        generateCompareInts(writer);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForIntInt(GhostWriter writer) {
-        writer.invokeStatic(GT.class, "greaterThan", boolean.class, int.class, int.class);
+        generateCompareInts(writer);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForIntBoolean(GhostWriter writer) {
-        writer.throwError("cannot compare a boolean");
+        writer.loadInt(0);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForBooleanReference(GhostWriter writer) {
-        writer.throwError("cannot compare a boolean");
+        writer.ensureValue(REFERENCE, BOOL);
+        generateCompareInts(writer);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForBooleanInt(GhostWriter writer) {
-        writer.throwError("cannot compare a boolean");
+        writer.loadInt(0);
         return BOOL;
     }
 
     @Override
     protected JvmType generateForBooleanBoolean(GhostWriter writer) {
-        writer.throwError("cannot compare a boolean");
+        generateCompareInts(writer);
         return BOOL;
+    }
+
+    private void generateCompareInts(GhostWriter writer) {
+        writer.withLabelAtEnd(end -> {
+            var notEqual = new Label();
+            writer.asm().visitJumpInsn(Opcodes.IF_ICMPNE, notEqual);
+            writer
+                .loadInt(1)
+                .jump(end);
+            writer.setLabelHere(notEqual);
+            writer.loadInt(0);
+        });
     }
 
     @Override
     public Optional<OptimizedIfForm> optimizedFormFor(PrimitiveNode ifCondition) {
-        var primitive = (Primitive2Node) ifCondition; // cast must succeed
-        if (primitive.argument1().specializedType() == INT
-            && primitive.argument2().specializedType() == INT)
-        {
-            return Optional.of(new IfFormOptimizedForInts(primitive, Opcodes.IF_ICMPLE));
+        var primitive = (Primitive2Node) ifCondition;
+        var arg1type = primitive.argument1().specializedType();
+        var arg2type = primitive.argument2().specializedType();
+        if ((arg1type == INT && arg2type == INT) || (arg1type == BOOL && arg2type == BOOL)) {
+            return Optional.of(new IfFormOptimizedForInts(primitive, Opcodes.IF_ICMPNE));
         } else {
             return Optional.empty();
         }
-    }
-
-    @SuppressWarnings("unused") // called by generated code
-    public static boolean greaterThan(Object a, Object b) {
-        return (Integer) a > (Integer) b;
-    }
-
-    @SuppressWarnings("unused") // called by generated code
-    public static boolean greaterThan(Object a, int b) {
-        return (Integer) a > b;
-    }
-
-    @SuppressWarnings("unused") // called by generated code
-    public static boolean greaterThan(int a, Object b) {
-        return a > (Integer) b;
-    }
-
-    @SuppressWarnings("unused") // called by generated code
-    public static boolean greaterThan(int a, int b) {
-        return a > b;
     }
 }

@@ -36,48 +36,57 @@ public class LT extends Primitive2 implements IfAware {
     }
 
     @Override
-    public JvmType generate(GhostWriter writer, JvmType arg1Category, JvmType arg2Category) {
-        return arg1Category.match(new JvmType.Matcher<>() {
-            public JvmType ifReference() {
-                return arg2Category.match(new JvmType.Matcher<>() {
-                    public JvmType ifReference() { // (Object, Object)
-                        writer.invokeStatic(LT.class, "lessThan", boolean.class, Object.class, Object.class);
-                        return BOOL;
-                    }
+    protected JvmType generateForReferenceReference(GhostWriter writer) {
+        writer.invokeStatic(LT.class, "lessThan", boolean.class, Object.class, Object.class);
+        return BOOL;
+    }
 
-                    public JvmType ifInt() { // (Object, int)
-                        writer.invokeStatic(LT.class, "lessThan", boolean.class, Object.class, int.class);
-                        return BOOL;
-                    }
+    @Override
+    protected JvmType generateForReferenceInt(GhostWriter writer) {
+        writer.invokeStatic(LT.class, "lessThan", boolean.class, Object.class, int.class);
+        return BOOL;
+    }
 
-                    public JvmType ifBoolean() { // (Object, boolean)
-                        throw new CompilerError("LT is not applicable to a boolean");
-                    }
-                });
-            }
+    @Override
+    protected JvmType generateForReferenceBoolean(GhostWriter writer) {
+        writer.throwError("cannot compare a boolean");
+        return BOOL;
+    }
 
-            public JvmType ifInt() {
-                return arg2Category.match(new JvmType.Matcher<>() {
-                    public JvmType ifReference() { // (int, Object)
-                        writer.invokeStatic(LT.class, "lessThan", boolean.class, int.class, Object.class);
-                        return BOOL;
-                    }
+    @Override
+    protected JvmType generateForIntReference(GhostWriter writer) {
+        writer.invokeStatic(LT.class, "lessThan", boolean.class, int.class, Object.class);
+        return BOOL;
+    }
 
-                    public JvmType ifInt() { // (int, int)
-                        writer.invokeStatic(LT.class, "lessThan", boolean.class, int.class, int.class);
-                        return BOOL;
-                    }
+    @Override
+    protected JvmType generateForIntInt(GhostWriter writer) {
+        writer.invokeStatic(LT.class, "lessThan", boolean.class, int.class, int.class);
+        return BOOL;
+    }
 
-                    public JvmType ifBoolean() {
-                        throw new CompilerError("LT is not applicable to a boolean");
-                    }
-                });
-            }
+    @Override
+    protected JvmType generateForIntBoolean(GhostWriter writer) {
+        writer.throwError("cannot compare a boolean");
+        return BOOL;
+    }
 
-            public JvmType ifBoolean() {
-                throw new CompilerError("LT is not applicable to a boolean");
-            }
-        });
+    @Override
+    protected JvmType generateForBooleanReference(GhostWriter writer) {
+        writer.throwError("cannot compare a boolean");
+        return BOOL;
+    }
+
+    @Override
+    protected JvmType generateForBooleanInt(GhostWriter writer) {
+        writer.throwError("cannot compare a boolean");
+        return BOOL;
+    }
+
+    @Override
+    protected JvmType generateForBooleanBoolean(GhostWriter writer) {
+        writer.throwError("cannot compare a boolean");
+        return BOOL;
     }
 
     @Override
