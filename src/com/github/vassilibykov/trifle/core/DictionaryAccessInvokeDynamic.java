@@ -11,6 +11,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
+import java.util.NoSuchElementException;
 
 /**
  * An invokedynamic instruction for getting or setting a value in a {@link Dictionary}.
@@ -36,7 +37,8 @@ public class DictionaryAccessInvokeDynamic {
     @SuppressWarnings("unused") // called by invokedynamic infrastructure
     public static CallSite bootstrapGet(Lookup lookup, String operation, MethodType callSiteType, Integer id) {
         var dictionary = Dictionary.withId(id);
-        var entry = dictionary.getEntry(keyIn(operation));
+        String name = keyIn(operation);
+        var entry = dictionary.getEntry(name).orElseThrow(NoSuchElementException::new); // TODO use a proper exception
         var handle = callSiteType.returnType() == int.class ? GET_INT : GET_REF;
         return new ConstantCallSite(handle.bindTo(entry));
     }
@@ -44,7 +46,7 @@ public class DictionaryAccessInvokeDynamic {
     @SuppressWarnings("unused") // called by invokedynamic infrastructure
     public static CallSite bootstrapSet(Lookup lookup, String operation, MethodType callSiteType, Integer id) {
         var dictionary = Dictionary.withId(id);
-        var entry = dictionary.getEntry(keyIn(operation));
+        var entry = dictionary.getEntry(keyIn(operation)).orElseThrow(NoSuchElementException::new); // TODO use a proper exception
         var handle = callSiteType.parameterType(0) == int.class ? GET_INT : GET_REF;
         return new ConstantCallSite(handle.bindTo(entry));
     }

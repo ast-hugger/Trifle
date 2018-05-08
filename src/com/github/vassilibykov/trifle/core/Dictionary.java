@@ -3,8 +3,10 @@
 package com.github.vassilibykov.trifle.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -86,7 +88,15 @@ public class Dictionary {
         return id;
     }
 
-    public Entry getEntry(String key) {
-        return entries.get(key);
+    public Map<String, Entry> entries() {
+        return Collections.unmodifiableMap(entries);
+    }
+
+    public Entry defineEntry(String key) {
+        return entries.computeIfAbsent(key, k -> new Entry(k, null));
+    }
+
+    public Optional<Entry> getEntry(String key) {
+        return Optional.ofNullable(entries.get(key));
     }
 }

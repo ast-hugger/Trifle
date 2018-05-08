@@ -3,6 +3,7 @@
 package com.github.vassilibykov.trifle.core;
 
 import java.lang.invoke.MethodType;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 public class DictionaryGetterDispatcher implements CallDispatcher {
@@ -25,7 +26,7 @@ public class DictionaryGetterDispatcher implements CallDispatcher {
         if (call.arity() != 0) {
             throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception
         }
-        return dictionary.getEntry(key).value();
+        return dictionary.getEntry(key).orElseThrow(NoSuchElementException::new).value(); // TODO use a proper exception
     }
 
     @Override
