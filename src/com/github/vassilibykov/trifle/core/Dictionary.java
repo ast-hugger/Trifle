@@ -46,11 +46,15 @@ public class Dictionary {
             setValue(value);
         }
 
-        Object value() {
+        public String key() {
+            return key;
+        }
+
+        public Object value() {
             return refValue == NO_VALUE ? intValue : refValue;
         }
 
-        int intValue() {
+        public int intValue() {
             if (refValue == NO_VALUE) {
                 return intValue;
             } else {
@@ -58,7 +62,7 @@ public class Dictionary {
             }
         }
 
-        void setValue(Object value) {
+        public void setValue(Object value) {
             if (value instanceof Integer) {
                 this.intValue = (Integer) value;
                 this.refValue = NO_VALUE;
@@ -67,7 +71,7 @@ public class Dictionary {
             }
         }
 
-        void setValue(int value) {
+        public void setValue(int value) {
             this.intValue = value;
             this.refValue = NO_VALUE;
         }

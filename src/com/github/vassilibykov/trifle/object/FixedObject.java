@@ -41,7 +41,7 @@ public class FixedObject {
     /*internal*/ Object[] referenceData;
     /*internal*/ int[] intData;
 
-    FixedObject(FixedObjectDefinition definition) {
+    protected FixedObject(FixedObjectDefinition definition) {
         this.definition = definition;
         this.layout = definition.layout();
         var size = layout.size();
