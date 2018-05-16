@@ -4,7 +4,7 @@ package com.github.vassilibykov.trifle.object;
 
 import com.github.vassilibykov.trifle.core.GhostWriter;
 import com.github.vassilibykov.trifle.core.InlineCachingCallSite;
-import com.github.vassilibykov.trifle.core.RuntimeError;
+import com.github.vassilibykov.trifle.core.Invocable;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 
@@ -12,6 +12,7 @@ import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.Optional;
 
 public class MessageSendInvokeDynamic {
 
@@ -42,19 +43,30 @@ public class MessageSendInvokeDynamic {
     public static Object dispatch(String selector, InlineCachingCallSite thisSite, Object[] args) throws Throwable {
         // args are guaranteed by the compiler to not be empty
         var firstArg = args[0];
-        if (!(firstArg instanceof MessageReceiver)) {
-            throw RuntimeError.message(firstArg + " is not a valid message receiver");
+        var isProperReceiver = firstArg instanceof MessageReceiver;
+        Optional<? extends Invocable> method;
+        if (isProperReceiver) {
+            method = ((MessageReceiver) firstArg).lookupSelector(selector);
+        } else {
+            method = MessageSendDispatcher.extension().lookupStrangeReceiverSelector(selector, args);
         }
-        var receiver = (MessageReceiver) firstArg;
-        var method = receiver.lookupSelector(selector);
         if (!method.isPresent()) {
-            throw RuntimeError.message("message not understood: " + selector);
+            return MessageSendDispatcher.extension().messageNotUnderstood(selector, args);
         }
         var invoker = method.get().invoker(thisSite.type());
-        var flushableInvoker = receiver.invalidationSwitchPoint().guardWithTest(
-            invoker,
-            thisSite.resetAndDispatchInvoker());
-        thisSite.addCacheEntry(CHECK_BEHAVIOR.bindTo(receiver.behaviorToken()), flushableInvoker);
+        MethodHandle cacheGuard;
+        MethodHandle flushableInvoker;
+        if (isProperReceiver) {
+            var receiver = (MessageReceiver) firstArg;
+            cacheGuard = CHECK_BEHAVIOR.bindTo(receiver.behaviorToken());
+            flushableInvoker = receiver.invalidationSwitchPoint().guardWithTest(
+                invoker,
+                thisSite.resetAndDispatchInvoker());
+        } else {
+            cacheGuard = firstArg == null ? CHECK_NULL : CHECK_CLASS.bindTo(firstArg.getClass());
+            flushableInvoker = invoker;
+        }
+        thisSite.addCacheEntry(cacheGuard, flushableInvoker);
         return invoker.invokeWithArguments(args);
     }
 
@@ -63,8 +75,24 @@ public class MessageSendInvokeDynamic {
             && ((MessageReceiver) receiver).behaviorToken() == expectedToken;
     }
 
+    private static boolean checkClass(Class<?> expectedClass, Object receiver) {
+        return expectedClass.isInstance(receiver);
+    }
+
+    /**
+     * A separate checker method for the receiver being {@code null}, required
+     * because strangely, even though {@code null} is a legal return value
+     * of a method with the return type {@code Void},
+     * {@code Void.class.isInstance(null)} is false.
+     */
+    private static boolean checkNull(Object receiver) {
+        return receiver == null;
+    }
+
     private static final MethodHandle DISPATCH;
     private static final MethodHandle CHECK_BEHAVIOR;
+    private static final MethodHandle CHECK_CLASS;
+    private static final MethodHandle CHECK_NULL;
     static {
         var lookup = MethodHandles.lookup();
         try {
@@ -76,6 +104,14 @@ public class MessageSendInvokeDynamic {
                 MessageSendInvokeDynamic.class,
                 "checkBehavior",
                 MethodType.methodType(boolean.class, Object.class, Object.class));
+            CHECK_CLASS = lookup.findStatic(
+                MessageSendInvokeDynamic.class,
+                "checkClass",
+                MethodType.methodType(boolean.class, Class.class, Object.class));
+            CHECK_NULL = lookup.findStatic(
+                MessageSendInvokeDynamic.class,
+                "checkNull",
+                MethodType.methodType(boolean.class, Object.class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }

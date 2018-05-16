@@ -7,6 +7,7 @@ import com.github.vassilibykov.trifle.core.CallNode;
 import com.github.vassilibykov.trifle.core.CodeGenerator;
 import com.github.vassilibykov.trifle.core.EvaluatorNode;
 import com.github.vassilibykov.trifle.core.Gist;
+import com.github.vassilibykov.trifle.core.Invocable;
 import com.github.vassilibykov.trifle.core.JvmType;
 import com.github.vassilibykov.trifle.core.RuntimeError;
 
@@ -15,6 +16,30 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 class MessageSendDispatcher implements CallDispatcher {
+
+    private static MessageDispatchExtension EXTENSION = new MessageDispatchExtension() {
+        @Override
+        public Optional<Invocable> lookupStrangeReceiverSelector(String selector, Object[] arguments) {
+            throw RuntimeError.message(arguments[0] + " is not a valid message receiver");
+        }
+
+        @Override
+        public Object messageNotUnderstood(String selector, Object[] arguments) {
+            throw RuntimeError.message("message not understood: " + selector);
+        }
+    };
+
+    static MessageDispatchExtension extension() {
+        return EXTENSION;
+    }
+
+    static void installExtension(MessageDispatchExtension handler) {
+        EXTENSION = handler;
+    }
+
+    /*
+        Instance
+     */
 
     private final String selector;
 
@@ -34,12 +59,14 @@ class MessageSendDispatcher implements CallDispatcher {
         }
         var args = call.arguments().map(each -> each.accept(interpreter)).toArray(Object[]::new);
         var receiver = args[0];
-        if (!(receiver instanceof MessageReceiver)) {
-            throw RuntimeError.message(receiver + " is not a message receiver");
+        Optional<? extends Invocable> method;
+        if (receiver instanceof MessageReceiver) {
+            method = ((MessageReceiver) receiver).lookupSelector(selector);
+        } else {
+            method = EXTENSION.lookupStrangeReceiverSelector(selector, args);
         }
-        var method = ((MessageReceiver) receiver).lookupSelector(selector);
         if (!method.isPresent()) {
-            throw RuntimeError.message("message not understood: " + selector);
+            return EXTENSION.messageNotUnderstood(selector, args);
         }
         return method.get().invokeWithArguments(args);
     }

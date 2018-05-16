@@ -9,6 +9,10 @@ import com.github.vassilibykov.trifle.core.EvaluatorNode;
 
 public class DictionarySetter implements Callable {
 
+    public static DictionarySetter of(Dictionary.Entry entry) {
+        return new DictionarySetter(entry.dictionary(), entry.key());
+    }
+
     public static DictionarySetter create(Dictionary dictionary, String key) {
         return new DictionarySetter(dictionary, key);
     }

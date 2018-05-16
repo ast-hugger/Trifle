@@ -36,7 +36,7 @@ public class Dictionary {
     private static final List<Dictionary> REGISTRY = new ArrayList<>();
     private static final Object NO_VALUE = new Object();
 
-    public static class Entry {
+    public class Entry {
         private final String key;
         private int intValue;
         private Object refValue;
@@ -44,6 +44,10 @@ public class Dictionary {
         private Entry(String key, Object value) {
             this.key = key;
             setValue(value);
+        }
+
+        public Dictionary dictionary() {
+            return Dictionary.this;
         }
 
         public String key() {
