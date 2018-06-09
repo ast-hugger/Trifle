@@ -45,7 +45,7 @@ public abstract class EvaluatorNode {
 
         @Override
         public T visitCall(CallNode call) {
-            call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
+            call.dispatcher().asEvaluatorNode().ifPresent(it -> it.accept(this));
             call.match(new CallNode.ArityMatcher<Void>() {
                 @Override
                 public Void ifNullary() {

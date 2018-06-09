@@ -17,11 +17,6 @@ public class DictionarySetterDispatcher implements CallDispatcher {
     }
 
     @Override
-    public Optional<EvaluatorNode> evaluatorNode() {
-        return Optional.empty();
-    }
-
-    @Override
     public Object execute(CallNode call, EvaluatorNode.Visitor<Object> interpreter) {
         if (call.arity() != 1) {
             throw RuntimeError.message("invalid call expression"); // TODO should probably use a different exception

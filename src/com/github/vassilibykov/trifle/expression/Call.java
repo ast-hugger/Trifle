@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A function call.
+ * A call of a function or something more interesting.
  */
 public class Call extends ComplexExpression {
     public static Call with(Callable target, AtomicExpression... arguments) {

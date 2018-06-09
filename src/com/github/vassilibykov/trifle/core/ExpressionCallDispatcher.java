@@ -14,15 +14,15 @@ public class ExpressionCallDispatcher implements CallDispatcher {
     }
 
     @Override
-    public Optional<EvaluatorNode> evaluatorNode() {
+    public Optional<EvaluatorNode> asEvaluatorNode() {
         return Optional.of(expression);
     }
 
     @Override
-    public Object execute(CallNode call, EvaluatorNode.Visitor<Object> visitor) {
+    public Object execute(CallNode call, EvaluatorNode.Visitor<Object> interpreter) {
         Invocable target;
         try {
-            target = (Invocable) expression.accept(visitor);
+            target = (Invocable) expression.accept(interpreter);
         } catch (ClassCastException e) {
             throw RuntimeError.message("closure expected");
         }
@@ -34,12 +34,12 @@ public class ExpressionCallDispatcher implements CallDispatcher {
 
             @Override
             public Object ifUnary(EvaluatorNode arg) {
-                return target.invoke(arg.accept(visitor));
+                return target.invoke(arg.accept(interpreter));
             }
 
             @Override
             public Object ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                return target.invoke(arg1.accept(visitor), arg2.accept(visitor));
+                return target.invoke(arg1.accept(interpreter), arg2.accept(interpreter));
             }
         });
     }

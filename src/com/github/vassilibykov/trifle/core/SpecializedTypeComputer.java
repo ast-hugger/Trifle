@@ -2,8 +2,6 @@
 
 package com.github.vassilibykov.trifle.core;
 
-import com.github.vassilibykov.trifle.expression.Expression;
-
 import static com.github.vassilibykov.trifle.core.JvmType.REFERENCE;
 
 /**
@@ -61,7 +59,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
 
     @Override
     public JvmType visitCall(CallNode call) {
-        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
+        call.dispatcher().asEvaluatorNode().ifPresent(it -> it.accept(this));
         call.match(new CallNode.ArityMatcher<Void>() {
             @Override
             public Void ifNullary() {

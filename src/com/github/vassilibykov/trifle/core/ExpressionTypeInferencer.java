@@ -56,7 +56,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
 
     @Override
     public ExpressionType visitCall(CallNode call) {
-        call.dispatcher().evaluatorNode().ifPresent(it -> it.accept(this));
+        call.dispatcher().asEvaluatorNode().ifPresent(it -> it.accept(this));
         call.match(new CallNode.ArityMatcher<Void>() {
             @Override
             public Void ifNullary() {

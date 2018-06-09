@@ -19,22 +19,31 @@ import java.util.Optional;
  * message send semantics.
  */
 public interface CallDispatcher {
-    Optional<EvaluatorNode> evaluatorNode();
 
     /**
      * Perform a call and return the result. This is typically used by the
      * interpreter to evaluate a {@link CallNode}.
      *
      * @param call The call node to which this dispatcher belongs.
-     * @param visitor The visitor, typically an interpreter, that requires
+     * @param interpreter The visitor, typically an interpreter, that requires
      *        the result. It can be asked to evaluate the call arguments
      *        as needed.
      * @return The value returned by the call target.
      */
-    Object execute(CallNode call, EvaluatorNode.Visitor<Object> visitor);
+    Object execute(CallNode call, EvaluatorNode.Visitor<Object> interpreter);
 
     /**
      * Generate executable code executing which results in calling the function.
      */
     Gist generateCode(CallNode call, CodeGenerator generator);
+
+    /**
+     * Overridden by {@link ExpressionCallDispatcher} to return the evaluator
+     * node of its expression, so it can be included in the various code
+     * analysis tree traversals. Other dispatchers, for callables which are
+     * not expressions, should stick with this default implementation.
+     */
+    default Optional<EvaluatorNode> asEvaluatorNode() {
+        return Optional.empty();
+    }
 }
