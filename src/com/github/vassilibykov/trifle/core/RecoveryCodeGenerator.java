@@ -477,28 +477,11 @@ class RecoveryCodeGenerator {
 
         @Override
         public MethodType generateArgumentLoad(CallNode callNode) {
-            return callNode.match(new CallNode.ArityMatcher<>() {
-                @Override
-                public MethodType ifNullary() {
-                    return MethodType.genericMethodType(0);
-                }
-
-                @Override
-                public MethodType ifUnary(EvaluatorNode arg) {
-                    var argGist = generateCode(arg);
-                    writer.adaptValue(argGist.type(), REFERENCE);
-                    return MethodType.genericMethodType(1);
-                }
-
-                @Override
-                public MethodType ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                    var gist1 = generateCode(arg1);
-                    writer.adaptValue(gist1.type(), REFERENCE);
-                    var gist2 = generateCode(arg2);
-                    writer.adaptValue(gist2.type(), REFERENCE);
-                    return MethodType.genericMethodType(2);
-                }
+            callNode.arguments().forEach(each -> {
+                var gist = generateCode(each);
+                writer.adaptValue(gist.type(), REFERENCE);
             });
+            return MethodType.genericMethodType(callNode.arity());
         }
 
         @Override

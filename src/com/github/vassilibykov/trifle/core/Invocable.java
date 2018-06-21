@@ -9,6 +9,8 @@ public interface Invocable {
     Object invoke();
     Object invoke(Object arg);
     Object invoke(Object arg1, Object arg2);
+    Object invoke(Object arg1, Object arg2, Object arg3);
+    Object invoke(Object arg1, Object arg2, Object arg3, Object arg4);
     Object invokeWithArguments(Object[] arguments);
     MethodHandle invoker(MethodType type);
 }

@@ -148,28 +148,11 @@ class MethodCodeGenerator implements CodeGenerator {
 
     @Override
     public MethodType generateArgumentLoad(CallNode call) {
-        return call.match(new CallNode.ArityMatcher<>() {
-            @Override
-            public MethodType ifNullary() {
-                var returnType = call.specializedType().representativeClass();
-                return MethodType.methodType(returnType);
-            }
-
-            @Override
-            public MethodType ifUnary(EvaluatorNode arg) {
-                var argType = arg.accept(MethodCodeGenerator.this).type().representativeClass();
-                var returnType = call.specializedType().representativeClass();
-                return MethodType.methodType(returnType, argType);
-            }
-
-            @Override
-            public MethodType ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                var arg1Type = arg1.accept(MethodCodeGenerator.this).type().representativeClass();
-                var arg2Type = arg2.accept(MethodCodeGenerator.this).type().representativeClass();
-                var returnType = call.specializedType().representativeClass();
-                return MethodType.methodType(returnType, arg1Type, arg2Type);
-            }
-        });
+        var argTypes = call.arguments()
+            .map(each -> each.accept(MethodCodeGenerator.this).type().representativeClass())
+            .toArray(Class<?>[]::new);
+        var returnType = call.specializedType().representativeClass();
+        return MethodType.methodType(returnType, argTypes);
     }
 
     @Override

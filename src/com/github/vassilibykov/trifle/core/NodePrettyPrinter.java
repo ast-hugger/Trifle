@@ -54,27 +54,10 @@ public class NodePrettyPrinter implements EvaluatorNode.Visitor<Void> {
             output.append(call.toString());
             printNodeProfile(call);
         });
-        call.match(new CallNode.ArityMatcher<Void>() {
-            @Override
-            public Void ifNullary() {
-                return null;
-            }
-
-            @Override
-            public Void ifUnary(EvaluatorNode arg) {
-                printLine(() -> output.append("arg:"));
-                indented(() -> arg.accept(NodePrettyPrinter.this));
-                return null;
-            }
-
-            @Override
-            public Void ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                printLine(() -> output.append("arg1:"));
-                indented(() -> arg1.accept(NodePrettyPrinter.this));
-                printLine(() -> output.append("arg2:"));
-                indented(() -> arg2.accept(NodePrettyPrinter.this));
-                return null;
-            }
+        int[] i = {0};
+        call.arguments().forEach(each -> {
+            printLine(() -> output.append("arg").append(String.valueOf(i[0]++)).append(":"));
+            indented(() -> each.accept(NodePrettyPrinter.this));
         });
         return null;
     }

@@ -57,25 +57,7 @@ class ExpressionTypeInferencer implements EvaluatorNode.Visitor<ExpressionType> 
     @Override
     public ExpressionType visitCall(CallNode call) {
         call.dispatcher().asEvaluatorNode().ifPresent(it -> it.accept(this));
-        call.match(new CallNode.ArityMatcher<Void>() {
-            @Override
-            public Void ifNullary() {
-                return null;
-            }
-
-            @Override
-            public Void ifUnary(EvaluatorNode arg) {
-                arg.accept(ExpressionTypeInferencer.this);
-                return null;
-            }
-
-            @Override
-            public Void ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                arg1.accept(ExpressionTypeInferencer.this);
-                arg2.accept(ExpressionTypeInferencer.this);
-                return null;
-            }
-        });
+        call.arguments().forEach(each -> each.accept(ExpressionTypeInferencer.this));
         return andSetIn(call, ExpressionType.unknown());
     }
 

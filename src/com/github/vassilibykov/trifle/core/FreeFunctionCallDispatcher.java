@@ -5,7 +5,7 @@ package com.github.vassilibykov.trifle.core;
 import com.github.vassilibykov.trifle.builtin.BuiltinFunction;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
+import java.util.stream.Stream;
 
 public class FreeFunctionCallDispatcher implements CallDispatcher {
     @NotNull private final FreeFunction target;
@@ -30,6 +30,26 @@ public class FreeFunctionCallDispatcher implements CallDispatcher {
             @Override
             public Object ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
                 return target.invoke(arg1.accept(interpreter), arg2.accept(interpreter));
+            }
+
+            @Override
+            public Object ifTernary(EvaluatorNode arg1, EvaluatorNode arg2, EvaluatorNode arg3) {
+                return target.invoke(arg1.accept(interpreter), arg2.accept(interpreter), arg3.accept(interpreter));
+            }
+
+            @Override
+            public Object ifQuaternary(EvaluatorNode arg1, EvaluatorNode arg2, EvaluatorNode arg3, EvaluatorNode arg4) {
+                return target.invoke(
+                    arg1.accept(interpreter),
+                    arg2.accept(interpreter),
+                    arg3.accept(interpreter),
+                    arg4.accept(interpreter));
+            }
+
+            @Override
+            public Object ifMultifarious(EvaluatorNode[] args) {
+                var arguments = Stream.of(args).map(each -> each.accept(interpreter)).toArray();
+                return target.invokeWithArguments(arguments);
             }
         });
     }

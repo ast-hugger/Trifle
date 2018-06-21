@@ -46,25 +46,7 @@ public abstract class EvaluatorNode {
         @Override
         public T visitCall(CallNode call) {
             call.dispatcher().asEvaluatorNode().ifPresent(it -> it.accept(this));
-            call.match(new CallNode.ArityMatcher<Void>() {
-                @Override
-                public Void ifNullary() {
-                    return null;
-                }
-
-                @Override
-                public Void ifUnary(EvaluatorNode arg) {
-                    arg.accept(VisitorSkeleton.this);
-                    return null;
-                }
-
-                @Override
-                public Void ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                    arg1.accept(VisitorSkeleton.this);
-                    arg2.accept(VisitorSkeleton.this);
-                    return null;
-                }
-            });
+            call.arguments().forEach(each -> each.accept(VisitorSkeleton.this));
             return null;
         }
 

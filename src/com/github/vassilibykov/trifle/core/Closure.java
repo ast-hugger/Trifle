@@ -159,16 +159,39 @@ public class Closure implements Invocable {
         }
     }
 
+    public Object invoke(Object arg1, Object arg2, Object arg3) {
+        try {
+            return genericInvoker.invokeExact(arg1, arg2, arg3);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
+        } catch (Throwable throwable) {
+            throw new InvocationException(throwable);
+        }
+    }
+
+    public Object invoke(Object arg1, Object arg2, Object arg3, Object arg4) {
+        try {
+            return genericInvoker.invokeExact(arg1, arg2, arg3, arg4);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
+        } catch (Throwable throwable) {
+            throw new InvocationException(throwable);
+        }
+    }
+
     public Object invokeWithArguments(Object... args) {
-        switch (args.length) {
-            case 0:
-                return invoke();
-            case 1:
-                return invoke(args[0]);
-            case 2:
-                return invoke(args[0], args[1]);
-            default:
-                throw new UnsupportedOperationException();
+        try {
+            return genericInvoker.invokeWithArguments(args);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
+        } catch (Throwable throwable) {
+            throw new InvocationException(throwable);
         }
     }
 }

@@ -55,16 +55,44 @@ public interface FreeFunction extends Invocable {
     }
 
     @Override
+    default Object invoke(Object arg1, Object arg2, Object arg3) {
+        var invoker = invoker(MethodType.genericMethodType(3));
+        try {
+            return invoker.invoke(arg1, arg2, arg3);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
+        } catch (Throwable throwable) {
+            throw new InvocationException(throwable);
+        }
+    }
+
+    @Override
+    default Object invoke(Object arg1, Object arg2, Object arg3, Object arg4) {
+        var invoker = invoker(MethodType.genericMethodType(4));
+        try {
+            return invoker.invoke(arg1, arg2, arg3, arg4);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
+        } catch (Throwable throwable) {
+            throw new InvocationException(throwable);
+        }
+    }
+
+    @Override
     default Object invokeWithArguments(Object[] arguments) {
-        switch (arguments.length) {
-            case 0:
-                return invoke();
-            case 1:
-                return invoke(arguments[0]);
-            case 2:
-                return invoke(arguments[0], arguments[1]);
-            default:
-                throw new UnsupportedOperationException("not supported yet");
+        var invoker = invoker(MethodType.genericMethodType(arguments.length));
+        try {
+            return invoker.invokeWithArguments(arguments);
+        } catch (SquarePegException e) {
+            return e.value;
+        } catch (RuntimeError e) {
+            throw e;
+        } catch (Throwable throwable) {
+            throw new InvocationException(throwable);
         }
     }
 }

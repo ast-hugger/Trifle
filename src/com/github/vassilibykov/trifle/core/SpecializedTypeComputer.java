@@ -60,25 +60,7 @@ class SpecializedTypeComputer implements EvaluatorNode.Visitor<JvmType> {
     @Override
     public JvmType visitCall(CallNode call) {
         call.dispatcher().asEvaluatorNode().ifPresent(it -> it.accept(this));
-        call.match(new CallNode.ArityMatcher<Void>() {
-            @Override
-            public Void ifNullary() {
-                return null;
-            }
-
-            @Override
-            public Void ifUnary(EvaluatorNode arg) {
-                arg.accept(SpecializedTypeComputer.this);
-                return null;
-            }
-
-            @Override
-            public Void ifBinary(EvaluatorNode arg1, EvaluatorNode arg2) {
-                arg1.accept(SpecializedTypeComputer.this);
-                arg2.accept(SpecializedTypeComputer.this);
-                return null;
-            }
-        });
+        call.arguments().forEach(each -> each.accept(SpecializedTypeComputer.this));
         if (call.profile.hasProfileData()) {
             return setSpecializedType(call, call.profile.jvmType());
         } else {
