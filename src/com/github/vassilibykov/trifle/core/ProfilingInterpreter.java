@@ -73,64 +73,20 @@ public class ProfilingInterpreter extends Interpreter {
      */
 
     @Override
-    public Object interpret(FunctionImplementation implementation) {
-        var frame = new Object[implementation.frameSize()];
-        implementation.profile.recordArguments(frame);
+    public Object interpret(FunctionImplementation function, Object[] args) {
+        var frame = new Object[function.frameSize()];
+        var allParameters = function.allParameters();
+        for (int i = 0; i < args.length; i++) {
+            allParameters[i].setupArgumentIn(frame, args[i]);
+        }
+        function.profile.recordArguments(frame);
         Object result;
         try {
-            result = implementation.body().accept(new ProfilingEvaluator(frame));
+            result = function.body().accept(new ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             result = e.value;
         }
-        implementation.profile.recordResult(result);
-        return result;
-    }
-
-    @Override
-    public Object interpret(FunctionImplementation implFunction, Object arg) {
-        var frame = new Object[implFunction.frameSize()];
-        implFunction.allParameters()[0].setupArgumentIn(frame, arg);
-        implFunction.profile.recordArguments(frame);
-        Object result;
-        try {
-            result = implFunction.body().accept(new ProfilingEvaluator(frame));
-        } catch (ReturnException e) {
-            result = e.value;
-        }
-        implFunction.profile.recordResult(result);
-        return result;
-    }
-
-    @Override
-    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2) {
-        var frame = new Object[implFunction.frameSize()];
-        implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
-        implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
-        implFunction.profile.recordArguments(frame);
-        Object result;
-        try {
-            result = implFunction.body().accept(new ProfilingEvaluator(frame));
-        } catch (ReturnException e) {
-            result = e.value;
-        }
-        implFunction.profile.recordResult(result);
-        return result;
-    }
-
-    @Override
-    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2, Object arg3) {
-        var frame = new Object[implFunction.frameSize()];
-        implFunction.allParameters()[0].setupArgumentIn(frame, arg1);
-        implFunction.allParameters()[1].setupArgumentIn(frame, arg2);
-        implFunction.allParameters()[2].setupArgumentIn(frame, arg3);
-        implFunction.profile.recordArguments(frame);
-        Object result;
-        try {
-            result = implFunction.body().accept(new ProfilingEvaluator(frame));
-        } catch (ReturnException e) {
-            result = e.value;
-        }
-        implFunction.profile.recordResult(result);
+        function.profile.recordResult(result);
         return result;
     }
 }

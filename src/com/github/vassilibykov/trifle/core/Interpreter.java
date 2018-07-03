@@ -126,45 +126,13 @@ public class Interpreter {
         Instance
      */
 
-    public Object interpret(FunctionImplementation implFunction) {
-        var frame = new Object[implFunction.frameSize()];
-        try {
-            return implFunction.body().accept(new Evaluator(frame));
-        } catch (ReturnException e) {
-            return e.value;
+    public Object interpret(FunctionImplementation function, Object[] args) {
+        var frame = new Object[function.frameSize()];
+        for (int i = 0; i < args.length; i++) {
+            function.allParameters()[i].setupArgumentIn(frame, args[i]);
         }
-    }
-
-    public Object interpret(FunctionImplementation implFunction, Object arg) {
-        var frame = new Object[implFunction.frameSize()];
-        implFunction.allParameters()[0].setupArgumentIn(frame, arg);
         try {
-            return implFunction.body().accept(new Evaluator(frame));
-        } catch (ReturnException e) {
-            return e.value;
-        }
-    }
-
-    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2) {
-        var frame = new Object[implFunction.frameSize()];
-        var allParameters = implFunction.allParameters();
-        allParameters[0].setupArgumentIn(frame, arg1);
-        allParameters[1].setupArgumentIn(frame, arg2);
-        try {
-            return implFunction.body().accept(new Evaluator(frame));
-        } catch (ReturnException e) {
-            return e.value;
-        }
-    }
-
-    public Object interpret(FunctionImplementation implFunction, Object arg1, Object arg2, Object arg3) {
-        var frame = new Object[implFunction.frameSize()];
-        var allParameters = implFunction.allParameters();
-        allParameters[0].setupArgumentIn(frame, arg1);
-        allParameters[1].setupArgumentIn(frame, arg2);
-        allParameters[2].setupArgumentIn(frame, arg3);
-        try {
-            return implFunction.body().accept(new Evaluator(frame));
+            return function.body().accept(new ProfilingInterpreter.ProfilingEvaluator(frame));
         } catch (ReturnException e) {
             return e.value;
         }

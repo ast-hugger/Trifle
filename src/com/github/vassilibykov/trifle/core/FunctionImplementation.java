@@ -138,13 +138,13 @@ public class FunctionImplementation {
      */
 
     @NotNull private final Lambda definition;
+    @Nullable private UserFunction userFunction;
     /**
-     * For an implementation of non-top level lambda expression, contains the
+     * For an implementation of a non-top level lambda expression, contains the
      * implementation of the topmost lambda expression containing this one.
-     * For an implementation of the top-level expression, contains this function
+     * For an implementation of a top-level expression, contains this function
      * implementation.
      */
-    @Nullable private UserFunction userFunction;
     @NotNull private final FunctionImplementation topImplementation;
     /**
      * Apparent parameters from the function definition. Does not include synthetic
@@ -242,14 +242,25 @@ public class FunctionImplementation {
         Accessors
      */
 
+    /**
+     * The name of the top-level {@link UserFunction} implemented by this,
+     * if this implementation does in fact implement a user function.
+     */
     public Optional<String> name() {
         return userFunction != null ? Optional.of(userFunction.name()) : Optional.empty();
     }
 
+    /**
+     * The definition from which this implementation was built.
+     */
     public Lambda definition() {
         return definition;
     }
 
+    /**
+     * The top-level named {@link UserFunction} implemented by this, or null
+     * if this does not implement a top-level named user function.
+     */
     public UserFunction userFunction() {
         return userFunction;
     }
@@ -258,22 +269,46 @@ public class FunctionImplementation {
         this.userFunction = userFunction;
     }
 
+    /**
+     * The unique ID of this function implementation. The ID is unique within
+     * a particular JVM session.
+     */
     public int id() {
         return id;
     }
 
+    /**
+     * A list of variables corresponding to the parameters of this function
+     * as declared in its source {@link #definition()}.
+     */
     List<VariableDefinition> declaredParameters() {
         return declaredParameters;
     }
 
+    /**
+     * A list of variables prepended to the parameter list of this function
+     * by closure conversion process.
+     */
     List<CopiedVariable> syntheticParameters() {
         return syntheticParameters;
     }
 
+    /**
+     * All parameters of this function implementation. The contents of this
+     * array are a concatenation of {@link #syntheticParameters()} and
+     * {@link #declaredParameters()}.
+     */
     AbstractVariable[] allParameters() {
         return allParameters;
     }
 
+    /**
+     * For a top-level function implementation, return a list with a
+     * transitive closure of implementations of all nested functions.
+     * For an implementation of a non-top-level function, return an
+     * empty list even if the function has nested functions. The list
+     * is topologically sorted w.r.t. the nesting of functions.
+     */
     List<FunctionImplementation> closureImplementations() {
         return closureImplementations;
     }
@@ -355,52 +390,16 @@ public class FunctionImplementation {
     }
 
     private MethodHandle profilingInterpreterInvoker() {
-        var type = MethodType.genericMethodType(implementationArity());
-        try {
-            var handle = MethodHandles.lookup().findVirtual(FunctionImplementation.class, "profile", type);
-            return handle.bindTo(this);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new AssertionError(e);
-        }
+        return PROFILE_METHOD.bindTo(this).asCollector(Object[].class, implementationArity());
     }
 
     private MethodHandle simpleInterpreterInvoker() {
-        var type = MethodType.genericMethodType(implementationArity());
-        type = type.insertParameterTypes(0, FunctionImplementation.class);
-        try {
-            MethodHandle interpret = MethodHandles.lookup().findVirtual(Interpreter.class, "interpret", type);
-            return MethodHandles.insertArguments(interpret, 0, Interpreter.INSTANCE, this);
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            throw new AssertionError(e);
-        }
+        return MethodHandles.insertArguments(INTERPRET_METHOD, 0, Interpreter.INSTANCE, this)
+            .asCollector(Object[].class, implementationArity());
     }
 
-    public Object profile() {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this);
-        if (profile.invocationCount() > PROFILING_TARGET) {
-            scheduleCompilation();
-        }
-        return result;
-    }
-
-    public Object profile(Object arg) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg);
-        if (profile.invocationCount() > PROFILING_TARGET) {
-            scheduleCompilation();
-        }
-        return result;
-    }
-
-    public Object profile(Object arg1, Object arg2) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg1, arg2);
-        if (profile.invocationCount() > PROFILING_TARGET) {
-            scheduleCompilation();
-        }
-        return result;
-    }
-
-    public Object profile(Object arg1, Object arg2, Object arg3) {
-        Object result = ProfilingInterpreter.INSTANCE.interpret(this, arg1, arg2, arg3);
+    public Object profile(Object[] args) {
+        Object result = ProfilingInterpreter.INSTANCE.interpret(this, args);
         if (profile.invocationCount() > PROFILING_TARGET) {
             scheduleCompilation();
         }
@@ -519,16 +518,27 @@ public class FunctionImplementation {
 
     private static final MethodHandle CHECK;
     private static final MethodHandle EXTRACT_SQUARE_PEG;
+    private static final MethodHandle INTERPRET_METHOD;
+    private static final MethodHandle PROFILE_METHOD;
 
     static {
         try {
-            CHECK = MethodHandles.lookup().findStatic(
+            var lookup = MethodHandles.lookup();
+            CHECK = lookup.findStatic(
                 FunctionImplementation.class,
                 "checkSpecializationApplicability",
                 MethodType.methodType(boolean.class, MethodType.class, Object[].class));
-            EXTRACT_SQUARE_PEG = MethodHandles.lookup().findStatic(
+            EXTRACT_SQUARE_PEG = lookup.findStatic(
                 FunctionImplementation.class,
                 "extractSquarePeg", MethodType.methodType(Object.class, SquarePegException.class));
+            INTERPRET_METHOD = lookup.findVirtual(
+                Interpreter.class,
+                "interpret",
+                MethodType.methodType(Object.class, FunctionImplementation.class, Object[].class));
+            PROFILE_METHOD = lookup.findVirtual(
+                FunctionImplementation.class,
+                "profile",
+                MethodType.methodType(Object.class, Object[].class));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new AssertionError(e);
         }
