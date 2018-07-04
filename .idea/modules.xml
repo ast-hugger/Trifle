@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/Scheme/Scheme.iml" filepath="$PROJECT_DIR$/Scheme/Scheme.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Smalltalk/Smalltalk.iml" filepath="$PROJECT_DIR$/Smalltalk/Smalltalk.iml" />
       <module fileurl="file://$PROJECT_DIR$/Trifle.iml" filepath="$PROJECT_DIR$/Trifle.iml" />
     </modules>
   </component>
