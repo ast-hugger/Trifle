@@ -5,10 +5,9 @@ package com.github.vassilibykov.trifle.smalltalk.core;
 import com.github.vassilibykov.trifle.builtin.Add;
 import com.github.vassilibykov.trifle.builtin.Multiply;
 import com.github.vassilibykov.trifle.builtin.Subtract;
-import com.github.vassilibykov.trifle.core.Closure;
 import com.github.vassilibykov.trifle.core.Dictionary;
+import com.github.vassilibykov.trifle.core.Invocable;
 import com.github.vassilibykov.trifle.core.UserFunction;
-import com.github.vassilibykov.trifle.object.MessageSend;
 import com.github.vassilibykov.trifle.smalltalk.grammar.AstBuilder;
 import com.github.vassilibykov.trifle.smalltalk.grammar.ClassDeclaration;
 
@@ -46,13 +45,19 @@ public class Smalltalk {
         TRUE_CLASS.installMethod("ifTrue:", new PrimitiveMethod() {
             @Override
             public Object invoke(Object self, Object block) {
-                return ((Closure) block).invoke();
+                return ((Invocable) block).invoke();
             }
         });
         TRUE_CLASS.installMethod("ifFalse:", new PrimitiveMethod() {
             @Override
-            public Object invoke(Object o, Object block) {
+            public Object invoke(Object self, Object block) {
                 return null;
+            }
+        });
+        TRUE_CLASS.installMethod("ifTrue:ifFalse:", new PrimitiveMethod() {
+            @Override
+            public Object invoke(Object self, Object trueBlock, Object falseBlock) {
+                return ((Invocable) trueBlock).invoke();
             }
         });
 
@@ -65,7 +70,13 @@ public class Smalltalk {
         FALSE_CLASS.installMethod("ifFalse:", new PrimitiveMethod() {
             @Override
             public Object invoke(Object self, Object block) {
-                return ((Closure) block).invoke();
+                return ((Invocable) block).invoke();
+            }
+        });
+        FALSE_CLASS.installMethod("ifTrue:ifFalse:", new PrimitiveMethod() {
+            @Override
+            public Object invoke(Object self, Object trueBlock, Object falseBlock) {
+                return ((Invocable) falseBlock).invoke();
             }
         });
 

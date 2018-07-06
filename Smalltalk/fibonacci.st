@@ -1,8 +1,9 @@
-Object subclass: FibonacciTester instanceVariables: ()
+Object subclass: Script instanceVariables: ()
 
 ! fibonacci: n
-    n < 2 ifTrue: [^1]
-    ^(self fibonacci: n - 1) + (self fibonacci: n - 2)
+    ^n < 2
+        ifTrue: [1]
+        ifFalse: [(self fibonacci: n - 1) + (self fibonacci: n - 2)]
 
-! main
+! doIt
     ^self fibonacci: 35

@@ -179,8 +179,8 @@ public class AstBuilder extends SmalltalkBaseVisitor<AstNode> {
 
     @Override
     public AstNode visitVarReference(SmalltalkParser.VarReferenceContext ctx) {
-
-        return super.visitVarReference(ctx);
+        var name = ctx.IDENTIFIER().getText();
+        return new VarReference(name);
     }
 
     @Override
@@ -223,6 +223,16 @@ public class AstBuilder extends SmalltalkBaseVisitor<AstNode> {
     }
 
     @Override
+    public AstNode visitSelfReceiver(SmalltalkParser.SelfReceiverContext ctx) {
+        return new VarReference("self");
+    }
+
+    @Override
+    public AstNode visitSuperReceiver(SmalltalkParser.SuperReceiverContext ctx) {
+        throw new UnsupportedOperationException("not implemented yet"); // TODO implement
+    }
+
+    @Override
     public AstNode visitIntegerLiteral(SmalltalkParser.IntegerLiteralContext ctx) {
         var value = Integer.valueOf(ctx.INTEGER().getText()); // FIXME no radix syntax support
         return new Literal(value);
@@ -232,6 +242,12 @@ public class AstBuilder extends SmalltalkBaseVisitor<AstNode> {
     public AstNode visitStringLiteral(SmalltalkParser.StringLiteralContext ctx) {
         String text = ctx.STRING().getText();
         return new Literal(text.substring(1, text.length() - 1)); // strip the quotes
+    }
+
+    @Override
+    public AstNode visitObject(SmalltalkParser.ObjectContext ctx) {
+        if (ctx.expression() != null) return ctx.expression().accept(this);
+        else return super.visitObject(ctx);
     }
 
     private <T extends ParserRuleContext> Stream<TerminalNode> streamOverNullable(T context, Function<T, List<TerminalNode>> listExtractor) {
