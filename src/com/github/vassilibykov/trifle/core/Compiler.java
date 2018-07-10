@@ -253,7 +253,8 @@ class Compiler {
     private void generateSpecializedMethod(FunctionImplementation closureImpl, FunctionResult functionResult) {
         var methodName = functionResult.genericMethodName + SPECIALIZED_METHOD_SUFFIX;
         var methodType = computeSpecializationType(closureImpl);
-        System.out.println("generating a specialized method of type " + methodType);
+        System.out.format("generating a specialized method %s%s for %s%n",
+            methodName, methodType, closureImpl.name().orElse("?"));
         MethodVisitor methodWriter = classWriter.visitMethod(
             ACC_PUBLIC | ACC_STATIC | ACC_FINAL,
             methodName,

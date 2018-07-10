@@ -643,7 +643,9 @@ class RecoveryCodeGenerator {
 
     private void visitReturn(Return aReturn) {
         setRecoveryLabelHere(aReturn.recoverySite);
-        writer.ret(REFERENCE);
+        JvmType targetType = function.specializedReturnType();
+        writer.bridgeValue(REFERENCE, targetType);
+        writer.ret(targetType);
     }
 
     private void visitStore(Store store) {

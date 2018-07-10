@@ -4,8 +4,8 @@ package com.github.vassilibykov.trifle.core;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -104,7 +104,8 @@ class FunctionAnalyzer {
          * and of functions nested in it (transitively).
          */
         private final Set<AbstractVariable> freeVariables = new HashSet<>();
-        private final Map<VariableDefinition, CopiedVariable> rewrittenVariables = new HashMap<>();
+        // LinkedHashMap so it iterates in insertion order and synthetic variables always maintain consistent order
+        private final Map<VariableDefinition, CopiedVariable> rewrittenVariables = new LinkedHashMap<>();
 
         ClosureConverter(FunctionImplementation thisFunction) {
             this.thisFunction = thisFunction;

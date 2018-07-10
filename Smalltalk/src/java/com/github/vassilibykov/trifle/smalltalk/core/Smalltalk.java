@@ -3,6 +3,7 @@
 package com.github.vassilibykov.trifle.smalltalk.core;
 
 import com.github.vassilibykov.trifle.builtin.Add;
+import com.github.vassilibykov.trifle.builtin.LessThan;
 import com.github.vassilibykov.trifle.builtin.Multiply;
 import com.github.vassilibykov.trifle.builtin.Subtract;
 import com.github.vassilibykov.trifle.core.Dictionary;
@@ -83,6 +84,7 @@ public class Smalltalk {
         INTEGER_CLASS.installMethod("+", Add.INSTANCE);
         INTEGER_CLASS.installMethod("-", Subtract.INSTANCE);
         INTEGER_CLASS.installMethod("*", Multiply.INSTANCE);
+        INTEGER_CLASS.installMethod("<", LessThan.INSTANCE);
     }
 
     static {

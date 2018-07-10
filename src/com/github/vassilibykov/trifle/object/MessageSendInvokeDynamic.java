@@ -12,6 +12,7 @@ import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.Map;
 import java.util.Optional;
 
 public class MessageSendInvokeDynamic {
@@ -23,14 +24,73 @@ public class MessageSendInvokeDynamic {
         MethodType.methodType(CallSite.class, MethodHandles.Lookup.class, String.class, MethodType.class).toMethodDescriptorString(),
         false);
 
+    /**
+     * Given a Smalltalk selector, compute the name to use as the method name in an
+     * {@code invokedynamic} instruction sending a message with the selector.
+     * JVM spec prohibits certain characters from appearing in a method name. Even
+     * though in the case of invokedynamic the method name has no immediate execution
+     * semantics, the prohibition still applies.
+     */
     static String indyName(String selector) {
-        return "send|" + selector;
+        var cleanedUp = escapeIllegalChars(selector);
+        return cleanedUp.equals(selector)
+            ? "send|" + selector
+            : "send|$" + cleanedUp;
     }
 
     static String extractSelector(String indyName) {
         var index = indyName.indexOf('|');
         if (index < 0) throw new AssertionError();
-        return indyName.substring(index + 1);
+        var selector = indyName.substring(index + 1);
+        return selector.charAt(0) == '$'
+            ? unescapeIllegalChars(selector)
+            : selector;
+    }
+
+    private static final Map<Character, String> CHARS_TO_ESCAPES = Map.of(
+        '.', "P",
+        ';', "S",
+        '[', "B",
+        '/', "H",
+        '<', "L",
+        '>', "R",
+        '$', "$");
+
+    private static final Map<Character, Character> ESCAPES_TO_CHARS = Map.of(
+        'P', '.',
+        'S', ';',
+        'B', '[',
+        'H', '/',
+        'L', '<',
+        'R', '>',
+        '$', '$');
+
+    private static String escapeIllegalChars(String string) {
+        var result = new StringBuilder();
+        for (int i = 0; i < string.length(); i++) {
+            var character = string.charAt(i);
+            var replacement = CHARS_TO_ESCAPES.get(character);
+            if (replacement != null) {
+                result.append("$").append(replacement);
+            } else {
+                result.append(character);
+            }
+        }
+        return result.toString();
+    }
+
+    private static String unescapeIllegalChars(String string) {
+        var result = new StringBuilder();
+        var iterator = string.chars().iterator();
+        iterator.next(); // skip the initial '$'
+        while (iterator.hasNext()) {
+            var character = Character.toChars(iterator.next())[0]; // bleah
+            if (character == '$') {
+                character = ESCAPES_TO_CHARS.get(Character.toChars(iterator.next())[0]);
+            }
+            result.append(character);
+        }
+        return result.toString();
     }
 
     public static CallSite bootstrap(MethodHandles.Lookup lookup, String indyName, MethodType callSiteType) {
@@ -62,6 +122,11 @@ public class MessageSendInvokeDynamic {
             flushableInvoker = receiver.invalidationSwitchPoint().guardWithTest(
                 invoker,
                 thisSite.resetAndDispatchInvoker());
+        } else if (thisSite.type().parameterType(0).isPrimitive()) {
+            // If the discriminating parameter at the call site is a primitive,
+            // we are guaranteed handler applicability every time - no need to guard.
+            thisSite.setTarget(invoker.asType(thisSite.type()));
+            return invoker.invokeWithArguments(args);
         } else {
             cacheGuard = firstArg == null ? CHECK_NULL : CHECK_CLASS.bindTo(firstArg.getClass());
             flushableInvoker = invoker;

@@ -252,16 +252,16 @@ class MethodCodeGenerator implements CodeGenerator {
         var conditionType = anIf.condition().accept(this).type();
         writer.ensureValue(conditionType, BOOL);
         boolean[] canFail = new boolean[2];
-        writer.ifThenElse(
-            () -> {
-                var valueGist = trueBranch.accept(this);
-                canFail[0] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
-            },
-            () -> {
+        writer.withLabelAtEnd(end -> {
+            writer.withLabelAtEnd(thenStart -> {
+                writer.jumpIfNot0(thenStart);
                 var valueGist = falseBranch.accept(this);
                 canFail[1] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
-            }
-        );
+                writer.jump(end);
+            });
+            var valueGist = trueBranch.accept(this);
+            canFail[0] = writer.bridgeValue(valueGist.type(), resultType) || valueGist.canFail();
+        });
         // The note above about tracking fallibility applies here as well.
         return Gist.of(resultType, canFail[0] || canFail[1]);
     }
