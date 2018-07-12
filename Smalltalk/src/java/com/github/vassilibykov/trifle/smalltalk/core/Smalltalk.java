@@ -22,8 +22,10 @@ public class Smalltalk {
 
     static final SmalltalkClass OBJECT_CLASS = new SmalltalkClass(null, List.of());
     static final SmalltalkClass BOOLEAN_CLASS = new SmalltalkClass(OBJECT_CLASS, List.of());
-    static final SmalltalkClass TRUE_CLASS = new SmalltalkClass(BOOLEAN_CLASS, List.of());
-    static final SmalltalkClass FALSE_CLASS = new SmalltalkClass(BOOLEAN_CLASS, List.of());
+// True and False removed in favor of handling everything in Boolean
+// because we currently can't discriminate between them in a cache guard.
+//    static final SmalltalkClass TRUE_CLASS = new SmalltalkClass(BOOLEAN_CLASS, List.of());
+//    static final SmalltalkClass FALSE_CLASS = new SmalltalkClass(BOOLEAN_CLASS, List.of());
     static final SmalltalkClass INTEGER_CLASS = new SmalltalkClass(OBJECT_CLASS, List.of());
     static final SmalltalkClass STRING_CLASS = new SmalltalkClass(OBJECT_CLASS, List.of());
     static final SmalltalkClass UNDEFINED_OBJECT_CLASS = new SmalltalkClass(OBJECT_CLASS, List.of());
@@ -43,41 +45,24 @@ public class Smalltalk {
             }
         });
 
-        TRUE_CLASS.installMethod("ifTrue:", new PrimitiveMethod() {
+        BOOLEAN_CLASS.installMethod("ifTrue:", new PrimitiveMethod() {
             @Override
             public Object invoke(Object self, Object block) {
-                return ((Invocable) block).invoke();
-            }
-        });
-        TRUE_CLASS.installMethod("ifFalse:", new PrimitiveMethod() {
-            @Override
-            public Object invoke(Object self, Object block) {
-                return null;
-            }
-        });
-        TRUE_CLASS.installMethod("ifTrue:ifFalse:", new PrimitiveMethod() {
-            @Override
-            public Object invoke(Object self, Object trueBlock, Object falseBlock) {
-                return ((Invocable) trueBlock).invoke();
+                return (Boolean) self ? ((Invocable) block).invoke() : null;
             }
         });
 
-        FALSE_CLASS.installMethod("ifTrue:", new PrimitiveMethod() {
-            @Override
-            public Object invoke(Object o, Object block) {
-                return null;
-            }
-        });
-        FALSE_CLASS.installMethod("ifFalse:", new PrimitiveMethod() {
+        BOOLEAN_CLASS.installMethod("ifFalse:", new PrimitiveMethod() {
             @Override
             public Object invoke(Object self, Object block) {
-                return ((Invocable) block).invoke();
+                return (Boolean) self ? null : ((Invocable) block).invoke();
             }
         });
-        FALSE_CLASS.installMethod("ifTrue:ifFalse:", new PrimitiveMethod() {
+
+        BOOLEAN_CLASS.installMethod("ifTrue:ifFalse:", new PrimitiveMethod() {
             @Override
             public Object invoke(Object self, Object trueBlock, Object falseBlock) {
-                return ((Invocable) falseBlock).invoke();
+                return (Boolean) self ? ((Invocable) trueBlock).invoke() : ((Invocable) falseBlock).invoke();
             }
         });
 
@@ -149,8 +134,8 @@ public class Smalltalk {
     private void setupBuiltinClasses() {
         globals.defineEntry("Object").setValue(OBJECT_CLASS);
         globals.defineEntry("Boolean").setValue(BOOLEAN_CLASS);
-        globals.defineEntry("True").setValue(TRUE_CLASS);
-        globals.defineEntry("False").setValue(FALSE_CLASS);
+//        globals.defineEntry("True").setValue(TRUE_CLASS);
+//        globals.defineEntry("False").setValue(FALSE_CLASS);
         globals.defineEntry("Integer").setValue(INTEGER_CLASS);
         globals.defineEntry("String").setValue(STRING_CLASS);
         globals.defineEntry("UndefinedObject").setValue(UNDEFINED_OBJECT_CLASS);

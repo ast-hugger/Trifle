@@ -125,6 +125,10 @@ public class MessageSendInvokeDynamic {
         } else if (thisSite.type().parameterType(0).isPrimitive()) {
             // If the discriminating parameter at the call site is a primitive,
             // we are guaranteed handler applicability every time - no need to guard.
+            // IMPORTANT: this currently precludes having distinct classes for True and False,
+            // as is the norm in Smalltalk, because their instances would both be represented
+            // as ints. We can work around this by allowing a dispatcher extension to supply
+            // a custom cache guard.
             thisSite.setTarget(invoker.asType(thisSite.type()));
             return invoker.invokeWithArguments(args);
         } else {

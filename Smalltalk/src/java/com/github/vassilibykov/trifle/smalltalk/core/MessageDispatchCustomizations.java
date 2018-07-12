@@ -21,8 +21,8 @@ class MessageDispatchCustomizations implements MessageDispatchExtension {
     public Optional<Invocable> lookupStrangeReceiverSelector(String selector, Object[] args) {
         var receiver = args[0];
         if (receiver instanceof Boolean) {
-            var klass = (Boolean) receiver ? Smalltalk.TRUE_CLASS : Smalltalk.FALSE_CLASS;
-            return Optional.ofNullable(klass.lookupSelector(selector));
+//            var klass = (Boolean) receiver ? Smalltalk.TRUE_CLASS : Smalltalk.FALSE_CLASS;
+            return Optional.ofNullable(Smalltalk.BOOLEAN_CLASS.lookupSelector(selector));
         } else if (receiver instanceof Integer || receiver instanceof BigInteger) {
             return Optional.ofNullable(Smalltalk.INTEGER_CLASS.lookupSelector(selector));
         } else if (receiver instanceof String) {

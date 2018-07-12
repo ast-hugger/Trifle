@@ -6,4 +6,4 @@ Object subclass: Script instanceVariables: ()
         ifFalse: [(self fibonacci: n - 1) + (self fibonacci: n - 2)]
 
 ! doIt
-    ^self fibonacci: 6
+    ^self fibonacci: 35
